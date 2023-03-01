@@ -1,0 +1,12 @@
+name: mod-site
+channels:
+  - conda-forge
+dependencies:
+  - python=3.9
+  - rdkit
+  - requests
+  - xlsxwriter
+  - pip:
+    - cairosvg
+    - tqdm
+    - IPython
