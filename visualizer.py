@@ -64,7 +64,7 @@ def table_to_tsv(data, path_to_tsv, path_to_img_folder):
     data["img_path"] = path_to_svg
 
     df = pd.DataFrame([data])
-    df = df[['# matched peaks', '# unshifted peaks', '# shifted peaks', 'img_path']]
+    df = df[['# matched peaks', '# unshifted peaks', '# shifted peaks', 'usi1', 'usi2', 'structure1', 'img_path']]
     
     # TODO: Adding structures and USIs
 

@@ -14,11 +14,11 @@ from copy import deepcopy
 import matplotlib.pyplot as plt
 from IPython.display import SVG
 
-def sitelocalize(spec1, spec2, smiles1, show_img=True):
+def sitelocalize(usi1, usi2, smiles1, show_img=True):
 
     molMol = Chem.MolFromSmiles(smiles1)
 
-    modsite = SiteLocator.SiteLocator(spec1, spec2, molMol)
+    modsite = SiteLocator.SiteLocator(usi1, usi2, molMol)
     scores_unshifted, scores_shifted = modsite.calculate_score()
     scores = modsite.distance_score(scores_unshifted, scores_shifted)
     if (max(scores.values()) > 0):
@@ -40,6 +40,10 @@ def sitelocalize(spec1, spec2, smiles1, show_img=True):
     result["# matched peaks"] = len(modsite.matchedPeaks)
     result['# unshifted peaks'] = len(modsite.unshifted)
     result['# shifted peaks'] = len(modsite.shifted)
+    result["usi1"] = usi1
+    result["usi2"] = usi2
+    result["structure1"] = smiles1
+    
     result['image'] = d2d.GetDrawingText()
 
     return result
