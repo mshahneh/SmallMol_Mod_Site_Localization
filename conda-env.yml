@@ -1,0 +1,14 @@
+channels:
+  - conda-forge
+  - defaults
+
+dependencies:
+  - python=3.9
+  - rdkit
+  - requests
+  - xlsxwriter
+  - pip
+  - pip:
+    - cairosvg
+    - tqdm
+    - IPython
