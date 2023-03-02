@@ -5,6 +5,7 @@ from rdkit import Chem
 from PIL import Image
 from io import BytesIO
 import cairosvg
+import pandas as pd
 
 def table_to_xlsx(data, path):
     """
@@ -52,6 +53,27 @@ def table_to_xlsx(data, path):
         os.remove("temp.png")
     except:
         pass
+
+def table_to_tsv(data, path_to_tsv, path_to_img_folder):
+    import uuid
+
+    unique_key = str(uuid.uuid4())
+
+    path_to_svg = os.path.join(path_to_img_folder, unique_key + ".svg")
+
+    data["img_path"] = path_to_svg
+
+    df = pd.DataFrame([data])
+    df = df[['# matched peaks', '# unshifted peaks', '# shifted peaks', 'img_path']]
+    
+    # TODO: Adding structures and USIs
+
+    df.to_csv(path_to_tsv, sep='\t', index=False)
+
+    # Writing out the images to file
+    with open(path_to_svg, "w") as f:
+        f.write(data["image"])
+
 
 def molToSVG(mol, substructure=None, highlightModificationSites=False):
     """
