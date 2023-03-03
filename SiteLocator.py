@@ -115,7 +115,7 @@ class SiteLocator():
         possiblities = self.fragments.find_fragments(peak_weight, 0.1, 0.98, 0.5)
         for possibility in possiblities:
             structures.append(self.fragments.get_fragment_info(possibility[0], 0)[3])
-        return   
+        return structures
 
 
 
