@@ -2,6 +2,7 @@ import xlsxwriter
 import os
 import utils as utils
 from rdkit import Chem
+from rdkit.Chem import Draw
 from PIL import Image
 from io import BytesIO
 import cairosvg
@@ -97,5 +98,14 @@ def molToSVG(mol, substructure=None, highlightModificationSites=False):
     else:
         d2d = Chem.Draw.MolDraw2DSVG(250,200)
         d2d.DrawMolecule(mol)
+    d2d.FinishDrawing()
+    return d2d.GetDrawingText()
+
+def highlightScores(mol, scores):
+    d2d = Draw.MolDraw2DSVG(250,200)
+    colors = dict()
+    for i in range(0, mol.GetNumAtoms()):
+        colors[i] = (1-(scores[i]**2), 1-(scores[i]**2), 1-(scores[i]**2))
+    d2d.DrawMolecule(mol, highlightAtoms=list(range(mol.GetNumAtoms())), highlightAtomColors=colors)
     d2d.FinishDrawing()
     return d2d.GetDrawingText()
