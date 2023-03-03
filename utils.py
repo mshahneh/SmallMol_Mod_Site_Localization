@@ -79,11 +79,14 @@ def getHitAtomsAndBonds(mol, substructure):
 
     return hitAtoms, hitBonds
 
+
+def generate_usi(id, library_membership):
+    return "mzspec:GNPS:" + library_membership + ":accession:" + id
+
 def getMatchedPeaks(usi1, usi2):
     payload = {
         'usi1': usi1,
         'usi2': usi2,
-    #  'usi2': 'mzspec:GNPS:GNPS-LIBRARY:accession:' + loaded_data[m1]['spectrum_id'], 
      'mz_min': 'None',
      'mz_max':'None',
      'annotate_precision': '4',
