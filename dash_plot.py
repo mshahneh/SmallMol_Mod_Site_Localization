@@ -1,9 +1,6 @@
-import dash
-import dash_html_components as html
+from dash import Dash, html, dcc, Input, Output, State, dash_table
 import plotly.graph_objects as go
-import dash_core_components as dcc
 import plotly.express as px
-from dash.dependencies import Input, Output, State
 from dash.dash_table.Format import Format, Scheme, Trim
 from urllib.request import urlopen
 import matplotlib.pyplot as plt
@@ -22,24 +19,24 @@ import utils as utils
 import fragmentation_py as fragmentation_py
 import SiteLocator as modSite
 from IPython.display import SVG
-import skunk
 
 
-df = pd.DataFrame(columns=["mol1ID", "mol2ID", "score", "# matched peaks", "# shifted peaks", "# unshifted peaks"])
+df = pd.DataFrame(columns=["mol1ID", "mol1Weight", "mol1Library", "mol2ID", "mol2Weight", "mol1Library", "score", "# matched peaks", "# shifted peaks", "# unshifted peaks"])
 columns=[{"name": i, "id": i} for i in df.columns]
 columns.append({"name": "structure", "id": "structure", "presentation": "markdown"})
 columns[2]["format"] = Format(precision=2, scheme=Scheme.fixed)
 print(columns)
 
-with open('Data/data_dict_filtered.pkl', 'rb') as f:
+library = "GNPS-MSMLS"
+with open('data/libraries/{}/data_dict_filtered.pkl'.format(library), 'rb') as f:
     data_dict_filtered = pickle.load(f)
 
-with open('Data/matches.pkl', 'rb') as f:
+with open('data/libraries/{}/matches.pkl'.format(library), 'rb') as f:
     matches = pickle.load(f)
 
-with open('Data/cachedStructures.pkl', 'rb') as f:
+with open('data/libraries/{}/cachedStructures.pkl'.format(library), 'rb') as f:
     cachedStructures = pickle.load(f)
-app = dash.Dash()
+app = Dash()
 
 siteLocator = None
 
@@ -47,7 +44,7 @@ app.layout = html.Div(id = 'parent', children = [
         html.P(id='table_out', children=len(df)),
         # refresh button
         html.Button('Refresh', id='refresh', n_clicks=0),
-        dash.dash_table.DataTable(
+        dash_table.DataTable(
         id='my_table',
         columns=columns,
         data=df.to_dict('records'),
@@ -90,7 +87,7 @@ def update_graphs(active_rows, local_df):
         print ("clicked on row:", active_rows[0])
         m0 = local_df[active_rows[0]]["mol1ID"]
         m1 = local_df[active_rows[0]]["mol2ID"]
-        siteLocator = modSite.SiteLocator("mzspec:GNPS:GNPS-LIBRARY:accession:"+m0, "mzspec:GNPS:GNPS-LIBRARY:accession:"+m1, cachedStructures[m0])
+        siteLocator = modSite.SiteLocator(utils.generate_usi(m0, library), utils.generate_usi(m1, library), cachedStructures[m0])
         scores_unshifted, scores_shifted = siteLocator.calculate_score()
         scores = siteLocator.distance_score(scores_unshifted, scores_shifted)
         if (max(scores.values()) > 0):
@@ -217,17 +214,6 @@ def dash_svg(text):
 if __name__ == '__main__':
     #read data
 
-
-    dbfile = open('Data/in_kegg_fragmentations.pkl', 'rb')
-    fragmentations = pickle.load(dbfile)
-    dbfile.close()
-
-    def generate_usi(id):
-        """
-        Generates a USI from a molecule.
-        """
-        return 'mzspec:GNPS:GNPS-LIBRARY:accession:' + id
-
     for match in tqdm(matches[1]):
         # break if we have enough matches
         if len(df) > 15:
@@ -236,8 +222,8 @@ if __name__ == '__main__':
             m0, m1 = match
             molMol = cachedStructures[m1]
             modifMol = cachedStructures[m0]
-            molUsi = generate_usi(m1)
-            modifUsi = generate_usi(m0)
+            molUsi = utils.generate_usi(m1, data_dict_filtered[m1]['library_membership'])
+            modifUsi = utils.generate_usi(m0, data_dict_filtered[m0]['library_membership'])
             molSmiles = data_dict_filtered[m1]['Smiles']
             site = modSite.SiteLocator(molUsi, modifUsi, molSmiles)
             modifLoc = list(utils.calculateModificationSites(modifMol, molMol, False))
