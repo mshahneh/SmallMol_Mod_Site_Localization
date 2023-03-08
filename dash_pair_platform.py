@@ -103,7 +103,7 @@ def update_output(n_clicks, usi1, usi2, smiles1, smiles2):
         return None, None, None, "Please enter USI1, USI2, and SMILES1.", None
     
     mol1 = Chem.MolFromSmiles(smiles1)
-    siteLocator = modSite.SiteLocator(usi1, usi2, smiles1)
+    siteLocator = modSite.SiteLocator(usi1, usi2, mol1)
     if siteLocator.molMeta['precursor_mz'] > siteLocator.modifMeta['precursor_mz']:
         return None, None, None, "Not supported, Modified molecule is smaller than the original molecule."
     scores_unshifted, scores_shifted = siteLocator.calculate_score()
@@ -204,7 +204,7 @@ def display_click_data(clickData, siteLocatorObj):
             structures = siteLocator.get_structures_per_peak(float(clickData['points'][0]['x']))
             res = []
             for structure in structures:
-                svg = dash_svg(visualizer.molToSVG(siteLocator.molMol, Chem.MolFromSmiles(structure)))
+                svg = dash_svg(visualizer.molToSVG(siteLocator.molMol, Chem.MolFromSmiles(structure, sanitize=False)))
                 res.append(html.Img(src=svg, style={'width': '300px'}))
             return res
                 

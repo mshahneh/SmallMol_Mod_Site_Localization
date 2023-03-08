@@ -57,17 +57,17 @@ def getHitAtomsAndBonds(mol, substructure):
         return hitAtoms, hitBonds
     
     if type(matches[0]) is tuple:
-        tempHitAtoms = set()
-        tempHitBonds = set()
         for match in matches:
+            tempHitAtoms = set()
+            tempHitBonds = set()
             for atom in match:
                 tempHitAtoms.add(atom)
-        for bond in mol.GetBonds():
-            if bond.GetBeginAtomIdx() in tempHitAtoms and bond.GetEndAtomIdx() in tempHitAtoms:
-                tempHitBonds.add(bond.GetIdx())
-        if len(tempHitAtoms) > 0:
-            hitAtoms.append(list(tempHitAtoms))
-            hitBonds.append(list(tempHitBonds))
+            for bond in mol.GetBonds():
+                if bond.GetBeginAtomIdx() in tempHitAtoms and bond.GetEndAtomIdx() in tempHitAtoms:
+                    tempHitBonds.add(bond.GetIdx())
+            if len(tempHitAtoms) > 0:
+                hitAtoms.append(list(tempHitAtoms))
+                hitBonds.append(list(tempHitBonds))
     else:
         hitAtoms.append([])
         hitBonds.append([])

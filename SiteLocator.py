@@ -10,7 +10,7 @@ class SiteLocator():
         self.molUsi = molUsi #smaler molecule
         self.modifUsi = modifUsi #bigger (with addition) modified molecule
         if type(mol) == str:
-            self.molMol = Chem.MolFromSmiles(mol, sanitize=False)
+            self.molMol = Chem.MolFromSmiles(mol)
         else:
             self.molMol = mol
         alignment = utils.getMatchedPeaks(molUsi, modifUsi)
@@ -26,6 +26,7 @@ class SiteLocator():
         self.appearance_shifted = {i: [] for i in range(0, self.molMol.GetNumAtoms())}
         self.appearance_unshifted = {i: [] for i in range(0, self.molMol.GetNumAtoms())}
         self.fragments = fragmentation_py.FragmentEngine(Chem.MolToMolBlock(self.molMol), 3, 2, 1, 0, 0)
+        self.numFrag = self.fragments.generate_fragments()
           
         shifted, unshifted = utils.separateShifted(self.matchedPeaks, self.molPeaks, self.modifPeaks)
         self.shifted = shifted
@@ -36,10 +37,6 @@ class SiteLocator():
         self.appearance_unshifted = {i: [] for i in range(0, self.molMol.GetNumAtoms())}
 
         shifted, unshifted = utils.separateShifted(self.matchedPeaks, self.molPeaks, self.modifPeaks)
-        
-        
-        numFrag = self.fragments.generate_fragments()
-        # print("Number of fragments: ", numFrag)
 
         for peak in unshifted:
             possiblities = self.fragments.find_fragments(self.molPeaks[peak[0]][0], 0.1, 0.98, 0.5)
@@ -118,6 +115,8 @@ class SiteLocator():
             substructure = Chem.MolFromSmiles(smiles, sanitize=False)
             if self.molMol.HasSubstructMatch(substructure):
                 structures.append(smiles)
+            else:
+                print("Error handling substructure, no match found: ", smiles, "")
         return structures
 
 
