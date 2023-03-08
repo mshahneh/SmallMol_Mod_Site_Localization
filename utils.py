@@ -89,7 +89,7 @@ def getMatchedPeaks(usi1, usi2):
         'usi2': usi2,
      'mz_min': 'None',
      'mz_max':'None',
-     'annotate_precision': '4',
+     'annotate_precision': '2',
      'annotation_rotation':'45',
      'max_intensity': '50',
      'cosine':'shifted',

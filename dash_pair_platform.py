@@ -121,6 +121,8 @@ def update_output(n_clicks, usi1, usi2, smiles1, smiles2):
     svg2 = visualizer.highlightScores(mol1, scores)
 
     fig = go.Figure()
+    typesInx = {'matched_shifted': [], 'matched_unshifted': [], 'unmatched': []}
+
     x1 = []
     y1 = []
     for peak in siteLocator.molPeaks:
@@ -130,10 +132,8 @@ def update_output(n_clicks, usi1, usi2, smiles1, smiles2):
 
     topPeakCount = 50
     # get index of top peaks in y1
-    topPeaksInx = sorted(range(len(y1)), key=lambda i: y1[i])[-topPeakCount:]
-    types = ['matched_shifted', 'matched_unshifted', 'unmatched']
-    typesInx = {'matched_shifted': [], 'matched_unshifted': [], 'unmatched': []}
-    for i in topPeaksInx:
+    topPeaksInxMol = sorted(range(len(y1)), key=lambda i: y1[i])[-topPeakCount:]
+    for i in topPeaksInxMol:
         flag = False
         for j in siteLocator.matchedPeaks:
             if (j[0] == i):
@@ -149,22 +149,39 @@ def update_output(n_clicks, usi1, usi2, smiles1, smiles2):
     for i in typesInx:
         x1_ = [round(x1[j], 2) for j in typesInx[i]]
         y1_ = [y1[j] for j in typesInx[i]]
-        y1_ = [x / max(y1_)*100 for x in y1_]
-        fig.add_trace(go.Bar(x=x1_, y=y1_, name=i, width=2))
+        y1_ = [x / max(y1_) * 100 for x in y1_]
+        indicis = typesInx[i]
+        fig.add_trace(go.Bar(x=x1_, y=y1_, hovertext=indicis, name=i, width=1))
 
+    typesInx = {'matched_shifted': [], 'matched_unshifted': [], 'unmatched': []}
     x2 = []
     y2 = []
     for peak in siteLocator.modifPeaks:
         x2.append(peak[0])
         y2.append(peak[1])
+    
+    topPeaksInxModif = sorted(range(len(y2)), key=lambda i: y2[i])[-topPeakCount:]
+    for i in topPeaksInxModif:
+        flag = False
+        for j in siteLocator.matchedPeaks:
+            if (j[1] == i):
+                if (abs(siteLocator.molPeaks[j[0]][0] - siteLocator.modifPeaks[j[1]][0]) > 0.1):
+                    typesInx['matched_shifted'].append(i)
+                else:
+                    typesInx['matched_unshifted'].append(i)
+                flag = True
+                break
+        if (not flag):
+            typesInx['unmatched'].append(i)
+    
 
-    # get index of top 10 peaks in y2
-    topPeaksInx = sorted(range(len(y2)), key=lambda i: y2[i])[-topPeakCount:]
-    x2 = [round(x2[i], 2) for i in topPeaksInx]
-    y2 = [y2[i] for i in topPeaksInx]
-    y2 = [-x / max(y2)*100 for x in y2]
-
-    fig.add_trace(go.Bar(x=x2, y=y2, name='modified molecule peaks', width=2))
+    for i in typesInx:
+        x1_ = [round(x2[j], 2) for j in typesInx[i]]
+        y2_ = [y2[j] for j in typesInx[i]]
+        y1_ = [-j / max(y2_) * 100 for j in y2_]
+        indicis = typesInx[i]
+        fig.add_trace(go.Bar(x=x1_, y=y1_, hovertext=indicis, name=i, width=1))
+    
     fig.update_layout(
         title="Peaks",
         bargap=0,
@@ -173,7 +190,7 @@ def update_output(n_clicks, usi1, usi2, smiles1, smiles2):
         legend_title="Peak Type",
     )
 
-    return dash_svg(svg1), dash_svg(svg2), fig, "Success", base64.b64encode(pickle.dumps(siteLocator)).decode()
+    return dash_svg(svg1), dash_svg(svg2), fig, "Success", base64.b64encode(pickle.dumps(siteLocator)).decode()  
 
 ## update debugtext if click on bar chart
 @app.callback(
