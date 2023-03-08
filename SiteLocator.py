@@ -6,7 +6,7 @@ import fragmentation_py as fragmentation_py
 
 
 class SiteLocator():
-    def __init__(self, molUsi, modifUsi, mol):
+    def __init__(self, molUsi, modifUsi, mol, adduct = 'M+H'):
         self.molUsi = molUsi #smaler molecule
         self.modifUsi = modifUsi #bigger (with addition) modified molecule
         if type(mol) == str:
@@ -25,7 +25,7 @@ class SiteLocator():
         
         self.appearance_shifted = {i: [] for i in range(0, self.molMol.GetNumAtoms())}
         self.appearance_unshifted = {i: [] for i in range(0, self.molMol.GetNumAtoms())}
-        self.fragments = fragmentation_py.FragmentEngine(Chem.MolToMolBlock(self.molMol), 3, 2, 1, 0, 0)
+        self.fragments = fragmentation_py.FragmentEngine(Chem.MolToMolBlock(self.molMol), 2, 2, 1, 0, 0)
         self.numFrag = self.fragments.generate_fragments()
           
         shifted, unshifted = utils.separateShifted(self.matchedPeaks, self.molPeaks, self.modifPeaks)
@@ -39,7 +39,7 @@ class SiteLocator():
         shifted, unshifted = utils.separateShifted(self.matchedPeaks, self.molPeaks, self.modifPeaks)
 
         for peak in unshifted:
-            possiblities = self.fragments.find_fragments(self.molPeaks[peak[0]][0], 0.1, 0.98, 0.5)
+            possiblities = self.fragments.find_fragments(self.molPeaks[peak[0]][0], 0.1, 0.98, 0.01)
             for possibility in possiblities:
                 smiles = self.fragments.get_fragment_info(possibility[0], 0)[3]
                 substructure = Chem.MolFromSmiles(smiles, sanitize=False)
@@ -107,9 +107,9 @@ class SiteLocator():
             structures_unshifted.append(self.get_fragment_info(frag, 0)[3])
         return structures_shifted, structures_unshifted
 
-    def get_structures_per_peak(self, peak_weight):
+    def get_structures_per_peak(self, peak_weight, mz_precision_abs = 0.05):
         structures = []
-        possiblities = self.fragments.find_fragments(peak_weight, 0.1, 0.98, 0.5)
+        possiblities = self.fragments.find_fragments(peak_weight, 0.1, 1, mz_precision_abs)
         for possibility in possiblities:
             smiles = self.fragments.get_fragment_info(possibility[0], 0)[3]
             substructure = Chem.MolFromSmiles(smiles, sanitize=False)

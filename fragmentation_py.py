@@ -1,8 +1,8 @@
 # 2014.10.20 12:28:02 CEST
 import numpy
-import pars as pars
+import pars
 import os
-from rdkit import Chem
+import rdkit_engine as Chem
 
 class FragmentEngine(object):
 
@@ -10,7 +10,7 @@ class FragmentEngine(object):
         try:
             self.mol = Chem.MolFromMolBlock(str(mol))
             self.accept = True
-            self.natoms = len(self.mol.GetAtoms())
+            self.natoms = Chem.natoms(self.mol)
         except:
             self.accept = False
             return 
@@ -29,20 +29,20 @@ class FragmentEngine(object):
         self.fragment_masses = ((max_broken_bonds + max_water_losses) * 2 + 1) * [0]
         self.fragment_info = [[0, 0, 0]]
         self.avg_score = None
-        for x in self.mol.GetAtoms():
+        for x in range(self.natoms):
             self.bonded_atoms.append([])
-            self.atom_masses.append(x.GetMass())
-            if x.GetSymbol() == 'O' and x.GetTotalNumHs() == 1 and x.GetTotalDegree() == 1:
-                self.neutral_loss_atoms.append(x.GetIdx())
-            if x.GetSymbol() == 'N' and x.GetTotalNumHs() == 2 and x.GetTotalDegree() == 1:
-                self.neutral_loss_atoms.append(x.GetIdx())
+            self.atom_masses.append(Chem.GetExtendedAtomMass(self.mol, x))
+            if Chem.GetAtomSymbol(self.mol, x) == 'O' and Chem.GetAtomHs(self.mol, x) == 1 and Chem.GetNBonds(self.mol, x) == 1:
+                self.neutral_loss_atoms.append(x)
+            if Chem.GetAtomSymbol(self.mol, x) == 'N' and Chem.GetAtomHs(self.mol, x) == 2 and Chem.GetNBonds(self.mol, x) == 1:
+                self.neutral_loss_atoms.append(x)
 
-        for x in range(self.mol.GetNumBonds()):
-            (a1, a2,) = self.mol.GetBondWithIdx(x).GetBeginAtomIdx(), self.mol.GetBondWithIdx(x).GetEndAtomIdx()
+        for x in range(Chem.nbonds(self.mol)):
+            (a1, a2,) = Chem.GetBondAtoms(self.mol, x)
             self.bonded_atoms[a1].append(a2)
             self.bonded_atoms[a2].append(a1)
             bond = 1 << a1 | 1 << a2
-            bondscore = pars.typew[self.mol.GetBondWithIdx(x).GetBondType().name] * pars.heterow[(self.mol.GetAtomWithIdx(a1).GetSymbol() != 'C' or self.mol.GetAtomWithIdx(a2).GetSymbol() != 'C')]
+            bondscore = pars.typew[Chem.GetBondType(self.mol, x)] * pars.heterow[(Chem.GetAtomSymbol(self.mol, a1) != 'C' or Chem.GetAtomSymbol(self.mol, a2) != 'C')]
             self.bonds.add(bond)
             self.bondscore[bond] = bondscore
 
@@ -136,9 +136,7 @@ class FragmentEngine(object):
                 bondbreaks += 1
 
         if score == 0:
-            print('score=0: ', end=' ')
-            print(fragment, end=' ')
-            print(bondbreaks)
+            print ('score=0: ', fragment, bondbreaks)
         return (bondbreaks, score)
 
 
@@ -201,38 +199,26 @@ class FragmentEngine(object):
     def get_fragment_info(self, fragment, deltaH):
         atomstring = ''
         atomlist = []
-        elements = dict([(e,0) for e in list(pars.mims.keys())])
-        for atom in self.mol.GetAtoms():
-            if 1 << atom.GetIdx() & fragment:
-                atomstring += ',' + str(atom.GetIdx())
-                atomlist.append(atom.GetIdx())
-                elements[atom.GetSymbol()] += 1
-                elements['H'] += atom.GetTotalNumHs()
-        # for atom in range(self.natoms):
-        #     if 1 << atom & fragment:
-        #         atomstring += ',' + str(atom)
-        #         atomlist.append(atom)
-        #         elements[Chem.GetAtomSymbol(self.mol, atom)] += 1
-        #         elements['H'] += Chem.GetAtomHs(self.mol, atom)
+        elements = dict([(e,0) for e in pars.mims.keys()])
+        for atom in range(self.natoms):
+            if 1 << atom & fragment:
+                atomstring += ',' + str(atom)
+                atomlist.append(atom)
+                elements[Chem.GetAtomSymbol(self.mol, atom)] += 1
+                elements['H'] += Chem.GetAtomHs(self.mol, atom)
 
         formula = ''
-        for el in list(pars.mims.keys()):
+        for el in pars.mims.keys():
             nel = elements[el]
             if nel > 0:
                 formula += el
             if nel > 1:
                 formula += str(nel)
 
-        #get inchi key of fragment
-        fragmentSmiles = Chem.MolFragmentToSmiles(self.mol, atomlist)
-        # fragmentMol = Chem.MolFromSmiles(fragmentSmiles)
-        # fragmentInchi = Chem.MolToInchi(fragmentMol)
-
         return (atomstring,
          atomlist,
          formula,
-         fragmentSmiles
-        )
+         Chem.FragmentToInchiKey(self.mol, atomlist))
 
 
 
