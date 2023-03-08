@@ -71,12 +71,12 @@ class SiteLocator():
     def distance_score(self, scores_unshifted, scores_shifted):
         scores = {}
         for i in range(0, self.molMol.GetNumAtoms()):
-            scores[i] = scores_shifted[i] - scores_unshifted[i]
+            scores[i] = scores_shifted[i] #- scores_unshifted[i]
         
         ## add min of scores to all in scores
         minScore = min(scores.values())
         for i in range(0, self.molMol.GetNumAtoms()):
-            scores[i] += abs(minScore)
+            scores[i] += max(0, -minScore)
         return scores
     
     def accuracy_score(self, modificationSiteIdx):
@@ -114,7 +114,10 @@ class SiteLocator():
         structures = []
         possiblities = self.fragments.find_fragments(peak_weight, 0.1, 0.98, 0.5)
         for possibility in possiblities:
-            structures.append(self.fragments.get_fragment_info(possibility[0], 0)[3])
+            smiles = self.fragments.get_fragment_info(possibility[0], 0)[3]
+            substructure = Chem.MolFromSmiles(smiles, sanitize=False)
+            if self.molMol.HasSubstructMatch(substructure):
+                structures.append(smiles)
         return structures
 
 

@@ -81,20 +81,26 @@ def molToSVG(mol, substructure=None, highlightModificationSites=False):
     Converts a molecule to an SVG image.
     """
     if substructure is not None:
-        hitAtoms, hitBonds = utils.getHitAtomsAndBonds(mol, substructure)
-        if highlightModificationSites:
-            modifications = list(utils.calculateModificationSites(mol, substructure))
+        if (type(substructure) == str):
+            substructure = Chem.MolFromSmarts(substructure)
+        if not mol.HasSubstructMatch(substructure):
             d2d = Chem.Draw.MolDraw2DSVG(250,200)
-            colors = dict()
-            for hitAtom in hitAtoms[0]:
-                if (hitAtom in modifications):
-                    colors[hitAtom] = (0.5,0.5,1)
-                else:
-                    colors[hitAtom] = (1,0.5,0.5)
-            d2d.DrawMolecule(mol,highlightAtoms=hitAtoms[0], highlightBonds=hitBonds[0], highlightAtomColors=colors)
+            d2d.DrawMolecule(mol)
         else:
-            d2d = Chem.Draw.MolDraw2DSVG(250,200)
-            d2d.DrawMolecule(mol,highlightAtoms=hitAtoms[0], highlightBonds=hitBonds[0])
+            hitAtoms, hitBonds = utils.getHitAtomsAndBonds(mol, substructure)
+            if highlightModificationSites:
+                modifications = list(utils.calculateModificationSites(mol, substructure))
+                d2d = Chem.Draw.MolDraw2DSVG(250, 200)
+                colors = dict()
+                for hitAtom in hitAtoms[0]:
+                    if (hitAtom in modifications):
+                        colors[hitAtom] = (0.3, 0.6, 1)
+                    else:
+                        colors[hitAtom] = (1,0.5,0.5)
+                d2d.DrawMolecule(mol,highlightAtoms=hitAtoms[0], highlightBonds=hitBonds[0], highlightAtomColors=colors)
+            else:
+                d2d = Chem.Draw.MolDraw2DSVG(250,200)
+                d2d.DrawMolecule(mol,highlightAtoms=hitAtoms[0], highlightBonds=hitBonds[0])
     else:
         d2d = Chem.Draw.MolDraw2DSVG(250,200)
         d2d.DrawMolecule(mol)

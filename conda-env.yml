@@ -8,6 +8,7 @@ dependencies:
   - requests
   - xlsxwriter
   - prettytable
+  - dash
   - pip
   - pip:
     - cairosvg
