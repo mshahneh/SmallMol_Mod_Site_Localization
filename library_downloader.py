@@ -67,6 +67,9 @@ def calculate_matches(data_dict, weight_threshold = 500, difference_threshold_ra
         
         for j in range(len(data_ids)):
             compound2 = data_ids[j]
+            if data_dict[compound1]['Adduct'] != data_dict[compound2]['Adduct']:
+                continue
+
             try:
                 w2 = float(data_dict[compound2]['Precursor_MZ'])
             except:
