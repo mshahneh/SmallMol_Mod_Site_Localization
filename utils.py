@@ -1,6 +1,7 @@
 import os
 import json
 import requests
+import numpy as np
 
 def calculateModificationSites(mol, substructure, inParent = True):
     """
@@ -37,7 +38,7 @@ def calculateModificationSites(mol, substructure, inParent = True):
                 subMatches = list(matches)
                 idx = subMatches.index(atom)
                 res.add(idx)
-        return res
+        return list(res)
 
 def getHitAtomsAndBonds(mol, substructure):
     """
@@ -121,3 +122,67 @@ def concert_explaind_peaks_string_to_list(peaks_string):
         peak = peak.split(":")
         peaks_list.append((float(peak[0]), peak[1]))
     return peaks_list
+
+
+def filter_peaks_by_intensity(peaks, intensity_ratio_threshold):
+    """
+    Filters the peaks by intensity ratio to the maximum peak.
+    """
+    filtered_peaks = []
+    max_intensity = max([peak[1] for peak in peaks])
+    for peak in peaks:
+        if peak[1] / max_intensity > intensity_ratio_threshold:
+            filtered_peaks.append(peak)
+    return filtered_peaks
+
+def filter_peaks_by_top_k(peaks, k):
+    """
+    Filters the peaks by top k peaks.
+    """
+    k = int(k)
+    filtered_peaks = []
+    peaks.sort(key=lambda x: x[1], reverse=True)
+    for i in range(min(k, len(peaks))):
+        filtered_peaks.append(peaks[i])
+    filtered_peaks.sort(key=lambda x: x[0])
+    return filtered_peaks
+
+def filter_peaks(peaks, method, variable):
+    """
+    Filters the peaks based on the method and variable.
+    """
+    if method == "intensity":
+        return filter_peaks_by_intensity(peaks, variable)
+    elif method == "top_k":
+        return filter_peaks_by_top_k(peaks, variable)
+    else:
+        return peaks
+    
+def convert_to_SpectrumTuple(peaks, precursor_mz, precursor_charge):
+    """
+    Converts the peaks to SpectrumTuple.
+    """
+
+    from alignment import SpectrumTuple
+    res = {}
+    res['precursor_charge'] = precursor_charge
+    res['precursor_mz'] = precursor_mz
+    res['mz'] = []
+    res['intensity'] = []
+    for peak in peaks:
+        res['mz'].append(peak[0])
+        res['intensity'].append(peak[1])
+    
+    maxIntensity = max(res['intensity'])
+    res['intensity'] = [x/maxIntensity for x in res['intensity']]
+    
+    return SpectrumTuple(**res)
+
+def normalize_peaks(peaks):
+    """
+    l2 normalizes the peaks.
+    """
+    # l2 normalize the peaks over the intensity
+    l2_norm = np.linalg.norm([peak[1] for peak in peaks])
+    peaks = [(peak[0], peak[1] / l2_norm) for peak in peaks]
+    return peaks

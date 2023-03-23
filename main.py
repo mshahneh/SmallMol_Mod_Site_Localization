@@ -26,15 +26,10 @@ def sitelocalize(usi1, usi2, smiles1, show_img=True):
     else:
         scores = [0 for x in scores.keys()]
     
+    svg = visualizer.highlightScores(molMol, scores)
+    
     if show_img:
-        fig, ax = plt.subplots(1, figsize=(4,4))
-        d2d = Draw.MolDraw2DSVG(250,200)
-        colors = dict()
-        for i in range(0, molMol.GetNumAtoms()):
-            colors[i] = (1-(scores[i]**2), 1-(scores[i]**2), 1-(scores[i]**2))
-        d2d.DrawMolecule(molMol, highlightAtoms=list(range(molMol.GetNumAtoms())), highlightAtomColors=colors)
-        d2d.FinishDrawing()
-        SVG(d2d.GetDrawingText())
+        SVG(svg)
     
     result = {}
     result["# matched peaks"] = len(modsite.matchedPeaks)
@@ -44,7 +39,7 @@ def sitelocalize(usi1, usi2, smiles1, show_img=True):
     result["usi2"] = usi2
     result["structure1"] = smiles1
     
-    result['image'] = d2d.GetDrawingText()
+    result['image'] = svg
 
     return result
 

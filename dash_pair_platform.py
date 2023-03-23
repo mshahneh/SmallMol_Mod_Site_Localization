@@ -43,35 +43,81 @@ siteLocator = None
 
 app.layout = html.Div(id = 'parent', children = [
         html.Div(id = 'inputs', children = [
-                    dcc.Input(
-            id="USI1",
-            type="text",
-            placeholder="USI1",
-            value = "mzspec:GNPS:TASK-5700dee92610412ea452a4262add2b93-f.MSV000086107/ccms_peak/VVP3-2_EtAc_MeOh.mzML:scan:2303",
-        ),
-                    dcc.Input(
-            id="USI2",
-            type="text",
-            placeholder="USI2 (modified bigger molecule)",
-            value = "mzspec:GNPS:TASK-5700dee92610412ea452a4262add2b93-f.MSV000086107/ccms_peak/VVP77_MeOh.mzML:scan:3024",
-        ),
-                    dcc.Input(
-            id="SMILES1",
-            type="text",
-            placeholder="SMILES1",
-            value = "OC1=CC=CC=C1C2=NC(C3N(C)C(C(O)=O)CS3)CS2",
-        ),
-                    dcc.Input(
-            id="SMILES2",
-            type="text",
-            placeholder="SMILES2 (optional)",
-            value = "OC1=CC=CC=C1C2=NC(C3N(C)C(C(OC)=O)CS3)CS2",
-        ),
+            html.Div(children = [
+                dcc.Input(
+                id="USI1",
+                type="text",
+                placeholder="USI1",
+                value = "mzspec:GNPS:TASK-5700dee92610412ea452a4262add2b93-f.MSV000086107/ccms_peak/VVP3-2_EtAc_MeOh.mzML:scan:2303",
+                style={'width':'23%'}
+            ),
+                        dcc.Input(
+                id="USI2",
+                type="text",
+                placeholder="USI2 (modified bigger molecule)",
+                value = "mzspec:GNPS:TASK-5700dee92610412ea452a4262add2b93-f.MSV000086107/ccms_peak/VVP77_MeOh.mzML:scan:3024",
+                style={'width':'23%'}
+            ),
+                        dcc.Input(
+                id="SMILES1",
+                type="text",
+                placeholder="SMILES1",
+                value = "OC1=CC=CC=C1C2=NC(C3N(C)C(C(O)=O)CS3)CS2",
+                style={'width':'23%'}
+            ),
+                        dcc.Input(
+                id="SMILES2",
+                type="text",
+                placeholder="SMILES2 (optional)",
+                value = "OC1=CC=CC=C1C2=NC(C3N(C)C(C(OC)=O)CS3)CS2",
+                style={'width':'23%'}
+            ),], style = {'display': 'flex', 'flex-direction': 'row', 'flex-wrap': 'wrap', 'justify-content': 'space-around', 'width': '100%', 'height': '5vh'}),
+        html.Div(id = 'arguments', children = [
+            dcc.Checklist(
+                id='options',
+                options=[
+                    {'label': 'presense only', 'value': 'presense'},
+                    {'label': 'subtract unshifted peaks', 'value': 'combine'},
+                    {'label': 'Intensity in score', 'value': 'intensity'},
+            ], labelStyle={'display': 'inline-block', 'margin-right': '1vw'}),
+            dcc.Dropdown(['intensity', 'top_k', 'none'], 'top_k', id='filter_peaks_method'),
+            dcc.Input(
+                id="filter_peaks_variable",
+                type="text",
+                placeholder="filter peaks variable",
+                value = "50",
+                style={'margin-right': '1vw'}
+            ),
+            dcc.Input(
+                id="mz_tolerance",
+                type="text",
+                placeholder="mz_tolerance",
+                value = "0.1",
+            ),
+                dcc.Input(
+                id="ppm",
+                type="text",
+                placeholder="ppm",
+                value = "1.01",
+            )
+        ], style = {'display': 'flex', 'flex-direction': 'row', 'flex-wrap': 'wrap', 'justify-content': 'center', 'width': '100%', 'height': '5vh', 'align-items': 'center', 'margin-top': '1vh'}),
         ]),
         html.Div(id = 'retrive', children = [
             html.Button('Refresh', id='refresh', n_clicks=0),
             html.P(id='retrive_status'),
         ]),
+        html.Div(id = 'score_output', children = [
+            html.P("cosine: "),
+            html.Div(id='cosine'),
+            html.P("Score: ", style = {'margin-left': '2vw'}),
+            html.Div(id='score'),
+            html.P("is Max: ", style = {'margin-left': '2vw'}),
+            html.Div(id='isMax'),
+            html.P("#matches: ", style = {'margin-left': '2vw'}),
+            html.Div(id='matches'),
+            html.P("#shifted: ", style = {'margin-left': '2vw'}),
+            html.Div(id='shifted'),
+        ], style = {'display': 'flex', 'flex-direction': 'row', 'flex-wrap': 'wrap', 'justify-content': 'left', 'width': '100%', 'height': '5vh', 'align-items': 'center', 'margin-top': '1vh'}),
         html.Img(id = 'prediction'),
         html.Img(id = 'substr'),
         #bar chart
@@ -88,33 +134,68 @@ app.layout = html.Div(id = 'parent', children = [
         Output('peaks', 'figure'),
         Output('retrive_status', 'children'),
         Output('siteLocatorObj', 'data'),
+        Output('score', 'children'),
+        Output('isMax', 'children'),
+        Output('cosine', 'children'),
+        Output('matches', 'children'),
+        Output('shifted', 'children'),
     ],
     Input('refresh', 'n_clicks'),
     State('USI1', 'value'),
     State('USI2', 'value'),
     State('SMILES1', 'value'),
     State('SMILES2', 'value'),
+    State('arguments', 'children'),
+    State('options', 'value')
     )
-def update_output(n_clicks, usi1, usi2, smiles1, smiles2):
+def update_output(n_clicks, usi1, usi2, smiles1, smiles2, arguments, options):
+    filter_peaks_method = arguments[1]['props']['value']
+    filter_peaks_variable = float(arguments[2]['props']['value'])
+    mz_tolerance = float(arguments[3]['props']['value'])
+    ppm = float(arguments[4]['props']['value'])
+    presense = False
+    combine = False
+    consider_intensity = False
+    if options is not None:
+        if 'presense' in options:
+            presense = True
+        if 'combine' in options:
+            combine = True
+        if 'intensity' in options:
+            consider_intensity = True
+
+    print(filter_peaks_method, filter_peaks_variable, mz_tolerance, ppm)
+
     if (n_clicks == 0 or n_clicks is None):
         raise PreventUpdate
     
     if (usi1 is None or usi2 is None or smiles1 is None):
-        return None, None, None, "Please enter USI1, USI2, and SMILES1.", None
+        return None, None, None, "Please enter USI1, USI2, and SMILES1.", None, None, None, None, None, None
     
     mol1 = Chem.MolFromSmiles(smiles1)
-    siteLocator = modSite.SiteLocator(usi1, usi2, mol1)
-    if siteLocator.molMeta['precursor_mz'] > siteLocator.modifMeta['precursor_mz']:
+
+    args = {
+        'filter_peaks_method': filter_peaks_method,
+        'filter_peaks_variable': filter_peaks_variable,
+        'mz_tolerance': mz_tolerance,
+        'ppm': ppm,
+    }
+
+    siteLocator = modSite.SiteLocator(usi1, usi2, mol1, args)
+    if siteLocator.molPrecursorMz > siteLocator.modifPrecursorMz:
         return None, None, None, "Not supported, Modified molecule is smaller than the original molecule."
-    scores_unshifted, scores_shifted = siteLocator.calculate_score()
-    scores = siteLocator.distance_score(scores_unshifted, scores_shifted)
-    if (max(scores.values()) > 0):
-        scores = [scores[x] / max(scores.values()) for x in scores.keys()]
-    else:
-        scores = [0 for x in scores.keys()]
+    scores_unshifted, scores_shifted = siteLocator.calculate_score(peak_presence_only = presense, consider_intensity = consider_intensity)
+    scores = siteLocator.distance_score(scores_unshifted, scores_shifted, combine = combine)
     
+    isMax = None
+    score = None
     if (smiles2 is not None and len(smiles2) > 0):
         svg1 = visualizer.molToSVG(Chem.MolFromSmiles(smiles2), mol1, True)
+        modifLoc = utils.calculateModificationSites(Chem.MolFromSmiles(smiles2), mol1, False)
+        print(presense, combine, modifLoc)
+        accuracy_score = siteLocator.accuracy_score(modifLoc[0], peak_presence_only=presense, combine=combine, return_all=True, consider_intensity=consider_intensity)
+        isMax = accuracy_score['isMax']
+        score = accuracy_score['score']
     else:
         svg1 = None
     
@@ -190,7 +271,7 @@ def update_output(n_clicks, usi1, usi2, smiles1, smiles2):
         legend_title="Peak Type",
     )
 
-    return dash_svg(svg1), dash_svg(svg2), fig, "Success", base64.b64encode(pickle.dumps(siteLocator)).decode()  
+    return dash_svg(svg1), dash_svg(svg2), fig, "Success", base64.b64encode(pickle.dumps(siteLocator)).decode(), round(score, 3), isMax, round(siteLocator.cosine, 3), len(siteLocator.matchedPeaks), len(siteLocator.shifted)
 
 ## update debugtext if click on bar chart
 @app.callback(
@@ -225,4 +306,4 @@ def dash_svg(text):
 
 if __name__ == '__main__':
 
-    app.run_server(debug=True )#port=80, host="0.0.0.0")
+    app.run_server(debug = True, port=80, host="0.0.0.0")

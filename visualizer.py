@@ -89,7 +89,7 @@ def molToSVG(mol, substructure=None, highlightModificationSites=False):
         else:
             hitAtoms, hitBonds = utils.getHitAtomsAndBonds(mol, substructure)
             if highlightModificationSites:
-                modifications = list(utils.calculateModificationSites(mol, substructure))
+                modifications = utils.calculateModificationSites(mol, substructure)
                 d2d = Chem.Draw.MolDraw2DSVG(250, 200)
                 colors = dict()
                 for hitAtom in hitAtoms[0]:

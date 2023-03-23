@@ -226,7 +226,7 @@ if __name__ == '__main__':
             modifUsi = utils.generate_usi(m0, data_dict_filtered[m0]['library_membership'])
             molSmiles = data_dict_filtered[m1]['Smiles']
             site = modSite.SiteLocator(molUsi, modifUsi, molSmiles)
-            modifLoc = list(utils.calculateModificationSites(modifMol, molMol, False))
+            modifLoc = utils.calculateModificationSites(modifMol, molMol, False)
             df = pd.concat([df, pd.DataFrame.from_records([{"mol1ID": m0, "mol2ID": m1, "score": site.accuracy_score(modifLoc[0]), 
             "# matched peaks": len(site.matchedPeaks), "# shifted peaks": len(site.shifted), "# unshifted peaks": len(site.unshifted)}])])
         except:
