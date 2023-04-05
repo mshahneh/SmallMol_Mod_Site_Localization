@@ -41,10 +41,8 @@ class SiteLocator():
         cosine, matchedPeaks = _cosine_fast(utils.convert_to_SpectrumTuple(self.molPeaks, self.molPrecursorMz, self.molPrecursorCharge), 
                                             utils.convert_to_SpectrumTuple(self.modifPeaks, self.modifPrecursorMz, self.modifPrecursorCharge),
                                             self.args['mz_tolerance'], True)
-        try:
-            self.cosine = alignment['cosine']
-        except:
-            self.cosine = cosine
+
+        self.cosine = cosine
         self.matchedPeaks = matchedPeaks
 
         if type(mol) == str:
@@ -166,9 +164,9 @@ class SiteLocator():
 
         entropy = 0
         
-        weights_distance = np.exp(-self.distances[modificationSiteIdx] * self.args['distance_decay'])
-        scores_wegihted = np.dot(scores, weights_distance)
-        H_weighted = -np.sum(np.dot(scores_wegihted, np.log(scores)))
+        # weights_distance = np.exp(-self.distances[modificationSiteIdx] * self.args['distance_decay'])
+        # scores_wegihted = np.dot(scores, weights_distance)
+        # H_weighted = -np.sum(np.dot(scores_wegihted, np.log(scores)))
 
 
         

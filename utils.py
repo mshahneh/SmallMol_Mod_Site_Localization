@@ -162,7 +162,7 @@ def convert_to_SpectrumTuple(peaks, precursor_mz, precursor_charge):
     """
     Converts the peaks to SpectrumTuple.
     """
-
+    peaks = normalize_peaks(peaks)
     from alignment import SpectrumTuple
     res = {}
     res['precursor_charge'] = precursor_charge
@@ -172,9 +172,6 @@ def convert_to_SpectrumTuple(peaks, precursor_mz, precursor_charge):
     for peak in peaks:
         res['mz'].append(peak[0])
         res['intensity'].append(peak[1])
-    
-    maxIntensity = max(res['intensity'])
-    res['intensity'] = [x/maxIntensity for x in res['intensity']]
     
     return SpectrumTuple(**res)
 

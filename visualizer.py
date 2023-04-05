@@ -7,6 +7,22 @@ from PIL import Image
 from io import BytesIO
 import cairosvg
 import pandas as pd
+import urllib.parse
+
+def make_url(base_url, USI1=None, USI2=None, SMILES1=None, SMILES2=None, args=None):
+    base_url = "http://localhost:8050"
+    query_params = {k: v for k, v in {
+        "USI1": USI1,
+        "USI2": USI2,
+        "SMILES1": SMILES1,
+        "SMILES2": SMILES2
+    }.items() if v is not None}
+    
+    if args is not None:
+        query_params.update(args)
+
+    url = base_url + "?" + urllib.parse.urlencode(query_params)
+    return url
 
 def table_to_xlsx(data, path):
     """

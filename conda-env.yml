@@ -9,8 +9,10 @@ dependencies:
   - xlsxwriter
   - prettytable
   - dash
+  - numpy
   - pip
   - pip:
     - cairosvg
     - tqdm
     - IPython
+    - furl
