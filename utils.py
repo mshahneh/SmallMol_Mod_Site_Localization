@@ -100,6 +100,11 @@ def getMatchedPeaks(usi1, usi2):
     r = requests.get('https://metabolomics-usi.ucsd.edu/json/mirror/', params=payload,  timeout=5)
     return json.loads(r.text)
 
+def getDataFromUsi(usi):
+    url = 'https://metabolomics-usi.ucsd.edu/json/' + "?usi1=" + usi
+    r = requests.get(url)
+    return json.loads(r.text)
+
 def separateShifted(matchedPeaks, mol1peaks, mol2peaks, eps = 0.1):
     """
     Separates the shifted and unshifted peaks.
