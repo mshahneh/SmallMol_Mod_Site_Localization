@@ -30,13 +30,13 @@ def get_gnps_library(url):
     print ("Number of compounds in the library: " + str(len(data_json)))
     return data_json
 
-def json_to_dict(data_json):
+def json_to_dict(data_json, key = 'spectrum_id'):
     """
     Converts the GNPS library JSON to a python dictionary.
     """
     data_dict = dict()
     for i in range(len(data_json)):
-        data_dict[data_json[i]['spectrum_id']] = data_json[i]
+        data_dict[data_json[i][key]] = data_json[i]
     return data_dict
 
 def calculate_matches(data_dict, weight_threshold = 500, difference_threshold_rate = 0.5):

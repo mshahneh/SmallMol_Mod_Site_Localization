@@ -53,7 +53,7 @@ app.layout = html.Div(id = 'parent', children = [
                 value = "mzspec:GNPS:TASK-5700dee92610412ea452a4262add2b93-f.MSV000086107/ccms_peak/VVP3-2_EtAc_MeOh.mzML:scan:2303",
                 style={'width':'23%'}
             ),
-                        dcc.Input(
+                dcc.Input(
                 id="USI2",
                 type="text",
                 placeholder="USI2 (modified bigger molecule)",
@@ -74,7 +74,24 @@ app.layout = html.Div(id = 'parent', children = [
                 value = "OC1=CC=CC=C1C2=NC(C3N(C)C(C(OC)=O)CS3)CS2",
                 style={'width':'23%'}
             ),], style = {'display': 'flex', 'flex-direction': 'row', 'flex-wrap': 'wrap', 'justify-content': 'space-around', 'width': '100%', 'min-height': '5vh'}),
-        
+            html.Div(children = [
+                    dcc.Input(
+                    id="helperUSI",
+                    type="text",
+                    placeholder="helperUSI",
+                    value = "mzspec:GNPS:GNPS-MSMLS:accession:CCMSLIB00005463927",
+                    style={'width':'23%'}
+                    ),
+                    dcc.Input(
+                    id="helperSMILES",
+                    type="text",
+                    placeholder="helperSMILES",
+                    value = "NCCCCC(O)=O",
+                    style={'width':'23%'}
+                    ),
+                    # html.Button('update', id='updateHelper', n_clicks=0)
+                    ]
+            ),
             html.Div(children = [
                 dcc.Checklist(
                         id='options',
@@ -119,7 +136,7 @@ app.layout = html.Div(id = 'parent', children = [
                 html.Img(id = 'prediction'),
                 html.Img(id = 'substr'),
             ], style = {'display': 'flex', 'flex-direction': 'row', 'justify-content': 'center', 'align-items': 'center'})
-        ],  style = {'display': 'flex', 'flex-direction': 'row', 'justify-content': 'center', 'align-items': 'center'}),
+        ],  style = {'display': 'flex', 'flex-direction': 'row', 'justify-content': 'center', 'align-items': 'center', 'position': 'relative', 'z-index': '2'}),
 
         html.Div(id = "peaks-component", children = [
             dcc.Graph(id='peaks', style = {'width': '100%'}),
@@ -165,7 +182,7 @@ def update_peaks(data, value):
         flag = False
         for j in siteLocator.matchedPeaks:
             if (j[0] == i):
-                if (abs(siteLocator.molPeaks[i][0] - siteLocator.modifPeaks[j[1]][0]) > 0.1):
+                if (abs(siteLocator.molPeaks[i][0] - siteLocator.modifPeaks[j[1]][0]) > siteLocator.args['mz_tolerance']):
                     typesInx['matched_shifted'].append(i)
                 else:
                     typesInx['matched_unshifted'].append(i)
@@ -175,7 +192,7 @@ def update_peaks(data, value):
             typesInx['unmatched'].append(i)
     
     for i in typesInx:
-        x1_ = [round(x1[j], 2) for j in typesInx[i]]
+        x1_ = [round(x1[j], 4) for j in typesInx[i]]
         y1_ = [y1[j] for j in typesInx[i]]
         y1_ = [x / max(y1_) * 100 for x in y1_]
         indicis = typesInx[i]
@@ -197,18 +214,18 @@ def update_peaks(data, value):
         for j in siteLocator.matchedPeaks:
             if (j[1] == i):
                 if (abs(siteLocator.molPeaks[j[0]][0] - siteLocator.modifPeaks[j[1]][0]) > 0.1):
-                    typesInx['matched_shifted'].append(i)
+                    typesInx['matched_shifted'].append([i, j[0]])
                 else:
-                    typesInx['matched_unshifted'].append(i)
+                    typesInx['matched_unshifted'].append([i, j[0]])
                 flag = True
                 break
         if (not flag):
-            typesInx['unmatched'].append(i)
+            typesInx['unmatched'].append([i, -1])
     
 
     for i in typesInx:
-        x1_ = [round(x2[j], 2) for j in typesInx[i]]
-        y2_ = [y2[j] for j in typesInx[i]]
+        x1_ = [round(x2[j[0]], 4) for j in typesInx[i]]
+        y2_ = [y2[j[0]] for j in typesInx[i]]
         y2_ = [-j / max(y2_) * 100 for j in y2_]
         indicis = typesInx[i]
         if (i == 'unmatched'):
@@ -223,7 +240,7 @@ def update_peaks(data, value):
         yaxis_title="intensity",
         legend_title="Peak Type",
     )
-    return fig, {'display': 'flex', 'flex-direction': 'column', 'justify-content': 'center', 'width': '100%', 'align-items': 'center', 'margin-top': '-4vh'}
+    return fig, {'display': 'flex', 'position': 'relative', 'flex-direction': 'column', 'justify-content': 'center', 'width': '100%', 'align-items': 'center', 'margin-top': '-4vh', "z-index": "1"}
 
 
 @app.callback(
@@ -250,6 +267,22 @@ def update_url(n_clicks, usi1, usi2, smiles1, smiles2, arguments, options):
     url = '?USI1=' + usi1 + '&USI2=' + usi2 + '&SMILES1=' + smiles1 + '&SMILES2=' + smiles2 + '&filter_peaks_method=' + filter_peaks_method + '&filter_peaks_variable=' + str(filter_peaks_variable) + '&mz_tolerance=' + str(mz_tolerance) + '&ppm=' + str(ppm) + '&options=' + str(options)
     return url
 
+# @app.callback(
+#     [
+#         Output('siteLocatorObj', 'data'),
+#     ],
+#     Input('update', 'n_clicks'),
+
+#     State('siteLocatorObj', 'data'),
+# )
+# def update_Helper(n_clicks, usi, smiles, siteLocatorObj):
+#     if (n_clicks == 0 or n_clicks is None):
+#         raise PreventUpdate
+#     siteLocator = pickle.loads(base64.b64decode(siteLocatorObj))
+#     siteLocator.helper_molecule(usi, smiles)
+#     return siteLocatorObj
+
+
 
 @app.callback(
     [
@@ -265,9 +298,11 @@ def update_url(n_clicks, usi1, usi2, smiles1, smiles2, arguments, options):
     State('SMILES1', 'value'),
     State('SMILES2', 'value'),
     State('arguments', 'children'),
-    State('options', 'value')
+    State('options', 'value'),
+    State('helperUSI', 'value'),
+    State('helperSMILES' , 'value'),
     )
-def update_output(n_clicks, usi1, usi2, smiles1, smiles2, arguments, options):
+def update_output(n_clicks, usi1, usi2, smiles1, smiles2, arguments, options, helperUSI, helperSMILES):
     if (n_clicks == 0 or n_clicks is None):
         raise PreventUpdate
     print("update_output")
@@ -304,6 +339,8 @@ def update_output(n_clicks, usi1, usi2, smiles1, smiles2, arguments, options):
     }
 
     siteLocator = modSite.SiteLocator(usi1, usi2, mol1, args)
+    if (helperUSI is not None and len(helperUSI) > 0 and helperSMILES is not None and len(helperSMILES) > 0):
+        siteLocator.helper_molecule(helperUSI, helperSMILES)
     if siteLocator.molPrecursorMz > siteLocator.modifPrecursorMz:
         return None, None, None, "Not supported, Modified molecule is smaller than the original molecule."
     scores_unshifted, scores_shifted = siteLocator.calculate_score(peak_presence_only = presense, consider_intensity = consider_intensity)
@@ -318,11 +355,12 @@ def update_output(n_clicks, usi1, usi2, smiles1, smiles2, arguments, options):
         isMax = accuracy_score['isMax']
         score = accuracy_score['score']
         stats =  html.Div([
-            html.P("cosine: " + str(round(siteLocator.cosine, 3)), style = {'margin-left': '2vw'}),
-            html.P("Score: " + str(round(score, 3)), style = {'margin-left': '2vw'}),
-            html.P("is Max: " + str(isMax), style = {'margin-left': '2vw'}),
-            html.P("#matches: " + str(len(siteLocator.matchedPeaks)), style = {'margin-left': '2vw'}),
-            html.P("#shifted: " + str(len(siteLocator.shifted)), style = {'margin-left': '2vw'}),
+            html.P("cosine: " + str(round(siteLocator.cosine, 4)), style = {'margin-left': '1.5vw'}),
+            html.P("Score: " + str(round(score, 4)), style = {'margin-left': '1.5vw'}),
+            html.P("is Max: " + str(isMax), style = {'margin-left': '1.5vw'}),
+            html.P("#matches: " + str(len(siteLocator.matchedPeaks)), style = {'margin-left': '1.5vw'}),
+            html.P("#shifted: " + str(len(siteLocator.shifted)), style = {'margin-left': '1.5vw'}),
+            html.P("delta w:" + str(round(abs(siteLocator.molPrecursorMz - siteLocator.modifPrecursorMz), 4)), style = {'margin-left': '1.5vw'}),
         ], style = {'display': 'flex', 'flex-direction': 'row', 'flex-wrap': 'wrap', 'justify-content': 'left', 'width': '100%', 'height': '5vh', 'align-items': 'center', 'margin-top': '1vh'})
     else:
         svg1 = None
@@ -349,13 +387,18 @@ def display_click_data(clickData, siteLocatorObj):
     if clickData:
         try:
             siteLocator = pickle.loads(base64.b64decode(siteLocatorObj))
-            structures = siteLocator.get_structures_per_peak(float(clickData['points'][0]['x']))
+            structures, result_posibility_indicies = siteLocator.get_structures_per_peak(float(clickData['points'][0]['x']))
             res = []
-            for structure in structures:
-                svg = dash_svg(visualizer.molToSVG(siteLocator.molMol, Chem.MolFromSmiles(structure, sanitize=False)))
+            # for structure in structures:
+            #     svg = dash_svg(visualizer.molToSVG(siteLocator.molMol, Chem.MolFromSmiles(structure, sanitize=False)))
+            #     res.append(html.Img(src=svg, style={'width': '300px'}))
+            
+            print ("debugging in display click data", result_posibility_indicies)
+            for posibility_index in result_posibility_indicies:
+                svg = dash_svg(visualizer.highlightMolIndices(siteLocator.molMol, posibility_index))
                 res.append(html.Img(src=svg, style={'width': '300px'}))
+            
             return res
-                
         except:
             return "siteLocator object not found"
     return None
@@ -405,5 +448,4 @@ def dash_svg(text):
         return None
 
 if __name__ == '__main__':
-
     app.run_server(debug = True)#, port=80, host="0.0.0.0")

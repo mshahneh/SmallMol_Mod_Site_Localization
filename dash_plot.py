@@ -124,7 +124,7 @@ def update_graphs(active_rows, local_df):
                 typesInx['unmatched'].append(i)
         
         for i in typesInx:
-            x1_ = [round(x1[j], 2) for j in typesInx[i]]
+            x1_ = [round(x1[j], 4) for j in typesInx[i]]
             y1_ = [y1[j] for j in typesInx[i]]
             y1_ = [x / max(y1_)*100 for x in y1_]
             fig.add_trace(go.Bar(x=x1_, y=y1_, name=i, width=2))
@@ -139,7 +139,7 @@ def update_graphs(active_rows, local_df):
 
         # get index of top 10 peaks in y2
         topPeaksInx = sorted(range(len(y2)), key=lambda i: y2[i])[-topPeakCount:]
-        x2 = [round(x2[i], 2) for i in topPeaksInx]
+        x2 = [round(x2[i], 4) for i in topPeaksInx]
         y2 = [y2[i] for i in topPeaksInx]
         y2 = [-x / max(y2)*100 for x in y2]
         print(x1, y1, x2, y2)

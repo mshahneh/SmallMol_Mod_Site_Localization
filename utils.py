@@ -81,29 +81,7 @@ def getHitAtomsAndBonds(mol, substructure):
     return hitAtoms, hitBonds
 
 
-def generate_usi(id, library_membership):
-    return "mzspec:GNPS:" + library_membership + ":accession:" + id
 
-def getMatchedPeaks(usi1, usi2):
-    payload = {
-        'usi1': usi1,
-        'usi2': usi2,
-     'mz_min': 'None',
-     'mz_max':'None',
-     'annotate_precision': '2',
-     'annotation_rotation':'45',
-     'max_intensity': '50',
-     'cosine':'shifted',
-     'fragment_mz_tolerance':'0.1',
-    #  'annotate_peaks': 'value3',
-      'grid': 'True'}
-    r = requests.get('https://metabolomics-usi.ucsd.edu/json/mirror/', params=payload,  timeout=5)
-    return json.loads(r.text)
-
-def getDataFromUsi(usi):
-    url = 'https://metabolomics-usi.ucsd.edu/json/' + "?usi1=" + usi
-    r = requests.get(url)
-    return json.loads(r.text)
 
 def separateShifted(matchedPeaks, mol1peaks, mol2peaks, eps = 0.1):
     """
@@ -118,7 +96,7 @@ def separateShifted(matchedPeaks, mol1peaks, mol2peaks, eps = 0.1):
             unshifted.append(peak)
     return shifted, unshifted
 
-def concert_explaind_peaks_string_to_list(peaks_string):
+def peaks_string_to_list(peaks_string):
     """
     Converts the explained peaks string to a list of tuples.
     """
@@ -138,6 +116,8 @@ def filter_peaks_by_intensity(peaks, intensity_ratio_threshold):
     for peak in peaks:
         if peak[1] / max_intensity > intensity_ratio_threshold:
             filtered_peaks.append(peak)
+    filtered_peaks.sort(key=lambda x: x[0])
+    peaks = filtered_peaks
     return filtered_peaks
 
 def filter_peaks_by_top_k(peaks, k):
@@ -150,19 +130,23 @@ def filter_peaks_by_top_k(peaks, k):
     for i in range(min(k, len(peaks))):
         filtered_peaks.append(peaks[i])
     filtered_peaks.sort(key=lambda x: x[0])
+    peaks = filtered_peaks
     return filtered_peaks
 
 def filter_peaks(peaks, method, variable):
     """
     Filters the peaks based on the method and variable.
     """
+    import copy
+    tempPeaks = copy.deepcopy(peaks)
     if method == "intensity":
-        return filter_peaks_by_intensity(peaks, variable)
+        return filter_peaks_by_intensity(tempPeaks, variable)
     elif method == "top_k":
-        return filter_peaks_by_top_k(peaks, variable)
+        return filter_peaks_by_top_k(tempPeaks, variable)
     else:
-        return peaks
-    
+        return tempPeaks
+
+
 def convert_to_SpectrumTuple(peaks, precursor_mz, precursor_charge):
     """
     Converts the peaks to SpectrumTuple.
@@ -179,6 +163,18 @@ def convert_to_SpectrumTuple(peaks, precursor_mz, precursor_charge):
         res['intensity'].append(peak[1])
     
     return SpectrumTuple(**res)
+
+def SpectrumTuple_to_dict(spectrum_tuple):
+    """
+    Converts the SpectrumTuple to a dictionary.
+    """
+    res = {}
+    res['precursor_charge'] = spectrum_tuple.precursor_charge
+    res['precursor_mz'] = spectrum_tuple.precursor_mz
+    res['peaks'] = []
+    for i in range(len(spectrum_tuple.mz)):
+        res['peaks'].append((spectrum_tuple.mz[i], spectrum_tuple.intensity[i]))
+    return res
 
 def normalize_peaks(peaks):
     """

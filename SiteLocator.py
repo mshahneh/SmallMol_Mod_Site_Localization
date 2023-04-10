@@ -1,9 +1,10 @@
 import utils as utils
 import visualizer
 import numpy as np
+import copy
 from rdkit import Chem
 import fragmentation_py as fragmentation_py
-from alignment import _cosine_fast
+from alignment import _cosine_fast, SpectrumTuple, handle_alignment
 
 
 class SiteLocator():
@@ -20,30 +21,24 @@ class SiteLocator():
             'distance_decay': 0.1,
         }
         self.args.update(args)
+        print (self.args)
 
-        if type(molData) != type(modifData):
-            raise Exception('molData and modifData must be of the same type')
-        if type(molData) == str:
-            molUsi = molData
-            modifUsi = modifData
-            alignment = utils.getMatchedPeaks(molUsi, modifUsi)
-            molData = alignment['spectrum1']
-            modifData = alignment['spectrum2']
-            
+        res = handle_alignment(molData, modifData, self.args)
+        molData = res['molData']
+        modifData = res['modifData']
+        
+        
+        self.cosine = res['cosine']
+        self.matchedPeaks = res['matchedPeaks']
+        self.molData = molData
+        self.modifData = modifData   
 
         self.molPrecursorMz = molData['precursor_mz']
         self.molPrecursorCharge = molData['precursor_charge']
         self.modifPrecursorMz = modifData['precursor_mz']
         self.modifPrecursorCharge = modifData['precursor_charge']
-        self.molPeaks = utils.filter_peaks(molData['peaks'], self.args['filter_peaks_method'], self.args['filter_peaks_variable'])
-        self.modifPeaks = utils.filter_peaks(modifData['peaks'], self.args['filter_peaks_method'], self.args['filter_peaks_variable'])
-        
-        cosine, matchedPeaks = _cosine_fast(utils.convert_to_SpectrumTuple(self.molPeaks, self.molPrecursorMz, self.molPrecursorCharge), 
-                                            utils.convert_to_SpectrumTuple(self.modifPeaks, self.modifPrecursorMz, self.modifPrecursorCharge),
-                                            self.args['mz_tolerance'], True)
-
-        self.cosine = cosine
-        self.matchedPeaks = matchedPeaks
+        self.molPeaks = molData['peaks']
+        self.modifPeaks = modifData['peaks']
 
         if type(mol) == str:
             self.molMol = Chem.MolFromSmiles(mol)
@@ -60,6 +55,82 @@ class SiteLocator():
         self.unshifted = unshifted # list of tuples (molPeakIndex, modifPeakIndex) of matched unshifted peaks
         self.appearance_shifted = None # dictionary of lists of shifted peak fragments for each atom
         self.appearance_unshifted = None # dictionary of lists of unshifted peak fragments for each atom
+
+        self.mol_filtered_annotations = dict()
+
+    def update_filtered_annotations(self, peak, fragments):
+        if fragments is None or len(fragments) == 0:
+            # remove peak from self.mol_filtered_annotations
+            self.mol_filtered_annotations.pop(peak, None)
+            return
+        
+        if peak in self.mol_filtered_annotations:
+            # intersection of the two lists
+            self.mol_filtered_annotations[peak] = list(set(self.mol_filtered_annotations[peak]) & set(fragments))
+        else:
+            self.mol_filtered_annotations[peak] = fragments
+    
+    def helper_molecule(self, helperMolData, helperMolStruct):
+
+        res = handle_alignment(self.molData, helperMolData, self.args)
+        helperMolData = res['modifData']
+        if type(helperMolStruct) == str:
+            helperMolStruct = Chem.MolFromSmiles(helperMolStruct)
+        
+        if not self.molMol.HasSubstructMatch(helperMolStruct) or not helperMolStruct.HasSubstructMatch(self.molMol):
+            print("helper molecule is not a substructure of the main molecule")
+            return
+
+        matechedPeaks = res['matchedPeaks']
+        shifted, unshifted = utils.separateShifted(matechedPeaks, self.molPeaks, helperMolData['peaks'])
+        helperFrag = fragmentation_py.FragmentEngine(Chem.MolToMolBlock(helperMolStruct), 2, 2, 1, 0, 0)
+        helperFrag.generate_fragments()
+
+        for peak in unshifted:
+            ## update self.mol_filtered_annotations
+            # only annotations that are in both molecules
+            molAnnotations = self.fragments.find_fragments(self.molPeaks[peak[0]][0], 0.1, self.args['ppm'], self.args['mz_tolerance'])
+            helperAnnotations = helperFrag.find_fragments(helperMolData['peaks'][peak[1]][0], 0.1, self.args['ppm'], self.args['mz_tolerance'])
+            posibilities = set()
+            flag = False
+            for molAnnotation in molAnnotations:
+                for helperAnnotation in helperAnnotations:
+                    molSubSmiles = self.fragments.get_fragment_info(molAnnotation[0], 0)[3]
+                    helperSubSmiles = helperFrag.get_fragment_info(helperAnnotation[0], 0)[3]
+                    if Chem.CanonSmiles(molSubSmiles) == Chem.CanonSmiles(helperSubSmiles):
+                        posibilities.add(molAnnotation[0])
+                        flag = True
+                        break
+                if not flag:
+                    print("there wasn't any match for this peak", peak, molAnnotation)
+            
+            # print ("unshi", peak, posibilities, molAnnotations, helperAnnotations)
+            self.update_filtered_annotations(peak[0], posibilities)
+
+        for peak in shifted:
+            ## update self.mol_filtered_annotations
+            # check annotations for each peak to see if they contain the modification site
+            molAnnotations = self.fragments.find_fragments(self.molPeaks[peak[0]][0], 0.1, self.args['ppm'], self.args['mz_tolerance'])
+            helperAnnotations = helperFrag.find_fragments(helperMolData['peaks'][peak[1]][0], 0.1, self.args['ppm'], self.args['mz_tolerance'])
+            posibilities = set()
+            for molAnnotation in molAnnotations:
+                for helperAnnotation in helperAnnotations:
+                    molSubSmiles = self.fragments.get_fragment_info(molAnnotation[0], 0)[3]
+                    helperSubSmiles = helperFrag.get_fragment_info(helperAnnotation[0], 0)[3]
+                    molSubStruct = Chem.MolFromSmiles(molSubSmiles)
+                    helperSubStruct = Chem.MolFromSmiles(helperSubSmiles)
+                    if self.molPrecursorMz < helperMolData['precursor_mz']:
+                        if helperSubStruct.HasSubstructMatch(molSubStruct):# and not self.molMol.HasSubstructMatch(helperSubStruct):
+                            posibilities.add(molAnnotation[0])
+                            break
+                    else:
+                        if molSubStruct.HasSubstructMatch(helperSubStruct):# and not helperMolStruct.HasSubstructMatch(molSubStruct):
+                            posibilities.add(molAnnotation[0])
+                            break
+            
+            # print ("shifted", peak, posibilities, res['modifData']['peaks'][peak[0]][0], helperMolData['peaks'][peak[1]][0])
+            self.update_filtered_annotations(peak[0], posibilities)
+
     
     def calculate_score(self, peak_presence_only = False, consider_intensity = False):
         self.appearance_shifted = {i: [] for i in range(0, self.molMol.GetNumAtoms())}
@@ -74,21 +145,23 @@ class SiteLocator():
 
         for peak in unshifted:
             atom_presence = set()
-            possiblities = self.fragments.find_fragments(self.molPeaks[peak[0]][0], 0.1, self.args['ppm'], self.args['mz_tolerance'])
+            if peak[0] in self.mol_filtered_annotations:
+                possiblities = list(self.mol_filtered_annotations[peak[0]])
+            else:
+                possiblities = self.fragments.find_fragments(self.molPeaks[peak[0]][0], 0.1, self.args['ppm'], self.args['mz_tolerance'])
+                possiblities = set([x[0] for x in possiblities])
+            
             for possibility in possiblities:
-                smiles = self.fragments.get_fragment_info(possibility[0], 0)[3]
-                substructure = Chem.MolFromSmiles(smiles, sanitize=False)
-                hitAtoms, hitBonds = utils.getHitAtomsAndBonds(self.molMol, substructure)
-                for atomSet in hitAtoms:
-                    for atom in atomSet:
-                        atom_presence.add(atom)
-                        self.appearance_unshifted[atom].append(possibility[0])
-                        
-                        if not peak_presence_only:
-                            if consider_intensity:
-                                scores_unshifted[atom] += self.molPeaks[peak[0]][1]/max_intensity
-                            else:
-                                scores_unshifted[atom] += 1
+                hitAtoms = self.fragments.get_fragment_info(possibility, 0)[1]
+                for atom in hitAtoms:
+                    atom_presence.add(atom)
+                    self.appearance_unshifted[atom].append(possibility)
+                    
+                    if not peak_presence_only:
+                        if consider_intensity:
+                            scores_unshifted[atom] += self.molPeaks[peak[0]][1]/max_intensity
+                        else:
+                            scores_unshifted[atom] += 1
             
             if peak_presence_only:
                 for atom in atom_presence:
@@ -99,21 +172,25 @@ class SiteLocator():
             
         for peak in shifted:
             atom_presence = set()
-            possiblities = self.fragments.find_fragments(self.molPeaks[peak[0]][0], 0.1, self.args['ppm'], self.args['mz_tolerance'])
-            for possibility in possiblities:
-                smiles = self.fragments.get_fragment_info(possibility[0], 0)[3]
-                substructure = Chem.MolFromSmiles(smiles, sanitize=False)
-                hitAtoms, hitBonds = utils.getHitAtomsAndBonds(self.molMol, substructure)
-                for atomSet in hitAtoms:
-                    for atom in atomSet:
-                        atom_presence.add(atom)
-                        self.appearance_shifted[atom].append(possibility[0])
+            if peak[0] in self.mol_filtered_annotations:
+                possiblities = list(self.mol_filtered_annotations[peak[0]])
+            else:
+                possiblities = self.fragments.find_fragments(self.molPeaks[peak[0]][0], 0.1, self.args['ppm'], self.args['mz_tolerance'])
+                possiblities = set([x[0] for x in possiblities])
 
-                        if not peak_presence_only:
-                            if consider_intensity:
-                                scores_shifted[atom] += self.molPeaks[peak[0]][1] / max_intensity
-                            else:
-                                scores_shifted[atom] += 1
+            for possibility in possiblities:
+                smiles = self.fragments.get_fragment_info(possibility, 0)[3]
+                substructure = Chem.MolFromSmiles(smiles, sanitize=False)
+                hitAtoms = self.fragments.get_fragment_info(possibility, 0)[1]
+                for atom in hitAtoms:
+                    atom_presence.add(atom)
+                    self.appearance_shifted[atom].append(possibility)
+
+                    if not peak_presence_only:
+                        if consider_intensity:
+                            scores_shifted[atom] += self.molPeaks[peak[0]][1] / max_intensity
+                        else:
+                            scores_shifted[atom] += 1
             
             if peak_presence_only:
                 for atom in atom_presence:
@@ -137,56 +214,51 @@ class SiteLocator():
 
         return scores
     
-    def accuracy_score(self, modificationSiteIdx, peak_presence_only = False, combine = False, return_all = False, consider_intensity = False):
-        
-        scores_unshifted, scores_shifted = self.calculate_score(peak_presence_only, consider_intensity)
-        scores = self.distance_score( scores_unshifted, scores_shifted, combine)
 
-        maxScore = max(scores)
+    def tempScore(self, modificationSiteIdx, preds, return_all = False):
+        
+        maxScore = max(preds)
         if maxScore == 0:
             if return_all:
                 return {'score': 0, 'count': 0, 'isMax': 0, 'closestMaxAtomDistance': 0}
             else:
                 return 0
-        
+    
+
         for i in range(self.molMol.GetNumAtoms()):
-            if scores[i] < self.args['min_score_ratio'] * maxScore:
-                scores[i] = 0
-
-        scores /= np.sum(scores)
-        maxScore = max(scores)
-        
-        closestMaxAtomIndx = 0
-        localDistances = 0
-        count = 0
+            if preds[i] < self.args['min_score_ratio'] * maxScore:
+                preds[i] = 0
+        preds /= np.sum(preds)
+        maxScore = max(preds)
         graphDiameter = np.amax(self.distances)
-
-
-        entropy = 0
-        
-        # weights_distance = np.exp(-self.distances[modificationSiteIdx] * self.args['distance_decay'])
-        # scores_wegihted = np.dot(scores, weights_distance)
-        # H_weighted = -np.sum(np.dot(scores_wegihted, np.log(scores)))
-
-
-        
-
-        for i in range(0, self.molMol.GetNumAtoms()):
-            if scores[i] > 0:
+        count = 0
+        localDistances = 0
+        closestMaxAtomIndx = 0
+        # print("DUAAAM", graphDiameter, self.molMol.GetNumAtoms())
+        for i in range(self.molMol.GetNumAtoms()):
+            if preds[i] > 0:
+                # print("in if")
                 count += 1
-                localDistances += (self.distances[modificationSiteIdx][i]/graphDiameter) * scores[i]/maxScore
-                if scores[i] == maxScore and self.distances[modificationSiteIdx][i] < self.distances[modificationSiteIdx][closestMaxAtomIndx]:
+
+                # print("ASD", self.distances[modificationSiteIdx][i])
+                localDistances += (self.distances[modificationSiteIdx][i]/graphDiameter) * preds[i]/maxScore
+                if preds[i] == maxScore and self.distances[modificationSiteIdx][i] < self.distances[modificationSiteIdx][closestMaxAtomIndx]:
                     closestMaxAtomIndx = i
         
         if return_all:
             res = {'score': 1 - (localDistances/count)}
             res['count'] = count
-            res['isMax'] = 1 if scores[modificationSiteIdx] == maxScore else 0
+            res['isMax'] = 1 if preds[modificationSiteIdx] == maxScore else 0
             res['closestMaxAtomDistance'] = self.distances[modificationSiteIdx][closestMaxAtomIndx]
         else:
             res = 1 - (localDistances/count)
         
         return res
+
+    def accuracy_score(self, modificationSiteIdx, peak_presence_only = False, combine = False, return_all = False, consider_intensity = False):
+        scores_unshifted, scores_shifted = self.calculate_score(peak_presence_only, consider_intensity)
+        scores = self.distance_score(scores_unshifted, scores_shifted, combine)
+        return self.tempScore(modificationSiteIdx, scores, return_all)
     
     def get_peaks_per_atom(self, atomIdx):
         return self.appearance_shifted[atomIdx], self.appearance_unshifted[atomIdx]
@@ -201,16 +273,39 @@ class SiteLocator():
         return structures_shifted, structures_unshifted
 
     def get_structures_per_peak(self, peak_weight, mz_precision_abs = 0.05):
-        structures = []
-        possiblities = self.fragments.find_fragments(peak_weight, 0.1, 1, mz_precision_abs)
+        # start debugging
+        print ("debugging", peak_weight)
+        possiblities = self.fragments.find_fragments(peak_weight, 0.1, self.args['ppm'], self.args['mz_tolerance'])
         for possibility in possiblities:
-            smiles = self.fragments.get_fragment_info(possibility[0], 0)[3]
+            print("debugging", possibility, self.fragments.get_fragment_info(possibility[0], 0))
+
+        # end debugging
+        structures = []
+        result_posibility_indicies = []
+        ind = -1
+        for i in range(len(self.molPeaks)):
+            if abs(round(self.molPeaks[i][0], 4) - peak_weight) < 0.00001:
+                ind = i
+        print("ind", ind)
+        print(self.mol_filtered_annotations)
+        if ind in self.mol_filtered_annotations:
+            print("filtered", ind, self.mol_filtered_annotations[ind])
+            possiblities = list(self.mol_filtered_annotations[ind])
+        else:
+            possiblities = self.fragments.find_fragments(peak_weight, 0.1, self.args['ppm'], self.args['mz_tolerance'])
+            possiblities = set([x[0] for x in possiblities])
+        print("get_structures_per_peak", possiblities)
+        for possibility in possiblities:
+            print(self.fragments.get_fragment_info(possibility, 0))
+            smiles = self.fragments.get_fragment_info(possibility, 0)[3]
+            posibility_indices = self.fragments.get_fragment_info(possibility, 0)[1]
             substructure = Chem.MolFromSmiles(smiles, sanitize=False)
             if self.molMol.HasSubstructMatch(substructure):
                 structures.append(smiles)
+                result_posibility_indicies.append(posibility_indices)
             else:
                 print("Error handling substructure, no match found: ", smiles, "")
-        return structures
+        return structures, result_posibility_indicies
 
 
 

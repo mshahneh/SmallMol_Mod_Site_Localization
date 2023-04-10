@@ -9,8 +9,7 @@ import cairosvg
 import pandas as pd
 import urllib.parse
 
-def make_url(base_url, USI1=None, USI2=None, SMILES1=None, SMILES2=None, args=None):
-    base_url = "http://localhost:8050"
+def make_url(base_url = "http://localhost:8050/", USI1=None, USI2=None, SMILES1=None, SMILES2=None, args=None):
     query_params = {k: v for k, v in {
         "USI1": USI1,
         "USI2": USI2,
@@ -129,5 +128,16 @@ def highlightScores(mol, scores):
     for i in range(0, mol.GetNumAtoms()):
         colors[i] = (1-(scores[i]**2), 1-(scores[i]**2), 1-(scores[i]**2))
     d2d.DrawMolecule(mol, highlightAtoms=list(range(mol.GetNumAtoms())), highlightAtomColors=colors)
+    d2d.FinishDrawing()
+    return d2d.GetDrawingText()
+
+def highlightMolIndices(mol, hitAtoms):
+    d2d = Draw.MolDraw2DSVG(250,200)
+    hitBonds = []
+    for bond in mol.GetBonds():
+        if bond.GetBeginAtomIdx() in hitAtoms and bond.GetEndAtomIdx() in hitAtoms:
+            hitBonds.append(bond.GetIdx())
+    d2d = Chem.Draw.MolDraw2DSVG(250,200)
+    d2d.DrawMolecule(mol,highlightAtoms=hitAtoms, highlightBonds=hitBonds)
     d2d.FinishDrawing()
     return d2d.GetDrawingText()
