@@ -16,3 +16,4 @@ dependencies:
     - tqdm
     - IPython
     - furl
+    - dash_daq

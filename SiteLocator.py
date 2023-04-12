@@ -17,8 +17,6 @@ class SiteLocator():
             'filter_peaks_variable': 50,
             'mz_tolerance': 0.05,
             'ppm': 1.01,
-            'min_score_ratio': 0.5,
-            'distance_decay': 0.1,
         }
         self.args.update(args)
         print (self.args)
@@ -132,7 +130,7 @@ class SiteLocator():
             self.update_filtered_annotations(peak[0], posibilities)
 
     
-    def calculate_score(self, peak_presence_only = False, consider_intensity = False):
+    def calculate_score(self, peak_presence_only = False, consider_intensity = False, modificationSite = None):
         self.appearance_shifted = {i: [] for i in range(0, self.molMol.GetNumAtoms())}
         self.appearance_unshifted = {i: [] for i in range(0, self.molMol.GetNumAtoms())}
 
@@ -182,15 +180,16 @@ class SiteLocator():
                 smiles = self.fragments.get_fragment_info(possibility, 0)[3]
                 substructure = Chem.MolFromSmiles(smiles, sanitize=False)
                 hitAtoms = self.fragments.get_fragment_info(possibility, 0)[1]
-                for atom in hitAtoms:
-                    atom_presence.add(atom)
-                    self.appearance_shifted[atom].append(possibility)
+                if modificationSite is None or modificationSite in hitAtoms:
+                    for atom in hitAtoms:
+                        atom_presence.add(atom)
+                        self.appearance_shifted[atom].append(possibility)
 
-                    if not peak_presence_only:
-                        if consider_intensity:
-                            scores_shifted[atom] += self.molPeaks[peak[0]][1] / max_intensity
-                        else:
-                            scores_shifted[atom] += 1
+                        if not peak_presence_only:
+                            if consider_intensity:
+                                scores_shifted[atom] += self.molPeaks[peak[0]][1] / max_intensity
+                            else:
+                                scores_shifted[atom] += 1
             
             if peak_presence_only:
                 for atom in atom_presence:
@@ -226,7 +225,7 @@ class SiteLocator():
     
 
         for i in range(self.molMol.GetNumAtoms()):
-            if preds[i] < self.args['min_score_ratio'] * maxScore:
+            if preds[i] < 0/5 * maxScore:
                 preds[i] = 0
         preds /= np.sum(preds)
         maxScore = max(preds)
@@ -257,6 +256,11 @@ class SiteLocator():
 
     def accuracy_score(self, modificationSiteIdx, peak_presence_only = False, combine = False, return_all = False, consider_intensity = False):
         scores_unshifted, scores_shifted = self.calculate_score(peak_presence_only, consider_intensity)
+        scores = self.distance_score(scores_unshifted, scores_shifted, combine)
+        return self.tempScore(modificationSiteIdx, scores, return_all)
+    
+    def get_max_possible_score(self, modificationSiteIdx, peak_presence_only = False, combine = False, return_all = False, consider_intensity = False):
+        scores_unshifted, scores_shifted = self.calculate_score(peak_presence_only, consider_intensity, modificationSite=modificationSiteIdx)
         scores = self.distance_score(scores_unshifted, scores_shifted, combine)
         return self.tempScore(modificationSiteIdx, scores, return_all)
     

@@ -3,6 +3,7 @@ from typing import List, Tuple
 import collections
 import utils as utils
 import handle_network as hn
+import json
 
 SpectrumTuple = collections.namedtuple(
     "SpectrumTuple", ["precursor_mz", "precursor_charge", "mz", "intensity"]
@@ -106,6 +107,9 @@ def handle_dict(molData):
     """
     Handles the case where molData and modifData are dicts
     """
+    molData['peaks'] = json.loads(molData['peaks_json'])
+    molData['precursor_mz'] = float(molData['Precursor_MZ'])
+    molData['precursor_charge'] = int(molData['Charge'])
     return molData
 
 
@@ -132,6 +136,7 @@ def handle_alignment(molData, modifData, args={'filter_peaks_method':"top_k", 'f
     else:
         raise TypeError("modifData must be of type str, SpectrumTuple, or dict")
     
+    print (molData['peaks'])
     temp1 = utils.filter_peaks(molData['peaks'], args['filter_peaks_method'], args['filter_peaks_variable'])
     molData['peaks'] = temp1
     modifData['peaks'] = utils.filter_peaks(modifData['peaks'], args['filter_peaks_method'], args['filter_peaks_variable'])
