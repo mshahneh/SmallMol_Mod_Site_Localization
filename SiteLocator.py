@@ -8,7 +8,7 @@ from alignment import _cosine_fast, SpectrumTuple, handle_alignment
 
 
 class SiteLocator():
-    def __init__(self, molData, modifData, mol, args = {}):
+    def __init__(self, molData, modifData, mol, args = {}, verbose = 0):
 
         # set default arguments
         self.args = {
@@ -19,7 +19,7 @@ class SiteLocator():
             'ppm': 1.01,
         }
         self.args.update(args)
-        print (self.args)
+        self.verbose = verbose
 
         res = handle_alignment(molData, modifData, self.args)
         molData = res['molData']
@@ -64,20 +64,45 @@ class SiteLocator():
         
         if peak in self.mol_filtered_annotations:
             # intersection of the two lists
-            self.mol_filtered_annotations[peak] = list(set(self.mol_filtered_annotations[peak]) & set(fragments))
+            self.mol_filtered_annotations[peak] = set(self.mol_filtered_annotations[peak]) & set(fragments)
         else:
             self.mol_filtered_annotations[peak] = fragments
     
-    def helper_molecule(self, helperMolData, helperMolStruct):
+    def helper_molecule(self, helperMolData, helperMolStruct, Sirius = None):
+        def binary_search_fragments(fragments, search_mz, threshold):
+            # Binary search implementation
+            left = 0
+            right = len(fragments)
 
+            while left < right:
+                mid = (left + right) // 2
+                mz = fragments[mid]['mz']
+                # print (left, right, mid, mz, search_mz)
+                diff = abs(mz - search_mz)
+                if right - left == 1:
+                    if diff <= threshold:
+                        return left
+                    else:
+                        return -1
+                elif mz >= search_mz:
+                    left = mid
+                else:
+                    right = mid
+
+            return -1  # Return -1 if fragment not found
+        
         res = handle_alignment(self.molData, helperMolData, self.args)
         helperMolData = res['modifData']
         if type(helperMolStruct) == str:
             helperMolStruct = Chem.MolFromSmiles(helperMolStruct)
         
-        if not self.molMol.HasSubstructMatch(helperMolStruct) or not helperMolStruct.HasSubstructMatch(self.molMol):
-            print("helper molecule is not a substructure of the main molecule")
-            return
+        if not self.molMol.HasSubstructMatch(helperMolStruct) and not helperMolStruct.HasSubstructMatch(self.molMol):
+            if self.verbose > 0:
+                print("helper molecule is not a substructure of the main molecule")
+            return 0
+        
+
+        countUpdated = 0
 
         matechedPeaks = res['matchedPeaks']
         shifted, unshifted = utils.separateShifted(matechedPeaks, self.molPeaks, helperMolData['peaks'])
@@ -85,49 +110,121 @@ class SiteLocator():
         helperFrag.generate_fragments()
 
         for peak in unshifted:
-            ## update self.mol_filtered_annotations
-            # only annotations that are in both molecules
             molAnnotations = self.fragments.find_fragments(self.molPeaks[peak[0]][0], 0.1, self.args['ppm'], self.args['mz_tolerance'])
-            helperAnnotations = helperFrag.find_fragments(helperMolData['peaks'][peak[1]][0], 0.1, self.args['ppm'], self.args['mz_tolerance'])
-            posibilities = set()
+            index = binary_search_fragments(Sirius['fragments'], helperMolData['peaks'][peak[1]][0], self.args['mz_tolerance'])
+            if index == -1:
+                continue
+            helperPeakFormula = Sirius['fragments'][index]['molecularFormula']
+            possibilites = set()
             flag = False
             for molAnnotation in molAnnotations:
-                for helperAnnotation in helperAnnotations:
-                    molSubSmiles = self.fragments.get_fragment_info(molAnnotation[0], 0)[3]
-                    helperSubSmiles = helperFrag.get_fragment_info(helperAnnotation[0], 0)[3]
-                    if Chem.CanonSmiles(molSubSmiles) == Chem.CanonSmiles(helperSubSmiles):
-                        posibilities.add(molAnnotation[0])
-                        flag = True
-                        break
-                if not flag:
-                    print("there wasn't any match for this peak", peak, molAnnotation)
+                molSubFormula = self.fragments.get_fragment_info(molAnnotation[0], 0)[2]
+                if utils.is_submolecule(molSubFormula,helperPeakFormula) and utils.is_submolecule(helperPeakFormula, molSubFormula):
+                    possibilites.add(molAnnotation[0])
+                    flag = True
+            if flag:
+                self.update_filtered_annotations(peak[0], possibilites)
+            if len(possibilites) < len(molAnnotations):
+                if flag:
+                    countUpdated += 1
+                    # print ("reduced ambiguity for peak " + str(peak[0]) + " from " + str(len(molAnnotations)) + " to " + str(len(possibilites)) + " possibilities")
+                # else:
+                #     for molAnnotation in molAnnotations:
+                #         molSubFormula = self.fragments.get_fragment_info(molAnnotation[0], 0)[2]
+                #         print (molSubFormula, end=" ")
+                #     print (helperPeakFormula, self.molPeaks[peak[0]][0])
             
-            # print ("unshi", peak, posibilities, molAnnotations, helperAnnotations)
-            self.update_filtered_annotations(peak[0], posibilities)
-
+        
+        notFound = 0
         for peak in shifted:
-            ## update self.mol_filtered_annotations
-            # check annotations for each peak to see if they contain the modification site
             molAnnotations = self.fragments.find_fragments(self.molPeaks[peak[0]][0], 0.1, self.args['ppm'], self.args['mz_tolerance'])
-            helperAnnotations = helperFrag.find_fragments(helperMolData['peaks'][peak[1]][0], 0.1, self.args['ppm'], self.args['mz_tolerance'])
-            posibilities = set()
+            index = binary_search_fragments(Sirius['fragments'], helperMolData['peaks'][peak[1]][0], self.args['mz_tolerance'])
+            if index == -1:
+                notFound += 1
+                continue
+            helperPeakFormula = Sirius['fragments'][index]['molecularFormula']
+            possibilites = set()
+            flag = False
             for molAnnotation in molAnnotations:
-                for helperAnnotation in helperAnnotations:
-                    molSubSmiles = self.fragments.get_fragment_info(molAnnotation[0], 0)[3]
-                    helperSubSmiles = helperFrag.get_fragment_info(helperAnnotation[0], 0)[3]
-                    molSubStruct = Chem.MolFromSmiles(molSubSmiles)
-                    helperSubStruct = Chem.MolFromSmiles(helperSubSmiles)
-                    if self.molPrecursorMz < helperMolData['precursor_mz']:
-                        if helperSubStruct.HasSubstructMatch(molSubStruct):# and not self.molMol.HasSubstructMatch(helperSubStruct):
-                            posibilities.add(molAnnotation[0])
-                            break
-                    else:
-                        if molSubStruct.HasSubstructMatch(helperSubStruct):# and not helperMolStruct.HasSubstructMatch(molSubStruct):
-                            posibilities.add(molAnnotation[0])
-                            break
+                molSubFormula = self.fragments.get_fragment_info(molAnnotation[0], 0)[2]
+                if self.molPrecursorMz < helperMolData['precursor_mz'] and utils.is_submolecule(molSubFormula, helperPeakFormula):
+                    possibilites.add(molAnnotation[0])
+                    flag = True
+                elif self.molPrecursorMz > helperMolData['precursor_mz'] and utils.is_submolecule(helperPeakFormula, molSubFormula):
+                    possibilites.add(molAnnotation[0])
+                    flag = True
+            if flag:
+                self.update_filtered_annotations(peak[0], possibilites)
+            if len(possibilites) < len(molAnnotations):
+                if flag:
+                    countUpdated += 1
+                    # print ("reduced shifted ambiguity for peak " + str(peak[0]) + " from " + str(len(molAnnotations)) + " to " + str(len(possibilites)) + " possibilities")
+        
+        # if len(shifted) - notFound > 1:
+        #     print ("not found: " + str(notFound) + " shifted: " + str(len(shifted)))
+        return countUpdated
+
+        # for peak in unshifted:
+        #     ## update self.mol_filtered_annotations
+        #     # only annotations that are in both molecules
+        #     molAnnotations = self.fragments.find_fragments(self.molPeaks[peak[0]][0], 0.1, self.args['ppm'], self.args['mz_tolerance'])
+        #     helperAnnotations = helperFrag.find_fragments(helperMolData['peaks'][peak[1]][0], 0.1, self.args['ppm'], self.args['mz_tolerance'])
+        #     posibilities = set()
+        #     flag = False
+        #     for molAnnotation in molAnnotations:
+        #         for helperAnnotation in helperAnnotations:
+        #             molSubSmiles = self.fragments.get_fragment_info(molAnnotation[0], 0)[3]
+        #             helperSubSmiles = helperFrag.get_fragment_info(helperAnnotation[0], 0)[3]
+        #             molSubStruct = Chem.MolFromSmiles(molSubSmiles, sanitize=False)
+        #             helperSubStruct = Chem.MolFromSmiles(helperSubSmiles, sanitize=False)
+        #             for bond in molSubStruct.GetBonds():
+        #                 bond.SetBondType(Chem.BondType.SINGLE)
+        #             for bond in helperSubStruct.GetBonds():
+        #                 bond.SetBondType(Chem.BondType.SINGLE)
+        #             if molSubStruct.HasSubstructMatch(helperSubStruct) and helperSubStruct.HasSubstructMatch(molSubStruct):
+        #                 posibilities.add(molAnnotation[0])
+        #                 flag = True
+        #                 break
+        #         if not flag:
+        #             if self.verbose == 1:
+        #                 print("there wasn't any match for this peak", peak, molAnnotation)
+        #             if self.verbose == 2:
+        #                 raise Exception("there wasn't any match for this peak")
             
-            # print ("shifted", peak, posibilities, res['modifData']['peaks'][peak[0]][0], helperMolData['peaks'][peak[1]][0])
-            self.update_filtered_annotations(peak[0], posibilities)
+        #     # print ("unshi", peak, posibilities, molAnnotations, helperAnnotations)
+        #     self.update_filtered_annotations(peak[0], posibilities)
+
+        # for peak in shifted:
+        #     ## update self.mol_filtered_annotations
+        #     # check annotations for each peak to see if they contain the modification site
+        #     molAnnotations = self.fragments.find_fragments(self.molPeaks[peak[0]][0], 0.1, self.args['ppm'], self.args['mz_tolerance'])
+        #     helperAnnotations = helperFrag.find_fragments(helperMolData['peaks'][peak[1]][0], 0.1, self.args['ppm'], self.args['mz_tolerance'])
+        #     posibilities = set()
+        #     for molAnnotation in molAnnotations:
+        #         for helperAnnotation in helperAnnotations:
+        #             try:
+        #                 molSubSmiles = self.fragments.get_fragment_info(molAnnotation[0], 0)[3]
+        #                 helperSubSmiles = helperFrag.get_fragment_info(helperAnnotation[0], 0)[3]
+        #                 molSubStruct = Chem.MolFromSmiles(molSubSmiles, sanitize=False)
+        #                 helperSubStruct = Chem.MolFromSmiles(helperSubSmiles, sanitize=False)
+        #                 for bond in molSubStruct.GetBonds():
+        #                     bond.SetBondType(Chem.BondType.SINGLE)
+        #                 for bond in helperSubStruct.GetBonds():
+        #                     bond.SetBondType(Chem.BondType.SINGLE)
+        #                 if self.molPrecursorMz < helperMolData['precursor_mz']:
+        #                     if helperSubStruct.HasSubstructMatch(molSubStruct):# and not self.molMol.HasSubstructMatch(helperSubStruct):
+        #                         posibilities.add(molAnnotation[0])
+        #                         break
+        #                 else:
+        #                     if molSubStruct.HasSubstructMatch(helperSubStruct):# and not helperMolStruct.HasSubstructMatch(molSubStruct):
+        #                         posibilities.add(molAnnotation[0])
+        #                         break
+        #             except:
+        #                 print ("error", molSubSmiles, helperSubSmiles, self.molData, helperMolData)
+        #                 raise Exception("error aromaticity")
+            
+        #     # print ("shifted", peak, posibilities, res['modifData']['peaks'][peak[0]][0], helperMolData['peaks'][peak[1]][0])
+        #     self.update_filtered_annotations(peak[0], posibilities)
 
     
     def calculate_score(self, peak_presence_only = False, consider_intensity = False, modificationSite = None):
@@ -209,7 +306,10 @@ class SiteLocator():
                 scores[i] = scores_shifted[i]
         
         ## normalize
-        scores = (scores - np.amin(scores)) / (np.amax(scores) - np.amin(scores))
+        if np.amax(scores) - np.amin(scores) != 0:
+            scores = (scores - np.amin(scores)) / (np.amax(scores) - np.amin(scores))
+        else:
+            scores = np.zeros(self.molMol.GetNumAtoms())
 
         return scores
     
@@ -225,7 +325,7 @@ class SiteLocator():
     
 
         for i in range(self.molMol.GetNumAtoms()):
-            if preds[i] < 0/5 * maxScore:
+            if preds[i] < 0.5 * maxScore:
                 preds[i] = 0
         preds /= np.sum(preds)
         maxScore = max(preds)
@@ -237,20 +337,21 @@ class SiteLocator():
         for i in range(self.molMol.GetNumAtoms()):
             if preds[i] > 0:
                 # print("in if")
-                count += 1
+                count += preds[i]/maxScore
 
                 # print("ASD", self.distances[modificationSiteIdx][i])
                 localDistances += (self.distances[modificationSiteIdx][i]/graphDiameter) * preds[i]/maxScore
                 if preds[i] == maxScore and self.distances[modificationSiteIdx][i] < self.distances[modificationSiteIdx][closestMaxAtomIndx]:
                     closestMaxAtomIndx = i
         
+        score = np.exp(-self.distances[modificationSiteIdx][closestMaxAtomIndx]/3) * 0.5 + np.exp(-(localDistances/count)) * 0.5
         if return_all:
-            res = {'score': 1 - (localDistances/count)}
+            res = {'score': score}
             res['count'] = count
             res['isMax'] = 1 if preds[modificationSiteIdx] == maxScore else 0
             res['closestMaxAtomDistance'] = self.distances[modificationSiteIdx][closestMaxAtomIndx]
         else:
-            res = 1 - (localDistances/count)
+            res = score
         
         return res
 
@@ -277,30 +378,18 @@ class SiteLocator():
         return structures_shifted, structures_unshifted
 
     def get_structures_per_peak(self, peak_weight, mz_precision_abs = 0.05):
-        # start debugging
-        print ("debugging", peak_weight)
-        possiblities = self.fragments.find_fragments(peak_weight, 0.1, self.args['ppm'], self.args['mz_tolerance'])
-        for possibility in possiblities:
-            print("debugging", possibility, self.fragments.get_fragment_info(possibility[0], 0))
-
-        # end debugging
         structures = []
         result_posibility_indicies = []
         ind = -1
         for i in range(len(self.molPeaks)):
             if abs(round(self.molPeaks[i][0], 4) - peak_weight) < 0.00001:
                 ind = i
-        print("ind", ind)
-        print(self.mol_filtered_annotations)
         if ind in self.mol_filtered_annotations:
-            print("filtered", ind, self.mol_filtered_annotations[ind])
             possiblities = list(self.mol_filtered_annotations[ind])
         else:
             possiblities = self.fragments.find_fragments(peak_weight, 0.1, self.args['ppm'], self.args['mz_tolerance'])
             possiblities = set([x[0] for x in possiblities])
-        print("get_structures_per_peak", possiblities)
         for possibility in possiblities:
-            print(self.fragments.get_fragment_info(possibility, 0))
             smiles = self.fragments.get_fragment_info(possibility, 0)[3]
             posibility_indices = self.fragments.get_fragment_info(possibility, 0)[1]
             substructure = Chem.MolFromSmiles(smiles, sanitize=False)
@@ -308,7 +397,8 @@ class SiteLocator():
                 structures.append(smiles)
                 result_posibility_indicies.append(posibility_indices)
             else:
-                print("Error handling substructure, no match found: ", smiles, "")
+                if self.verbose > 0:
+                    print("Error handling substructure, no match found: ", smiles, "")
         return structures, result_posibility_indicies
 
 

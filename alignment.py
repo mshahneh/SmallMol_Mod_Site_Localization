@@ -136,7 +136,6 @@ def handle_alignment(molData, modifData, args={'filter_peaks_method':"top_k", 'f
     else:
         raise TypeError("modifData must be of type str, SpectrumTuple, or dict")
     
-    print (molData['peaks'])
     temp1 = utils.filter_peaks(molData['peaks'], args['filter_peaks_method'], args['filter_peaks_variable'])
     molData['peaks'] = temp1
     modifData['peaks'] = utils.filter_peaks(modifData['peaks'], args['filter_peaks_method'], args['filter_peaks_variable'])

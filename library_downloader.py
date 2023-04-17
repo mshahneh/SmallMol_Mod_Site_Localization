@@ -39,7 +39,7 @@ def json_to_dict(data_json, key = 'spectrum_id'):
         data_dict[data_json[i][key]] = data_json[i]
     return data_dict
 
-def calculate_matches(data_dict, weight_threshold = 500, difference_threshold_rate = 0.5):
+def calculate_matches(data_dict, weight_threshold = 1500, difference_threshold_rate = 0.3):
     """
     Calculates the matches between the library.
     It is assumed that the library is passed as a dictionary with unique key identifiers.
@@ -54,8 +54,6 @@ def calculate_matches(data_dict, weight_threshold = 500, difference_threshold_ra
     matches = {}
     cachedStructures = dict()
     data_ids = list(data_dict.keys())
-    weight_threshold = 500
-    difference_threshold_rate = 0.5
     for i in tqdm(range(len(data_ids))):   
         compound1 = data_ids[i]
         try:
@@ -82,9 +80,9 @@ def calculate_matches(data_dict, weight_threshold = 500, difference_threshold_ra
 
             try:
                 if compound1 not in cachedStructures:
-                    cachedStructures[compound1] = Chem.MolFromSmiles(data_dict[compound1]['Smiles'], sanitize=False)
+                    cachedStructures[compound1] = Chem.MolFromSmiles(data_dict[compound1]['Smiles'])
                 if compound2 not in cachedStructures:
-                    cachedStructures[compound2] = Chem.MolFromSmiles(data_dict[compound2]['Smiles'], sanitize=False)
+                    cachedStructures[compound2] = Chem.MolFromSmiles(data_dict[compound2]['Smiles'])
 
                 m1 = cachedStructures[compound1]
                 m2 = cachedStructures[compound2]

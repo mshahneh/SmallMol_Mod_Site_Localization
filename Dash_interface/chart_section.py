@@ -2,6 +2,8 @@ from dash import Dash, html, dcc, Input, Output, State, dash_table
 import pickle
 import base64
 import plotly.graph_objects as go
+import rdkit.Chem as Chem
+import numpy as np
 
 def dash_svg(text):
     """
@@ -40,7 +42,52 @@ def get_layout():
         html.Div(id='peak_info')
     ])
 
-def get_callbacks(app, visualizer):
+def get_callbacks(app, visualizer, utils):
+    @app.callback(
+        [Output('prediction', 'src'),
+        Output('substr', 'src'),
+        Output('stats', 'children')],
+        Input('siteLocatorObj', 'data'),
+        State('InputData', 'data')
+    )
+    def update_stats(siteLocatorObj, args):
+        if (siteLocatorObj == None):
+            return None, None, None
+        siteLocator = pickle.loads(base64.b64decode(siteLocatorObj))
+        scores_unshifted, scores_shifted = siteLocator.calculate_score(peak_presence_only = args['presence_only'], consider_intensity = args['consider_intensity'])
+        scores = siteLocator.distance_score(scores_unshifted, scores_shifted, combine = (args['shifted_only']==False))
+    
+        isMax = None
+        score = None
+
+        smiles1 = args['SMILES1']
+        smiles2 = args['SMILES2']
+        mol1 = Chem.MolFromSmiles(smiles1)
+
+        if (smiles2 is not None and len(smiles2) > 0):
+            svg1 = visualizer.molToSVG(Chem.MolFromSmiles(smiles2), mol1, True)
+            modifLoc = list(utils.calculateModificationSites(Chem.MolFromSmiles(smiles2), mol1, False))
+            accuracy_score = siteLocator.accuracy_score(modifLoc[0], peak_presence_only=args['presence_only'], combine=(args['shifted_only']==False), return_all=True, consider_intensity=args['consider_intensity'])
+            isMax = accuracy_score['isMax']
+            score = accuracy_score['score']
+            stats =  html.Div([
+                html.P("cosine: " + str(round(siteLocator.cosine, 4)), style = {'margin-left': '1.5vw'}),
+                html.P("Score: " + str(round(score, 4)), style = {'margin-left': '1.5vw'}),
+                html.P("is Max: " + str(isMax), style = {'margin-left': '1.5vw'}),
+                html.P("#matches: " + str(len(siteLocator.matchedPeaks)), style = {'margin-left': '1.5vw'}),
+                html.P("#shifted: " + str(len(siteLocator.shifted)), style = {'margin-left': '1.5vw'}),
+                html.P("delta w:" + str(round(abs(siteLocator.molPrecursorMz - siteLocator.modifPrecursorMz), 4)), style = {'margin-left': '1.5vw'}),
+            ], style = {'display': 'flex', 'flex-direction': 'row', 'flex-wrap': 'wrap', 'justify-content': 'left', 'width': '100%', 'height': '5vh', 'align-items': 'center', 'margin-top': '1vh'})
+        else:
+            svg1 = None
+            stats =  html.Div([
+                html.P("#matches: " + str(len(siteLocator.matchedPeaks)), style = {'margin-left': '2vw'}),
+                html.P("#shifted: " + str(len(siteLocator.shifted)), style = {'margin-left': '2vw'}),
+            ], style = {'display': 'flex', 'flex-direction': 'row', 'flex-wrap': 'wrap', 'justify-content': 'left', 'width': '100%', 'height': '5vh', 'align-items': 'center', 'margin-top': '1vh'})
+        
+        svg2 = visualizer.highlightScores(mol1, scores)
+        return dash_svg(svg1), dash_svg(svg2), stats
+
     
     @app.callback(
         [Output('peaks', 'figure'),

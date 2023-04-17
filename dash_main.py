@@ -3,6 +3,7 @@ from Dash_interface import chart_section, input_section, url_manager, computatio
 from arguments import args
 import SiteLocator as modSite
 import visualizer as vis
+import utils as utils
 
 app = Dash()
 
@@ -16,6 +17,6 @@ if __name__ == '__main__':
     url_manager.get_callbacks(app, args)
     input_section.get_callbacks(app)
     computation.get_callbacks(app, modSite)
-    chart_section.get_callbacks(app, vis)
+    chart_section.get_callbacks(app, vis, utils)
 
     app.run_server(debug = True, port=8051)#, host="0.0.0.0")
