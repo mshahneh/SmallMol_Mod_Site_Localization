@@ -81,8 +81,15 @@ def process_element(element):
         modifLoc = utils.calculateModificationSites(modifMol, molMol, False)
         peak_presence_only = True
         combine = True
-        # calculate score
+        # calculate score 
         pre_helper = site.accuracy_score(modifLoc[0], peak_presence_only=peak_presence_only, combine=combine, return_all=True)
+        try:
+            molSirius = json.load(open(os.path.join(helperDirectory, m1 + "_fragmentationtree.json")))
+            site.apply_sirius(molSirius)
+        except:
+            print ("error finding sirius file for molecule")
+            pass
+        post_sirius = site.accuracy_score(modifLoc[0], peak_presence_only=peak_presence_only, combine=combine, return_all=True)
         for helper in helpers.get(m1, []):
             if helper != m0:
                 helperFile = json.load(open(os.path.join(helperDirectory, helper + "_fragmentationtree.json")))
@@ -95,6 +102,7 @@ def process_element(element):
                     import traceback
                     traceback.print_exc()
                     pass
+                break
         post_helper = site.accuracy_score(modifLoc[0], peak_presence_only=peak_presence_only, combine=combine, return_all=True)
 
         # generate random probability array 1-hot
@@ -115,7 +123,7 @@ def process_element(element):
                                                         "delta_mass": abs(float(data_dict_filtered[m0]['Precursor_MZ']) - float(data_dict_filtered[m1]['Precursor_MZ'])),
                                                         "#_matched_peaks": len(site.matchedPeaks), "#_shifted_peaks": len(site.shifted), "#_unshifted_peaks": len(site.unshifted),
                                                         "Closest_Max_Atom_Distance": pre_helper['closestMaxAtomDistance'], "Count_Max": pre_helper['count'], "Is_Max": pre_helper['isMax'], "cosine":site.cosine, 
-                                                        "pre_helper": float(pre_helper['score']), "post_helper": float(post_helper['score']), "best_score": maxScore, "random_guess":res2['score'], "random_prob":res3['score'], 
+                                                        "pre_helper": float(pre_helper['score']), "post_sirius": float(post_sirius['score']) ,"post_helper": float(post_helper['score']), "best_score": maxScore, "random_guess":res2['score'], "random_prob":res3['score'], 
                                                         "url":visualizer.make_url("http://reza.cs.ucr.edu/", molUsi, modifUsi, molSmiles, modifSmiles, args=None) }
         return row
     except:
@@ -126,7 +134,7 @@ def process_element(element):
 
 if __name__ == '__main__':
     # Define your array of elements
-    array = list(range(min(len(matches_array), 10000)))
+    array = list(range(min(len(matches_array), 30000)))
 
     # Create a multiprocessing pool with desired number of processes
     pool = mp.Pool(processes=16)  # Use 16 processes, adjust as needed
@@ -144,17 +152,15 @@ if __name__ == '__main__':
 
     # Create a dataframe from the results
     df = pd.DataFrame(results)
-    print(df[['pre_helper','post_helper', "best_score", "random_guess", "random_prob"]].describe())
+    resultColumns = ['pre_helper', 'post_sirius','post_helper', "best_score", "random_guess", "random_prob"]
+    print(df[resultColumns].describe())
 
     # select the rows that have a score difference
     df2 = df[df['pre_helper'] != df['post_helper']]
-    print(df2[['pre_helper','post_helper', "best_score", "random_guess", "random_prob"]].describe())
+    print(df2[resultColumns].describe())
     
-    df_stats = df[['pre_helper','post_helper', "best_score", "random_guess", "random_prob"]].describe()
-
-    # Visualize the statistics using plots and save the figures
-    # Box plots for showing min, 25th percentile, median, 75th percentile, and max
-    bar_plot = df_stats.loc[['mean', 'std', '25%', '50%', '75%']].plot(kind='bar', legend=True)
+    df_stats = df[resultColumns].describe()
+    bar_plot = df_stats.loc[['std', 'mean', '25%', '50%', '75%']].plot(kind='bar', legend=True)
     plt.title('Bar Plot of Descriptive Statistics')
     plt.xlabel('Statistics')
     plt.ylabel('Value')
@@ -162,8 +168,8 @@ if __name__ == '__main__':
     plt.savefig('df_stats_box_plot.png', bbox_inches='tight')
     plt.close()
 
-    df2_stats = df2[['pre_helper','post_helper', "best_score", "random_guess", "random_prob"]].describe()
-    bar_plot = df2_stats.loc[['mean', 'std', '25%', '50%', '75%']].plot(kind='bar', legend=True)
+    df2_stats = df2[resultColumns].describe()
+    bar_plot = df2_stats.loc[['std', 'mean', '25%', '50%', '75%']].plot(kind='bar', legend=True)
     plt.title('Bar Plot of Descriptive Statistics')
     plt.xlabel('Statistics')
     plt.ylabel('Value')
