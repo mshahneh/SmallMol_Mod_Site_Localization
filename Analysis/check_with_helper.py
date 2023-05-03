@@ -134,7 +134,7 @@ def process_element(element):
 
 if __name__ == '__main__':
     # Define your array of elements
-    array = list(range(min(len(matches_array), 30000)))
+    array = list(range(min(len(matches_array), 3000)))
 
     # Create a multiprocessing pool with desired number of processes
     pool = mp.Pool(processes=16)  # Use 16 processes, adjust as needed
@@ -176,3 +176,6 @@ if __name__ == '__main__':
     plt.legend(loc='upper right')
     plt.savefig('df2_stats_box_plot.png', bbox_inches='tight')
     plt.close()
+
+    # save the dataframe to a csv file
+    df.to_csv('df.csv', index=False)
