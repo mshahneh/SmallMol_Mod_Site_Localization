@@ -122,13 +122,6 @@ def generate_probabilities(element):
 
         # get max score
         maxScore = site.get_max_possible_score(modifLoc[0], peak_presence_only=peak_presence_only, combine=combine)
-        
-        row = {"mol1ID": molUsi, "mol2ID": modifUsi, "mol1smile": molSmiles, "mol2smile": data_dict_filtered[m0]['Smiles'], 
-                                                        "delta_mass": abs(float(data_dict_filtered[m0]['Precursor_MZ']) - float(data_dict_filtered[m1]['Precursor_MZ'])),
-                                                        "#_matched_peaks": len(site.matchedPeaks), "#_shifted_peaks": len(site.shifted), "#_unshifted_peaks": len(site.unshifted),
-                                                        "Closest_Max_Atom_Distance": pre_helper['closestMaxAtomDistance'], "Count_Max": pre_helper['count'], "Is_Max": pre_helper['isMax'], "cosine":site.cosine, 
-                                                        "pre_helper": float(pre_helper['score']), "post_sirius": float(post_sirius['score']) ,"post_helper": float(post_helper['score']), "best_score": maxScore, "random_guess":res2['score'], "random_prob":res3['score'], 
-                                                        "url":visualizer.make_url("http://reza.cs.ucr.edu/", molUsi, modifUsi, molSmiles, modifSmiles, args=None) }
         return row
     except:
         # print stack trace

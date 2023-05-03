@@ -21,11 +21,11 @@ def getMatchedPeaks(usi1, usi2):
      'fragment_mz_tolerance':'0.1',
     #  'annotate_peaks': 'value3',
       'grid': 'True'}
-    r = requests.get('https://metabolomics-usi.ucsd.edu/json/mirror/', params=payload,  timeout=5)
+    r = requests.get('https://metabolomics-usi.gnps2.org/json/mirror/', params=payload,  timeout=5)
     return json.loads(r.text)
 
 def getDataFromUsi(usi):
-    url = 'https://metabolomics-usi.ucsd.edu/json/' + "?usi1=" + usi
+    url = 'https://metabolomics-usi.gnps2.org/json/' + "?usi1=" + usi
     r = requests.get(url)
     return json.loads(r.text)
 
@@ -46,11 +46,11 @@ def getMatchedPeaks(usi1, usi2):
      'fragment_mz_tolerance':'0.1',
     #  'annotate_peaks': 'value3',
       'grid': 'True'}
-    r = requests.get('https://metabolomics-usi.ucsd.edu/json/mirror/', params=payload,  timeout=5)
+    r = requests.get('https://metabolomics-usi.gnps2.org/json/mirror/', params=payload,  timeout=5)
     return json.loads(r.text)
 
 def getDataFromUsi(usi):
-    url = 'https://metabolomics-usi.ucsd.edu/json/' + "?usi1=" + usi
+    url = 'https://metabolomics-usi.gnps2.org/json/' + "?usi1=" + usi
     r = requests.get(url)
     return json.loads(r.text)
 
