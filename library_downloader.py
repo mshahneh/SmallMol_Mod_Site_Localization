@@ -104,8 +104,8 @@ def download(url, output, weight_threshold, difference_threshold_rate):
     Input:
         url: URL to download the JSON library from
         output: output directory
-        weight_threshold: maximum weight to consider
-        difference_threshold_rate: maximum difference between two weights to consider
+        weight_threshold (mz : double): maximum weight to consider
+        difference_threshold_rate (double): maximum difference between two weights to consider
     Output:
         data_dict_filtered: dictionary with the library, filtered to only include the compounds that are in matches
         matches: dictionary with the matches, [key] = [list of matches] where key is the number of modification sites

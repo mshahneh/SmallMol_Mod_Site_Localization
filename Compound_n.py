@@ -7,24 +7,24 @@ import utils_n as utils
 important_arguments = ["peaks", "Adduct", "Precursor_MZ", "Charge"]
 class Compound():
     """A class to represent a compound."""
-    def __init__(self, Compound, structure=None, args={}):
+    def __init__(self, data, structure=None, args={}):
         """Initialize the compound."""
         
         self.args = {"ppm": 1.01, "mz_tolerance": 0.1, "filter_peaks_method": "intensity", "filter_peaks_variable": 0.01}
         self.args.update(args)
 
-        self.metadata = copy.deepcopy(Compound)
+        self.metadata = copy.deepcopy(data)
         for arg in important_arguments:
-            if not arg in Compound:
-                # print("debug: missing argument: " + arg + " in " + str(Compound))
+            if not arg in data:
+                # print("debug: missing argument: " + arg + " in " + str(data))
                 if arg != "peaks":
                     raise ValueError("Missing argument: " + arg)
-                elif "peaks_json" in Compound:
-                    self.peaks = json.loads(Compound["peaks_json"])
+                elif "peaks_json" in data:
+                    self.peaks = json.loads(data["peaks_json"])
                 else:
                     raise ValueError("Missing argument: " + arg)
             else:
-                setattr(self, arg, Compound[arg])
+                setattr(self, arg, data[arg])
                 self.metadata.pop(arg)
         
         self.Charge = int(self.Charge)
