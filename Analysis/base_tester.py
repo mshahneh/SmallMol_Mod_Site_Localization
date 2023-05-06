@@ -17,7 +17,6 @@ if module_path not in sys.path:
 
 import library_downloader as library_downloader
 import multiprocessing as mp
-from multiprocessing import Pool
 from functools import partial
 
 
@@ -26,6 +25,7 @@ from ModificationSiteLocator import ModificationSiteLocator
 
 
 def load(library, accepted_adduct = None, count = None):
+    print("Loading library: " + library)
     if not os.path.exists( os.path.join("../data/libraries", library)):
         url = "https://gnps-external.ucsd.edu/gnpslibrary/" + library + ".json"
         location = "../data/libraries/" + library + "/"
@@ -73,19 +73,22 @@ def create_modifiSiteLoc(main_id, modified_id, args, data_dict_filtered, cachedS
     modified_compound = Compound(data_dict_filtered[modified_id], cachedStructures_filtered.get(modified_id, None), args)
     return ModificationSiteLocator(main_compound, modified_compound, args)
 
-def multiprocessing_wrapper(func, library = "BERKELEY-LAB", accepted_adduct = None, count = None):
+def multiprocessing_wrapper(func, library = "BERKELEY-LAB", accepted_adduct = None, count = None, processes = 16):
     data_dict_filtered, cachedStructures_filtered, siriusDirectory, helpers, matches_array = load(library, accepted_adduct, count)
     array = list(range(len(matches_array)))
 
     # add data_dict_filtered, cachedStructures_filtered, siriusDirectory, helpers, matches_array to shared memory
-    func = partial(func, data_dict_filtered, cachedStructures_filtered, siriusDirectory, helpers, matches_array)
+    par_func = partial(func, data_dict_filtered = data_dict_filtered, 
+                       cachedStructures_filtered=cachedStructures_filtered,
+                         siriusDirectory=siriusDirectory, helpers=helpers,
+                           matches_array=matches_array)
 
     # Create a multiprocessing pool with desired number of processes
-    pool = Pool(processes=16)  # Use 16 processes, adjust as needed
+    pool = mp.Pool(processes=processes)  # Use 16 processes, adjust as needed
 
     results = []
     with tqdm(total=len(array), desc="Progress") as pbar:  # Initialize progress bar
-        for result in pool.imap(func, array):
+        for result in pool.imap(par_func, array):
             results.append(result)
             pbar.update(1)
     results = filter(None, results)
