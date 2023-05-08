@@ -52,7 +52,7 @@ class ModificationSiteLocator():
             true_modification_site: int, if not None, only fragments that contain this atom are considered
         """
         contributions_data = self.find_contributions(peakids, true_modification_site)
-        print("debugging: contributions_data", contributions_data)
+        # print("debugging: contributions_data", contributions_data)
         contributions = [0 for i in range(len(self.main_compound.structure.GetAtoms()))]
         for atom in range(len(contributions_data)):
             for peak in contributions_data[atom]:
@@ -77,7 +77,7 @@ class ModificationSiteLocator():
         s_peakids = [_[0] for _ in self.shifted]
         positive_contributions = self.calculate_contributions(s_peakids, PPO, CI, true_modification_site)
         if not shifted_only:
-            u_peakids = [_[0] for _ in self.shifted]
+            u_peakids = [_[0] for _ in self.unshifted]
             negative_contributions = self.calculate_contributions(u_peakids, PPO, CI, None)
         else:
             negative_contributions = [0 for i in range(len(self.main_compound.structure.GetAtoms()))]
@@ -86,9 +86,16 @@ class ModificationSiteLocator():
         for i in range(len(positive_contributions)):
             probabilities[i] = positive_contributions[i] - negative_contributions[i]
         
+        # print("debugging: probabilities1", probabilities, positive_contributions, negative_contributions)
+        
         # Normalize probabilities
         probabilities = probabilities - np.min(probabilities)
-        probabilities = probabilities / np.sum(probabilities)
+        if np.sum(probabilities) != 0:
+            probabilities = probabilities / np.sum(probabilities)
+        else:
+            probabilities = np.zeros(len(self.main_compound.structure.GetAtoms()))
+        
+        # print("debugging: probabilities2", probabilities, positive_contributions, negative_contributions)
         return probabilities
     
     def calculate_score(self, true_modification_site, method, probabilities = None, extensive_response = False, filter_ratio = 0.5):
@@ -107,16 +114,19 @@ class ModificationSiteLocator():
         G = self.main_compound.distances
         
         maxScore = max(probabilities)
+        for i in range(self.main_compound.structure.GetNumAtoms()):
+            if probabilities[i] <= filter_ratio * maxScore:
+                probabilities[i] = 0
+        
+        if np.sum(probabilities) != 0:
+            probabilities /= np.sum(probabilities)
+
+        maxScore = max(probabilities)  
         if maxScore == 0:
             if extensive_response:
                 return {'score': 0, 'count': 0, 'isMax': 0, 'closestMaxAtomDistance': 0}
             else:
                 return 0
-        
-        for i in range(self.main_compound.structure.GetNumAtoms()):
-            if probabilities[i] <= filter_ratio * maxScore:
-                probabilities[i] = 0
-        probabilities /= np.sum(probabilities)
         
         # call the score function from Calc_Scores based on the method
         if method == "is_max":

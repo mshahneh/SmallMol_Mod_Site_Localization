@@ -68,6 +68,22 @@ def load(library, accepted_adduct = None, count = None):
 
     return data_dict_filtered, cachedStructures_filtered, siriusDirectory, helpers, matches_array
 
+def create_compound(main_id, args, data_dict_filtered, cachedStructures_filtered = {}, siriusDirectory = None, helpers = []):
+    c = Compound(data_dict_filtered[main_id], cachedStructures_filtered.get(main_id, None), args)
+    if siriusDirectory is not None:
+        try:
+            with open(os.path.join(siriusDirectory, main_id + "_fragmentationtree.json")) as f:
+                sirius_json = json.load(f)
+            c.apply_sirius(sirius_json)
+        except:
+            pass
+    
+    if len(helpers) > 0:
+        for helper in helpers:
+            helper_c = create_compound(helper, args, data_dict_filtered, cachedStructures_filtered, siriusDirectory, helpers=[])
+            c.apply_helper(helper_c)
+    return c
+
 def create_modifiSiteLoc(main_id, modified_id, args, data_dict_filtered, cachedStructures_filtered = {}):
     main_compound = Compound(data_dict_filtered[main_id], cachedStructures_filtered.get(main_id, None), args)
     modified_compound = Compound(data_dict_filtered[modified_id], cachedStructures_filtered.get(modified_id, None), args)

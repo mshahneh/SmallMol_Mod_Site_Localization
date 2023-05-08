@@ -15,8 +15,8 @@ def dist_from_max(G, probabilities, true_index):
     graph_diameter = np.amax(G)
     for i in range(len(probabilities)):
         if probabilities[i] == max_val:
-            min_dist = min(min_dist, G[true_index][i])
-    return 1 - np.exp(-min_dist/(graph_diameter-min_dist+eps))
+            min_dist = min(min_dist, G[true_index, i])
+    return float(1 - np.exp(-min_dist/(graph_diameter-min_dist+eps)))
 
 def average_dist_from_max(G, probabilities, true_index):
     eps = 0.000001
@@ -26,10 +26,10 @@ def average_dist_from_max(G, probabilities, true_index):
     count = 0
     for i in range(len(probabilities)):
         if probabilities[i] == max_val:
-            value = 1 - np.exp(-G[true_index][i]/(graph_diameter-G[true_index][i]+eps))
+            value = 1 - np.exp(-G[true_index,i]/(graph_diameter-G[true_index,i]+eps))
             dists += value * probabilities[i]
             count += probabilities[i]
-    return dists/count
+    return float(dists/count)
 
 def average_dist(G, probabilities, true_index):
     eps = 0.000001
@@ -37,10 +37,10 @@ def average_dist(G, probabilities, true_index):
     dists = 0
     count = 0
     for i in range(len(probabilities)):
-        value = 1 - np.exp(-G[true_index][i]/(graph_diameter-G[true_index][i]+eps))
+        value = 1 - np.exp(-G[true_index, i]/(graph_diameter-G[true_index, i]+eps))
         dists += value * probabilities[i]
         count += probabilities[i]
-    return dists/count
+    return float(dists/count)
 
 # def calculate_spanning_graph(G, probabilities):
 #     max_val = max(probabilities)
