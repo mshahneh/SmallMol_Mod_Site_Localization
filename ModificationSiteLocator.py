@@ -114,12 +114,12 @@ class ModificationSiteLocator():
         G = self.main_compound.distances
         
         maxScore = max(probabilities)
-        for i in range(self.main_compound.structure.GetNumAtoms()):
-            if probabilities[i] <= filter_ratio * maxScore:
-                probabilities[i] = 0
+        # for i in range(self.main_compound.structure.GetNumAtoms()):
+        #     if probabilities[i] <= filter_ratio * maxScore:
+        #         probabilities[i] = 0
         
-        if np.sum(probabilities) != 0:
-            probabilities /= np.sum(probabilities)
+        # if np.sum(probabilities) != 0:
+        #     probabilities /= np.sum(probabilities)
 
         maxScore = max(probabilities)  
         if maxScore == 0:
@@ -137,6 +137,8 @@ class ModificationSiteLocator():
             return Calc_Scores.average_dist_from_max(G, probabilities, true_modification_site)
         elif method == "average_dist":
             return Calc_Scores.average_dist(G, probabilities, true_modification_site)
+        elif method == "temp":
+            return Calc_Scores.temp_score(G, probabilities, true_modification_site)
         else:
             raise Exception("Method not found")
     

@@ -32,8 +32,8 @@ class Compound():
         self.Adduct = utils.parse_adduct(self.Adduct)
         self.peaks = utils.filter_peaks(self.peaks, self.args['filter_peaks_method'], self.args['filter_peaks_variable'])
 
-        if structure == None and "Smiles" in Compound:
-            self.structure = Chem.MolFromSmiles(Compound["Smiles"])
+        if structure == None and "Smiles" in data:
+            self.structure = Chem.MolFromSmiles(data["Smiles"])
         elif structure != None:
             self.structure = structure
         
@@ -73,5 +73,9 @@ class Compound():
     
     
     def apply_helper(self, helper_compound):
+        # TODO: implement
+        pass
+
+    def apply_iceberg(self, iceberg):
         # TODO: implement
         pass

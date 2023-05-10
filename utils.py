@@ -8,6 +8,7 @@ def calculateModificationSites(mol, substructure, inParent = True):
         Input:
             mol1: first molecule
             substructure: substructure molecule
+            inParent: bool, if True, the modification sites are given in the parent molecule, if False, the modification sites are given in the substructure
         Output:
             count: modification sites
     """

@@ -16,7 +16,7 @@ def dist_from_max(G, probabilities, true_index):
     for i in range(len(probabilities)):
         if probabilities[i] == max_val:
             min_dist = min(min_dist, G[true_index, i])
-    return float(1 - np.exp(-min_dist/(graph_diameter-min_dist+eps)))
+    return float(np.exp(-min_dist/(graph_diameter-min_dist+eps)))
 
 def average_dist_from_max(G, probabilities, true_index):
     eps = 0.000001
@@ -26,7 +26,7 @@ def average_dist_from_max(G, probabilities, true_index):
     count = 0
     for i in range(len(probabilities)):
         if probabilities[i] == max_val:
-            value = 1 - np.exp(-G[true_index,i]/(graph_diameter-G[true_index,i]+eps))
+            value = np.exp(-G[true_index,i]/(graph_diameter-G[true_index,i]+eps))
             dists += value * probabilities[i]
             count += probabilities[i]
     return float(dists/count)
@@ -37,10 +37,41 @@ def average_dist(G, probabilities, true_index):
     dists = 0
     count = 0
     for i in range(len(probabilities)):
-        value = 1 - np.exp(-G[true_index, i]/(graph_diameter-G[true_index, i]+eps))
+        value = np.exp(-G[true_index, i]/(graph_diameter-G[true_index, i]+eps))
         dists += value * probabilities[i]
         count += probabilities[i]
     return float(dists/count)
+
+def temp_score(G, probabilities, modificationSiteIdx):
+    maxScore = max(probabilities)
+    if maxScore == 0:
+        return 0
+
+
+    for i in range(len(probabilities)):
+        if probabilities[i] < 0.5 * maxScore:
+            probabilities[i] = 0
+    probabilities /= np.sum(probabilities)
+    maxScore = max(probabilities)
+    graphDiameter = np.amax(G)
+    count = 0
+    localDistances = 0
+    closestMaxAtomIndx = 0
+    # print("DUAAAM", graphDiameter, self.molMol.GetNumAtoms())
+    for i in range(len(probabilities)):
+        if probabilities[i] == maxScore:
+            # print("in if")
+            count += probabilities[i]/maxScore
+
+            # print("ASD", self.distances[modificationSiteIdx][i])
+            localDistances += (G[modificationSiteIdx, i]/graphDiameter) * probabilities[i]/maxScore
+            if probabilities[i] == maxScore and G[modificationSiteIdx, i] < G[modificationSiteIdx, closestMaxAtomIndx]:
+                closestMaxAtomIndx = i
+    
+    # score = np.exp(-self.distances[modificationSiteIdx][closestMaxAtomIndx]/3) * 0.5 + np.exp(-(localDistances/count)) * 0.5
+    # score = np.exp(-self.distances[modificationSiteIdx][closestMaxAtomIndx])
+    score = np.exp(-(localDistances/count))
+    return score
 
 # def calculate_spanning_graph(G, probabilities):
 #     max_val = max(probabilities)
