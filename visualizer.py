@@ -144,9 +144,10 @@ def highlightMolIndices(mol, hitAtoms):
     d2d.FinishDrawing()
     return d2d.GetDrawingText()
 
-def draw_alignment(peaks1, peaks2, matched_peaks, shift = 0.1, show_text = False, show_lines = True, scale = 1):
+def draw_alignment(peaks1, peaks2, matched_peaks, shift = 0.1, show_text = False, show_lines = True, scale = 1, ax = None):
 
-    fig, ax = plt.subplots(figsize=(20, 10))
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(20, 10))
 
     shifted, unshifted = utils.separateShifted(matched_peaks, peaks1, peaks2)
 
@@ -234,4 +235,4 @@ def draw_alignment(peaks1, peaks2, matched_peaks, shift = 0.1, show_text = False
     print(y_ticks_labels)
     ax.set_yticks(y_ticks, y_ticks_labels)
 
-    return fig
+    return ax

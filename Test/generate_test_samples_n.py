@@ -1,3 +1,7 @@
+"""
+generates synthetic and database test samples for unit testing
+"""
+
 """   
 Compound_Item format:
     {
@@ -106,7 +110,19 @@ def generate_test_from_library(lib, count):
     
 
 def generate_synthetic_test(count):
-    return []
+    with open("synthetic1.json", "r") as f:
+        data = json.load(f)
+    results = []
+    for i in range(count):
+        if i >= len(data):
+            break
+        results.append({
+            "type": "synthetic",
+            "library": "synthetic",
+            "main": generate_compound_item(data[i][0], "", ""),
+            "modified": generate_compound_item(data[i][1], "", ""),
+        })
+    return results
 
 def main(libs, lib_count, synthetic_count):
     """
@@ -122,6 +138,6 @@ def main(libs, lib_count, synthetic_count):
     
 if __name__ == '__main__':
     libs = ["BERKELEY-LAB"]
-    results = main(libs, 5, 1)
+    results = main(libs, 5, 4)
     with open("test_samples.pkl", "wb") as f:
         pickle.dump(results, f)

@@ -134,9 +134,6 @@ class FragmentEngine(object):
             if 0 < fragment & bond < bond:
                 score += self.bondscore[bond]
                 bondbreaks += 1
-
-        if score == 0:
-            print ('score=0: ', fragment, bondbreaks)
         return (bondbreaks, score)
 
 
