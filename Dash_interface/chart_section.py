@@ -54,7 +54,8 @@ def get_callbacks(app, visualizer, utils):
         if (siteLocatorObj == None):
             return None, None, None
         siteLocator = pickle.loads(base64.b64decode(siteLocatorObj))
-        scores_unshifted, scores_shifted = siteLocator.calculate_score(peak_presence_only = args['presence_only'], consider_intensity = args['consider_intensity'])
+        scores_unshifted, scores_shifted = siteLocator.calculate_score(peak_presence_only = args['presence_only'], consider_intensity = args['presence_only'])
+        print ("debugging: scores shifted:", scores_unshifted, scores_shifted, (args['shifted_only']==False), args['presence_only'], args['presence_only'])
         scores = siteLocator.distance_score(scores_unshifted, scores_shifted, combine = (args['shifted_only']==False))
     
         isMax = None
@@ -85,6 +86,7 @@ def get_callbacks(app, visualizer, utils):
                 html.P("#shifted: " + str(len(siteLocator.shifted)), style = {'margin-left': '2vw'}),
             ], style = {'display': 'flex', 'flex-direction': 'row', 'flex-wrap': 'wrap', 'justify-content': 'left', 'width': '100%', 'height': '5vh', 'align-items': 'center', 'margin-top': '1vh'})
         
+        print("scores are:", scores)
         svg2 = visualizer.highlightScores(mol1, scores)
         return dash_svg(svg1), dash_svg(svg2), stats
 

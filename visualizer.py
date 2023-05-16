@@ -100,7 +100,7 @@ def molToSVG(mol, substructure=None, highlightModificationSites=False):
         if (type(substructure) == str):
             substructure = Chem.MolFromSmarts(substructure)
         if not mol.HasSubstructMatch(substructure):
-            d2d = Chem.Draw.MolDraw2DSVG(250,200)
+            d2d = Chem.Draw.MolDraw2DSVG(1250,1200)
             d2d.DrawMolecule(mol)
         else:
             hitAtoms, hitBonds = utils.getHitAtomsAndBonds(mol, substructure)
@@ -115,31 +115,31 @@ def molToSVG(mol, substructure=None, highlightModificationSites=False):
                         colors[hitAtom] = (1,0.5,0.5)
                 d2d.DrawMolecule(mol,highlightAtoms=hitAtoms[0], highlightBonds=hitBonds[0], highlightAtomColors=colors)
             else:
-                d2d = Chem.Draw.MolDraw2DSVG(250,200)
+                d2d = Chem.Draw.MolDraw2DSVG(1250,1200)
                 d2d.DrawMolecule(mol,highlightAtoms=hitAtoms[0], highlightBonds=hitBonds[0])
     else:
-        d2d = Chem.Draw.MolDraw2DSVG(250,200)
+        d2d = Chem.Draw.MolDraw2DSVG(1250,1200)
         d2d.DrawMolecule(mol)
     d2d.FinishDrawing()
     return d2d.GetDrawingText()
 
 def highlightScores(mol, scores):
     vals = [x/max(scores) for x in scores]
-    d2d = Draw.MolDraw2DSVG(250,200)
+    d2d = Draw.MolDraw2DSVG(1250,1200)
     colors = dict()
     for i in range(0, mol.GetNumAtoms()):
         colors[i] = (1-(vals[i]**2), 1-(vals[i]**2), 1-(vals[i]**2))
-    d2d.DrawMolecule(mol, highlightAtoms=list(range(mol.GetNumAtoms())), highlightAtomColors=colors)
+    d2d.DrawMolecule(mol, highlightAtoms=list(range(mol.GetNumAtoms())), highlightAtomColors=colors, highlightBonds=[])
     d2d.FinishDrawing()
     return d2d.GetDrawingText()
 
 def highlightMolIndices(mol, hitAtoms):
-    d2d = Draw.MolDraw2DSVG(250,200)
+    d2d = Draw.MolDraw2DSVG(1250,1200)
     hitBonds = []
     for bond in mol.GetBonds():
         if bond.GetBeginAtomIdx() in hitAtoms and bond.GetEndAtomIdx() in hitAtoms:
             hitBonds.append(bond.GetIdx())
-    d2d = Chem.Draw.MolDraw2DSVG(250,200)
+    d2d = Chem.Draw.MolDraw2DSVG(1250,1200)
     d2d.DrawMolecule(mol,highlightAtoms=hitAtoms, highlightBonds=hitBonds)
     d2d.FinishDrawing()
     return d2d.GetDrawingText()
@@ -150,15 +150,18 @@ def draw_alignment(peaks1, peaks2, matched_peaks, shift = 0.1, show_text = False
         fig, ax = plt.subplots(figsize=(20, 10))
 
     shifted, unshifted = utils.separateShifted(matched_peaks, peaks1, peaks2)
-
     max_y = max([_[1] for _ in peaks1])
-    max_y = max([max_y, max([_[1] for _ in peaks2])])
+    peaks1 = [(peaks1[i][0], peaks1[i][1]/max_y) for i in range(len(peaks1))]
+
+    max_y = max([_[1] for _ in peaks2])
+    peaks2 = [(peaks2[i][0], peaks2[i][1]/max_y) for i in range(len(peaks2))]
 
     max_x = max([_[0] for _ in peaks1])
     max_x = max([max_x, max([_[0] for _ in peaks2])])
 
     ax.set_xlim(0, max_x+5)
 
+    print('debugging', peaks2)
     
     molShifted = [i[0] for i in shifted]
     molUnshifted = [i[0] for i in unshifted]
@@ -172,25 +175,25 @@ def draw_alignment(peaks1, peaks2, matched_peaks, shift = 0.1, show_text = False
     x = [_[0] for _ in peaks1 ]
     y = [ _[1] for _ in peaks1 ]
     shift_array = [shift for _ in peaks1 ]
-    ax.bar(x, shift_array, width=1.2*scale, color="white")
+    ax.bar(x, shift_array, width=1.2*scale, color="white", alpha = 0)
     ax.bar(x, y, width=1.2*scale, color="gray", bottom=shift_array)
 
     x_shifted = [peaks1[_][0] for _ in molShifted]
     y_shifted = [ peaks1[_][1] for _ in molShifted]
     shift_array = [shift for _ in molShifted]
-    ax.bar(x_shifted, shift_array, width=1.2*scale, color="white")
+    ax.bar(x_shifted, shift_array, width=1.2*scale, color="white", alpha = 0)
     ax.bar(x_shifted, y_shifted, width=1.2*scale, color="red", bottom=shift_array)
 
     x_unshifted = [peaks1[_][0] for _ in molUnshifted]
     y_unshifted = [ peaks1[_][1] for _ in molUnshifted]
     shift_array = [shift for _ in molUnshifted]
-    ax.bar(x_unshifted, shift_array, width=1.2*scale, color="white")
+    ax.bar(x_unshifted, shift_array, width=1.2*scale, color="white", alpha = 0)
     ax.bar(x_unshifted, y_unshifted, width=1.2*scale, color="blue", bottom=shift_array)
 
     #plot modified peaks as reversed
     x = [_[0] for _ in peaks2]
     y = [-_[1] for _ in peaks2]
-    ax.bar(x, y, width=1.2, color="gray")
+    ax.bar(x, y, width=1.2*scale, color="gray")
 
     x_shifted = [peaks2[_][0] for _ in modifiedShifted]
     y_shifted = [-peaks2[_][1] for _ in modifiedShifted]
@@ -221,18 +224,29 @@ def draw_alignment(peaks1, peaks2, matched_peaks, shift = 0.1, show_text = False
     ax.plot([5, max_x], [0, 0], color="gray", linewidth=0.5*scale, linestyle="-")
 
     # custom y axis ticks
-    y_ticks1 = [i/10 + shift for i in range(0, 10, 2)]
-    y_ticks2 = [-i/10 for i in range(0, 10, 2)]
+    y_ticks1 = [i/10 + shift for i in range(0, 11, 2)]
+    y_ticks2 = [-i/10 for i in range(0, 11, 2)]
     # reverse y ticks2
     y_ticks2 = y_ticks2[::-1]
     y_ticks =  y_ticks2 + y_ticks1 
     print(y_ticks)
-    y_ticks_labels1 = [i/10 for i in range(0, 10, 2)]
-    y_ticks_labels2 = [i/10 for i in range(0, 10, 2)]
+    y_ticks_labels1 = [i for i in range(0, 110, 20)]
+    y_ticks_labels2 = [i for i in range(0, 110, 20)]
     # reverse y ticks2
     y_ticks_labels2 = y_ticks_labels2[::-1]
     y_ticks_labels = y_ticks_labels2 + y_ticks_labels1
     print(y_ticks_labels)
     ax.set_yticks(y_ticks, y_ticks_labels)
+
+    # set font size
+    ax.tick_params(axis='both', which='major', labelsize=10*scale)
+
+    # add legend
+    ax.plot([], [], color="red", linewidth=2*scale, linestyle="-", label="Shifted Matched Peaks")
+    ax.plot([], [], color="blue", linewidth=2*scale, linestyle="-", label="Unshifted Matched Peaks")
+    ax.plot([], [], color="gray", linewidth=2*scale, linestyle="-", label="Unmatched Peaks")
+    ax.legend(loc='upper left')
+    # legend font size
+    ax.legend(prop={'size': 10*scale})
 
     return ax

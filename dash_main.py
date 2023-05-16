@@ -4,8 +4,9 @@ from arguments import args
 import SiteLocator as modSite
 import visualizer as vis
 import utils as utils
+import dash_bootstrap_components as dbc
 
-app = Dash()
+app = Dash(external_stylesheets=[dbc.themes.BOOTSTRAP])
 
 if __name__ == '__main__':
     layout = [dcc.Store(id='siteLocatorObj'), dcc.Store(id='InputData'), dcc.Store(id='urlData'), html.P(id='ErrorMessage')]

@@ -1,5 +1,6 @@
 from dash import Dash, html, dcc, Input, Output, State, dash_table
 import dash_daq as daq
+import dash_bootstrap_components as dbc
 
 def get_layout(passedArgs):
     print ("passedArgs", passedArgs)
@@ -12,12 +13,9 @@ def get_layout(passedArgs):
 
     layer1 = []
     for item in ['USI1', 'USI2', 'SMILES1', 'SMILES2']:
-        layer1.append(dcc.Input(
-            id=item,
-            type="text",
-            placeholder=item,
-            value = args.get(item, ""),
-            style={'width':'23%'}
+        layer1.append(dbc.InputGroup(
+            [dbc.InputGroupText(item), dbc.Input(placeholder=item,id=item, value = args.get(item, ""))],
+            style = {'width': '45vw', 'margin': '1vh'}
         ))
     layer1 = html.Div(children = layer1, style = {'display': 'flex', 'flex-direction': 'row', 'flex-wrap': 'wrap', 'justify-content': 'space-around', 'width': '100%', 'min-height': '5vh'})
 
@@ -32,12 +30,9 @@ def get_layout(passedArgs):
 
     optionArguments = [dcc.Dropdown(['intensity', 'top_k', 'none'], 'top_k', id='filter_peaks_method')]
     for item in ['filter_peaks_variable', 'mz_tolerance', 'ppm']:
-        optionArguments.append(dcc.Input(
-            id=item,
-            type="text",
-            placeholder=item,
-            value = args.get(item, ""),
-            style={'width':'23%',"height": "2vh"}
+        optionArguments.append(dbc.InputGroup(
+            [dbc.InputGroupText(item), dbc.Input(placeholder=item,id=item, value = args.get(item, ""))],
+            style={'width':'30%',"height": "2vh"}
         ))
 
     return html.Div(id = 'inputs', children = 
@@ -48,27 +43,28 @@ def get_layout(passedArgs):
                 html.Div(
                         id='options',
                         children=myOptions,
-                    style={'display': 'inline-block', 'margin-right': '1vw'}),
+                    style={'display': 'flex', 'flex-direction': 'row','margin-right': '1vw'}),
                 html.Div(id = 'arguments', children = optionArguments, style = {'display': 'flex', 'flex-direction': 'row', 'justify-content': 'center', 'min-height': '5vh', 'align-items': 'center', 'margin-top': '1vh'}),
             ], style = {'display': 'flex', 'flex-direction': 'row', 'justify-content': 'center', 'align-items': 'center'}),
             
-            html.Div(children = [
-                dcc.Input(
-                    id="helperUSI",
-                    type="text",
-                    placeholder="helperUSI",
-                    style={'width':'23%'}
-                ),
-                dcc.Input(
-                    id="helperSMILES",
-                    type="text",
-                    placeholder="helperSMILES",
-                    style={'width':'23%'}
-                ),
-                    # html.Button('update', id='updateHelper', n_clicks=0)
-            ]),
-            html.Button('update', id='update', n_clicks=0)
-        ])
+            # html.Div(children = [
+            #     dcc.Input(
+            #         id="helperUSI",
+            #         type="text",
+            #         placeholder="helperUSI",
+            #         style={'width':'23%'}
+            #     ),
+            #     dcc.Input(
+            #         id="helperSMILES",
+            #         type="text",
+            #         placeholder="helperSMILES",
+            #         style={'width':'23%'}
+            #     ),
+            #         # html.Button('update', id='updateHelper', n_clicks=0)
+            # ], style={'display': 'hidden'}
+            # ),
+            dbc.Button('update', id='update', n_clicks=0)
+        ], style = {'display': 'flex', 'flex-direction': 'column', 'justify-content': 'center', 'align-items': 'center', 'width': '100%','margin-bottom': '1vh'})
 
 def get_callbacks(app):
     @app.callback(

@@ -13,10 +13,11 @@ def parse_adduct(adduct):
     return adduct
 
 
-def filter_peaks(peaks, method, variable):
+def filter_peaks(peaks, method, variable, precursor_mz = None, charge = None):
     """
     Filters the peaks based on the method and variable.
     """
+    eps = 0.0001
     def top_k(peaks, k):
         """Filters the peaks by top k peaks."""
         k = int(k)
@@ -39,14 +40,17 @@ def filter_peaks(peaks, method, variable):
         peaks = filtered_peaks
         return filtered_peaks
     
-    
+    # delete peaks that are bigger than the precursor + charge
+    if precursor_mz != None and charge != None:
+        peaks = [peak for peak in peaks if peak[0] <= precursor_mz + charge + eps]
+
     tempPeaks = normalize_peaks(peaks)
 
     # call the appropriate function
     if method == "intensity":
-        return intensity(tempPeaks, variable)
+        return normalize_peaks(intensity(tempPeaks, variable))
     elif method == "top_k":
-        return top_k(tempPeaks, variable)
+        return normalize_peaks(top_k(tempPeaks, variable))
     else:
         return tempPeaks
 

@@ -98,7 +98,7 @@ if __name__ == '__main__':
         df = pd.read_csv("score_comparison.csv")
     except:
     
-        res = multiprocessing_wrapper(compare_score_row, library = "BERKELEY-LAB", accepted_adduct = "M+H", count = 50, processes = 8)
+        res = multiprocessing_wrapper(compare_score_row, library = "BERKELEY-LAB", accepted_adduct = "M+H", count = 1500, processes = 8)
         
         # create pandas dataframe
         df = pd.DataFrame(res)
@@ -112,6 +112,8 @@ if __name__ == '__main__':
         print(df[["true_" + method, "random_choice" + method, "random_probabilities" + method, "best_" + method]].describe())
     
     labels = scoring_methods
+    labels_text = ["Is Max?", "Distance to max (DTM)", "Average DTM", "Weighted Average", "Sorted Index"]
+    settings_text = ["Our Method", "Random Choice", "Random Probabilities", "Best Possible", "All same probability"]
     
     data = []
     for propability_setting in settings:
@@ -128,11 +130,11 @@ if __name__ == '__main__':
     N = len(labels)
     theta = np.linspace(0.0, 2 * np.pi, N, endpoint=False)
     for i in range(len(data)):
-        ax.plot(theta, data[i], label=settings[i])
+        ax.plot(theta, data[i], label=settings_text[i])
     ax.set_theta_zero_location("N")
     ax.set_theta_direction(-1)
     ax.set_xticks(theta)
-    ax.set_xticklabels(labels)
+    ax.set_xticklabels(labels_text)
     ax.set_rlabel_position(0)
     ax.set_ylim(0, 1)
     ax.set_yticks(np.arange(0, 1, 0.1))

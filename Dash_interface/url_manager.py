@@ -1,10 +1,11 @@
 from dash import Dash, html, dcc, Input, Output, State, dash_table
 from furl import furl
 from copy import deepcopy
+import dash_bootstrap_components as dbc
 
 def get_layout():
     return html.Div([dcc.Location(id='url', refresh=False),
-                      html.Button('share', id='share', n_clicks=0, style={"position":"absolute", "right":"10px", "top":"10px"}),
+                      dbc.Button('share', id='share',outline=True, color="secondary", n_clicks=0, style={"position":"absolute", "right":"10px", "top":"10px"}),
                       html.Div(id="share_dialog", children=[html.P(id='share_url'),
                                                              html.Button('x', id='close_share_dialog', style={"position":"absolute", "right":"10px", "top":"10px"})
                                                             ], style={"display":"none"})])

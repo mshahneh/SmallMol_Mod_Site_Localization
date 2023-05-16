@@ -30,7 +30,7 @@ class Compound():
         self.Charge = int(self.Charge)
         self.Precursor_MZ = float(self.Precursor_MZ)
         self.Adduct = utils.parse_adduct(self.Adduct)
-        self.peaks = utils.filter_peaks(self.peaks, self.args['filter_peaks_method'], self.args['filter_peaks_variable'])
+        self.peaks = utils.filter_peaks(self.peaks, self.args['filter_peaks_method'], self.args['filter_peaks_variable'], self.Precursor_MZ, self.Charge)
 
         if structure == None and "Smiles" in data:
             self.structure = Chem.MolFromSmiles(data["Smiles"])
