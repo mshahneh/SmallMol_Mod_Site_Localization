@@ -147,7 +147,7 @@ def highlightMolIndices(mol, hitAtoms):
 def draw_alignment(peaks1, peaks2, matched_peaks, shift = 0.1, show_text = False, show_lines = True, scale = 1, ax = None):
 
     if ax is None:
-        fig, ax = plt.subplots(figsize=(20, 10))
+        fig, ax = plt.subplots(figsize=(20*scale, 10*scale))
 
     shifted, unshifted = utils.separateShifted(matched_peaks, peaks1, peaks2)
     max_y = max([_[1] for _ in peaks1])
@@ -175,33 +175,33 @@ def draw_alignment(peaks1, peaks2, matched_peaks, shift = 0.1, show_text = False
     x = [_[0] for _ in peaks1 ]
     y = [ _[1] for _ in peaks1 ]
     shift_array = [shift for _ in peaks1 ]
-    ax.bar(x, shift_array, width=1.2*scale, color="white", alpha = 0)
-    ax.bar(x, y, width=1.2*scale, color="gray", bottom=shift_array)
+    ax.bar(x, shift_array, width=0.5*scale, color="white", alpha = 0)
+    ax.bar(x, y, width=0.5*scale, color="gray", bottom=shift_array)
 
     x_shifted = [peaks1[_][0] for _ in molShifted]
     y_shifted = [ peaks1[_][1] for _ in molShifted]
     shift_array = [shift for _ in molShifted]
-    ax.bar(x_shifted, shift_array, width=1.2*scale, color="white", alpha = 0)
-    ax.bar(x_shifted, y_shifted, width=1.2*scale, color="red", bottom=shift_array)
+    ax.bar(x_shifted, shift_array, width=0.5*scale, color="white", alpha = 0)
+    ax.bar(x_shifted, y_shifted, width=0.5*scale, color="red", bottom=shift_array)
 
     x_unshifted = [peaks1[_][0] for _ in molUnshifted]
     y_unshifted = [ peaks1[_][1] for _ in molUnshifted]
     shift_array = [shift for _ in molUnshifted]
-    ax.bar(x_unshifted, shift_array, width=1.2*scale, color="white", alpha = 0)
-    ax.bar(x_unshifted, y_unshifted, width=1.2*scale, color="blue", bottom=shift_array)
+    ax.bar(x_unshifted, shift_array, width=0.5*scale, color="white", alpha = 0)
+    ax.bar(x_unshifted, y_unshifted, width=0.5*scale, color="blue", bottom=shift_array)
 
     #plot modified peaks as reversed
     x = [_[0] for _ in peaks2]
     y = [-_[1] for _ in peaks2]
-    ax.bar(x, y, width=1.2*scale, color="gray")
+    ax.bar(x, y, width=0.5*scale, color="gray")
 
     x_shifted = [peaks2[_][0] for _ in modifiedShifted]
     y_shifted = [-peaks2[_][1] for _ in modifiedShifted]
-    ax.bar(x_shifted, y_shifted, width=1.2*scale, color="red")
+    ax.bar(x_shifted, y_shifted, width=0.5*scale, color="red")
 
     x_unshifted = [peaks2[_][0] for _ in modifiedUnshifted]
     y_unshifted = [-peaks2[_][1] for _ in modifiedUnshifted]
-    ax.bar(x_unshifted, y_unshifted, width=1.2*scale, color="blue")
+    ax.bar(x_unshifted, y_unshifted, width=0.5*scale, color="blue")
 
     if show_lines:
         for peak in shifted:
@@ -239,7 +239,7 @@ def draw_alignment(peaks1, peaks2, matched_peaks, shift = 0.1, show_text = False
     ax.set_yticks(y_ticks, y_ticks_labels)
 
     # set font size
-    ax.tick_params(axis='both', which='major', labelsize=10*scale)
+    ax.tick_params(axis='both', which='major', labelsize=20*scale)
 
     # add legend
     ax.plot([], [], color="red", linewidth=2*scale, linestyle="-", label="Shifted Matched Peaks")
@@ -247,6 +247,6 @@ def draw_alignment(peaks1, peaks2, matched_peaks, shift = 0.1, show_text = False
     ax.plot([], [], color="gray", linewidth=2*scale, linestyle="-", label="Unmatched Peaks")
     ax.legend(loc='upper left')
     # legend font size
-    ax.legend(prop={'size': 10*scale})
+    ax.legend(prop={'size': 20*scale})
 
     return ax

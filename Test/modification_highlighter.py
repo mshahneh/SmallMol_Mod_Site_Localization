@@ -62,11 +62,11 @@ def molToSVG(mol, substructure=None, highlightModificationSites=False):
                     if (hitAtom in modifications):
                         colors[hitAtom] = (0.3, 0.6, 1)
                     else:
-                        colors[hitAtom] = (1,0.5,0.5)
-                d2d.DrawMolecule(mol,highlightAtoms=hitAtoms[0], highlightBonds=hitBonds[0], highlightAtomColors=colors)
+                        colors[hitAtom] = (1,1,1)
+                d2d.DrawMolecule(mol,highlightAtoms=hitAtoms[0], highlightBonds=[], highlightAtomColors=colors)
             else:
                 d2d = Draw.MolDraw2DSVG(250,200)
-                d2d.DrawMolecule(mol,highlightAtoms=hitAtoms[0], highlightBonds=hitBonds[0])
+                d2d.DrawMolecule(mol,highlightAtoms=hitAtoms[0], highlightBonds=[])
     else:
         d2d = Draw.MolDraw2DSVG(250,200)
         d2d.DrawMolecule(mol)

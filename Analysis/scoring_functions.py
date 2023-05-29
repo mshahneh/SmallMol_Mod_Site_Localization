@@ -125,12 +125,12 @@ if __name__ == '__main__':
         data.append(row)
     
     # plot the data as spider radar plot and connect the points
-    fig = plt.figure(figsize=(9, 9))
+    fig = plt.figure(figsize=(100, 90))
     ax = fig.add_subplot(111, polar=True)
     N = len(labels)
     theta = np.linspace(0.0, 2 * np.pi, N, endpoint=False)
     for i in range(len(data)):
-        ax.plot(theta, data[i], label=settings_text[i])
+        ax.plot(theta, data[i], label=settings_text[i], linewidth=10)
     ax.set_theta_zero_location("N")
     ax.set_theta_direction(-1)
     ax.set_xticks(theta)
@@ -138,7 +138,24 @@ if __name__ == '__main__':
     ax.set_rlabel_position(0)
     ax.set_ylim(0, 1)
     ax.set_yticks(np.arange(0, 1, 0.1))
-    ax.legend()
+
+    # increase the font size
+    for item in ([ax.title, ax.xaxis.label, ax.yaxis.label] + ax.get_xticklabels() + ax.get_yticklabels()):
+        item.set_fontsize(160)
+
+    ax.legend(fontsize=160)
+
+    # make the lines thicker
+    for line in ax.get_lines():
+        line.set_linewidth(20)
+    
+    # make the grid thicker
+    for line in ax.get_xgridlines() + ax.get_ygridlines():
+        line.set_linewidth(20)
+
+
+        
+
     plt.savefig("score_comparison.png")
 
     
