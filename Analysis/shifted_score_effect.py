@@ -76,11 +76,6 @@ if __name__ == '__main__':
     scores = df["score"].tolist()
     matchedPeaks = df["matched"].tolist()
 
-    # print(scores)
-
-    for i in range(len(scores)):
-        if scores[i] < 0.9:
-            scores[i] = min((9+scores[i])/10, scores[i] + (1.01 ** matchedPeaks[i]) - 1)
     
     plt.figure(figsize=(40, 40))
     plt.xscale('function', functions=(lambda x: np.log10(x+0.001), lambda x: 10**x))
