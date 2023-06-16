@@ -84,8 +84,6 @@ if __name__ == '__main__':
     scores = df["score"].tolist()
     ambiguities = df["ambiguity"].tolist()
 
-    for i in range(len(scores)):
-        scores[i] = scores[i] * (0.98** ambiguities[i])
     
     plt.figure(figsize=(40, 40))
 

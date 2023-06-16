@@ -20,8 +20,8 @@ def get_layout():
         html.Div(children = [
             html.Div(id = 'stats', style={"margin-right": "1vw"}),
             html.Div(children = [
-                html.Img(id = 'prediction', style = {'width': '50%'}),
-                html.Img(id = 'substr', style = {'width': '50%'}),
+                html.Img(id = 'prediction'),
+                html.Img(id = 'substr'),
             ], style = {'display': 'flex', 'flex-direction': 'row', 'justify-content': 'center', 'align-items': 'center'})
         ],  style = {'display': 'flex', 'flex-direction': 'row', 'justify-content': 'center', 'align-items': 'center', 'position': 'relative', 'z-index': '2'}),
 
@@ -43,52 +43,52 @@ def get_layout():
     ])
 
 def get_callbacks(app, visualizer, utils):
-    @app.callback(
-        [Output('prediction', 'src'),
-        Output('substr', 'src'),
-        Output('stats', 'children')],
-        Input('siteLocatorObj', 'data'),
-        State('InputData', 'data')
-    )
-    def update_stats(siteLocatorObj, args):
-        if (siteLocatorObj == None):
-            return None, None, None
-        siteLocator = pickle.loads(base64.b64decode(siteLocatorObj))
-        scores_unshifted, scores_shifted = siteLocator.calculate_score(peak_presence_only = args['presence_only'], consider_intensity = args['presence_only'])
-        print ("debugging: scores shifted:", scores_unshifted, scores_shifted, (args['shifted_only']==False), args['presence_only'], args['presence_only'])
-        scores = siteLocator.distance_score(scores_unshifted, scores_shifted, combine = (args['shifted_only']==False))
+    # @app.callback(
+    #     [Output('prediction', 'src'),
+    #     Output('substr', 'src'),
+    #     Output('stats', 'children')],
+    #     Input('siteLocatorObj', 'data'),
+    #     State('InputData', 'data')
+    # )
+    # def update_stats(siteLocatorObj, args):
+    #     if (siteLocatorObj == None):
+    #         return None, None, None
+    #     siteLocator = pickle.loads(base64.b64decode(siteLocatorObj))
+    #     scores_unshifted, scores_shifted = siteLocator.calculate_score(peak_presence_only = args['presence_only'], consider_intensity = args['presence_only'])
+    #     print ("debugging: scores shifted:", scores_unshifted, scores_shifted, (args['shifted_only']==False), args['presence_only'], args['presence_only'])
+    #     scores = siteLocator.distance_score(scores_unshifted, scores_shifted, combine = (args['shifted_only']==False))
     
-        isMax = None
-        score = None
+    #     isMax = None
+    #     score = None
 
-        smiles1 = args['SMILES1']
-        smiles2 = args['SMILES2']
-        mol1 = Chem.MolFromSmiles(smiles1)
+    #     smiles1 = args['SMILES1']
+    #     smiles2 = args['SMILES2']
+    #     mol1 = Chem.MolFromSmiles(smiles1)
 
-        if (smiles2 is not None and len(smiles2) > 0):
-            svg1 = visualizer.molToSVG(Chem.MolFromSmiles(smiles2), mol1, True)
-            modifLoc = list(utils.calculateModificationSites(Chem.MolFromSmiles(smiles2), mol1, False))
-            accuracy_score = siteLocator.accuracy_score(modifLoc[0], peak_presence_only=args['presence_only'], combine=(args['shifted_only']==False), return_all=True, consider_intensity=args['consider_intensity'])
-            isMax = accuracy_score['isMax']
-            score = accuracy_score['score']
-            stats =  html.Div([
-                html.P("cosine: " + str(round(siteLocator.cosine, 4)), style = {'margin-left': '1.5vw'}),
-                html.P("Score: " + str(round(score, 4)), style = {'margin-left': '1.5vw'}),
-                html.P("is Max: " + str(isMax), style = {'margin-left': '1.5vw'}),
-                html.P("#matches: " + str(len(siteLocator.matchedPeaks)), style = {'margin-left': '1.5vw'}),
-                html.P("#shifted: " + str(len(siteLocator.shifted)), style = {'margin-left': '1.5vw'}),
-                html.P("delta w:" + str(round(abs(siteLocator.molPrecursorMz - siteLocator.modifPrecursorMz), 4)), style = {'margin-left': '1.5vw'}),
-            ], style = {'display': 'flex', 'flex-direction': 'row', 'flex-wrap': 'wrap', 'justify-content': 'left', 'width': '100%', 'height': '5vh', 'align-items': 'center', 'margin-top': '1vh'})
-        else:
-            svg1 = None
-            stats =  html.Div([
-                html.P("#matches: " + str(len(siteLocator.matchedPeaks)), style = {'margin-left': '2vw'}),
-                html.P("#shifted: " + str(len(siteLocator.shifted)), style = {'margin-left': '2vw'}),
-            ], style = {'display': 'flex', 'flex-direction': 'row', 'flex-wrap': 'wrap', 'justify-content': 'left', 'width': '100%', 'height': '5vh', 'align-items': 'center', 'margin-top': '1vh'})
+    #     if (smiles2 is not None and len(smiles2) > 0):
+    #         svg1 = visualizer.molToSVG(Chem.MolFromSmiles(smiles2), mol1, True)
+    #         modifLoc = list(utils.calculateModificationSites(Chem.MolFromSmiles(smiles2), mol1, False))
+    #         accuracy_score = siteLocator.accuracy_score(modifLoc[0], peak_presence_only=args['presence_only'], combine=(args['shifted_only']==False), return_all=True, consider_intensity=args['consider_intensity'])
+    #         isMax = accuracy_score['isMax']
+    #         score = accuracy_score['score']
+    #         stats =  html.Div([
+    #             html.P("cosine: " + str(round(siteLocator.cosine, 4)), style = {'margin-left': '1.5vw'}),
+    #             html.P("Score: " + str(round(score, 4)), style = {'margin-left': '1.5vw'}),
+    #             html.P("is Max: " + str(isMax), style = {'margin-left': '1.5vw'}),
+    #             html.P("#matches: " + str(len(siteLocator.matchedPeaks)), style = {'margin-left': '1.5vw'}),
+    #             html.P("#shifted: " + str(len(siteLocator.shifted)), style = {'margin-left': '1.5vw'}),
+    #             html.P("delta w:" + str(round(abs(siteLocator.molPrecursorMz - siteLocator.modifPrecursorMz), 4)), style = {'margin-left': '1.5vw'}),
+    #         ], style = {'display': 'flex', 'flex-direction': 'row', 'flex-wrap': 'wrap', 'justify-content': 'left', 'width': '100%', 'height': '5vh', 'align-items': 'center', 'margin-top': '1vh'})
+    #     else:
+    #         svg1 = None
+    #         stats =  html.Div([
+    #             html.P("#matches: " + str(len(siteLocator.matchedPeaks)), style = {'margin-left': '2vw'}),
+    #             html.P("#shifted: " + str(len(siteLocator.shifted)), style = {'margin-left': '2vw'}),
+    #         ], style = {'display': 'flex', 'flex-direction': 'row', 'flex-wrap': 'wrap', 'justify-content': 'left', 'width': '100%', 'height': '5vh', 'align-items': 'center', 'margin-top': '1vh'})
         
-        print("scores are:", scores)
-        svg2 = visualizer.highlightScores(mol1, scores)
-        return dash_svg(svg1), dash_svg(svg2), stats
+    #     print("scores are:", scores)
+    #     svg2 = visualizer.highlightScores(mol1, scores)
+    #     return dash_svg(svg1), dash_svg(svg2), stats
 
     
     @app.callback(
@@ -114,7 +114,7 @@ def get_callbacks(app, visualizer, utils):
         topPeaksInxModif = sorted(range(len(y1)), key=lambda i: y1[i])[-topPeakCount:]
         for i in topPeaksInxModif:
             flag = False
-            for j in siteLocator.matchedPeaks:
+            for j in siteLocator.matched_peaks:
                 if (j[0] == i):
                     if (abs(siteLocator.molPeaks[i][0] - siteLocator.modifPeaks[j[1]][0]) > siteLocator.args['mz_tolerance']):
                         typesInx['matched_shifted'].append(i)
@@ -131,9 +131,9 @@ def get_callbacks(app, visualizer, utils):
             y1_ = [x / max(y1_) * 100 for x in y1_]
             indicis = typesInx[i]
             if (i == 'unmatched'):
-                fig.add_trace(go.Bar(x=x1_, y=y1_, hovertext=indicis, name=i, width=0.4, visible='legendonly'))
+                fig.add_trace(go.Bar(x=x1_, y=y1_, hovertext=indicis, name=i, width=1, visible='legendonly'))
             else:
-                fig.add_trace(go.Bar(x=x1_, y=y1_, hovertext=indicis, name=i, width=0.4))
+                fig.add_trace(go.Bar(x=x1_, y=y1_, hovertext=indicis, name=i, width=1))
 
         typesInx = {'matched_shifted': [], 'matched_unshifted': [], 'unmatched': []}
         x2 = []
@@ -163,9 +163,9 @@ def get_callbacks(app, visualizer, utils):
             y2_ = [-j / max(y2_) * 100 for j in y2_]
             indicis = typesInx[i]
             if (i == 'unmatched'):
-                fig.add_trace(go.Bar(x=x1_, y=y2_, hovertext=indicis, name=i, width=0.4, visible='legendonly'))
+                fig.add_trace(go.Bar(x=x1_, y=y2_, hovertext=indicis, name=i, width=1, visible='legendonly'))
             else:
-                fig.add_trace(go.Bar(x=x1_, y=y2_, hovertext=indicis, name=i, width=0.4))
+                fig.add_trace(go.Bar(x=x1_, y=y2_, hovertext=indicis, name=i, width=1))
         
         fig.update_layout(
             title="Peaks",

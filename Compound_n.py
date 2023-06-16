@@ -10,12 +10,12 @@ class Compound():
     def __init__(self, data, structure=None, args={}):
         """Initialize the compound."""
         
-        self.args = {"ppm": 1.01, "mz_tolerance": 0.1, "filter_peaks_method": "intensity", "filter_peaks_variable": 0.01}
+        self.args = {"ppm": 1.01, "mz_tolerance": 0.1, "filter_peaks_method": "top_k", "filter_peaks_variable": 50}
         self.args.update(args)
 
         self.metadata = copy.deepcopy(data)
         for arg in important_arguments:
-            if not arg in data:
+            if not arg in data and not arg.lower() in data:
                 # print("debug: missing argument: " + arg + " in " + str(data))
                 if arg != "peaks":
                     raise ValueError("Missing argument: " + arg)
@@ -24,8 +24,12 @@ class Compound():
                 else:
                     raise ValueError("Missing argument: " + arg)
             else:
-                setattr(self, arg, data[arg])
-                self.metadata.pop(arg)
+                if arg.lower() in data:
+                    setattr(self, arg, data[arg.lower()])
+                    self.metadata.pop(arg.lower())
+                else:
+                    setattr(self, arg, data[arg])
+                    self.metadata.pop(arg)
         
         self.Charge = int(self.Charge)
         self.Precursor_MZ = float(self.Precursor_MZ)
@@ -33,9 +37,13 @@ class Compound():
         self.peaks = utils.filter_peaks(self.peaks, self.args['filter_peaks_method'], self.args['filter_peaks_variable'], self.Precursor_MZ, self.Charge)
 
         if structure == None and "Smiles" in data:
+            print("debug: using smiles")
             self.structure = Chem.MolFromSmiles(data["Smiles"])
         elif structure != None:
-            self.structure = structure
+            if type(structure) == str:
+                self.structure = Chem.MolFromSmiles(structure)
+            else:
+                self.structure = structure
         
         if self.structure != None:
             self.distances = Chem.rdmolops.GetDistanceMatrix(self.structure)

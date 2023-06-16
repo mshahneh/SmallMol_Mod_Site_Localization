@@ -1,10 +1,8 @@
 from dash import Dash, html, dcc, Input, Output, State, dash_table
 import base64
 import pickle
-import json
-import os
 
-def get_callbacks(app, modSite):
+def get_callbacks(app, modSite, Compound, hn):
     
     @app.callback(
         [Output('siteLocatorObj', 'data'), Output('ErrorMessage', 'children')],
@@ -14,17 +12,22 @@ def get_callbacks(app, modSite):
         print ('\n\n\n', data, '\n\n\n')
         if data is None:
             return None, None
-        siteLocator = modSite.SiteLocator(data['USI1'], data['USI2'], data['SMILES1'], data)
-        m1 = data['USI1'].split(':')[-1]
-        try:
-            siriusDirectory = os.path.join("data/libraries","BERKELEY-LAB","nf_output/fragmentationtrees/")
-            molSirius = json.load(open(os.path.join(siriusDirectory, m1 + "_fragmentationtree.json")))
-            siteLocator.apply_sirius(molSirius)
-        except:
-            print("error applying sirius")
-            pass
-        print ("here and done with that!")
-        if siteLocator.molPrecursorMz > siteLocator.modifPrecursorMz:
+        print("we actually get to here")
+        main_info = hn.getDataFromUsi(data['USI1'])
+        main_info['Adduct'] = "M+H"
+        main_info['Charge'] = "1"
+        mod_info = hn.getDataFromUsi(data['USI2'])
+        mod_info['Adduct'] = "M+H"
+        mod_info['Charge'] = "1"
+        print("main_info", main_info)
+        print("mod_info", mod_info)
+        print("done!")
+        main_compound = Compound.Compound(main_info, data['SMILES1'])
+        print("main_compound is built")
+        mod_compound = Compound.Compound(mod_info, data['SMILES2'])
+        siteLocator = modSite.ModificationSiteLocator(main_compound, mod_compound)
+        print ("here and done with that!", len(siteLocator.matched_peaks), len(siteLocator.shifted))
+        if siteLocator.main_compound.Precursor_MZ > siteLocator.modified_compound.Precursor_MZ:
             return None, "Molecule precursor mass is higher than modified precursor mass"
         else:
             return base64.b64encode(pickle.dumps(siteLocator)).decode(), "Great Success!"

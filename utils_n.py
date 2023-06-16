@@ -40,9 +40,9 @@ def filter_peaks(peaks, method, variable, precursor_mz = None, charge = None):
         peaks = filtered_peaks
         return filtered_peaks
     
-    # delete peaks that are bigger than the precursor + charge
-    if precursor_mz != None and charge != None:
-        peaks = [peak for peak in peaks if peak[0] <= precursor_mz + charge + eps]
+    # # delete peaks that are bigger than the precursor + charge
+    # if precursor_mz != None and charge != None:
+    #     peaks = [peak for peak in peaks if peak[0] <= precursor_mz + charge + eps]
 
     tempPeaks = normalize_peaks(peaks)
 

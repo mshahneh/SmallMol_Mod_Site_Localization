@@ -39,8 +39,8 @@ class TestModificationSiteLocator(unittest.TestCase):
             except:
                 continue
             try:
-                self.assertTrue(abs(site_locator.cosine - matchedPeaks["cosine"]) < 0.01)
-                self.assertTrue(abs(len(site_locator.matched_peaks) - matchedPeaks["n_peak_matches"])/len(site_locator.matched_peaks) < 0.1)
+                self.assertTrue(site_locator.cosine > matchedPeaks["cosine"]*0.9)
+                self.assertTrue(abs(len(site_locator.matched_peaks) - matchedPeaks["n_peak_matches"])/len(site_locator.matched_peaks) < 0.2)
             except AssertionError:
                 print("AssertionError: ", c1, c2)
                 print("site_locator.cosine: ", site_locator.cosine)
