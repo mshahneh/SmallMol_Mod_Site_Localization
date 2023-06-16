@@ -1,10 +1,10 @@
-FROM continuumio/miniconda3:4.10.3
-MAINTAINER Mingxun Wang "mwang87@gmail.com"
+FROM mambaorg/micromamba:1.4.4
+MAINTAINER Reza Shahneh "mzare008@ucr.edu"
 
-RUN apt-get update && apt-get install -y build-essential
-
-COPY requirements.txt .
-RUN pip install -r requirements.txt
+COPY conda-env.yml .
+RUN micromamba env create -f conda-env.yml --name mod-site
+RUN echo "source activate mod-site" > ~/.bashrc
+ENV PATH /opt/conda/envs/mod-site/bin:$PATH
 
 COPY . /app
 WORKDIR /app
