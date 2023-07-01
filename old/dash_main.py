@@ -21,4 +21,4 @@ if __name__ == '__main__':
     computation.get_callbacks(app, modSite)
     chart_section.get_callbacks(app, vis, utils)
 
-    app.run_server(debug = True, port=80, host="0.0.0.0")
+    app.run_server(debug = True, port=5000, host="0.0.0.0")
