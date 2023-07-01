@@ -157,7 +157,10 @@ def highlightMolIndices(mol, hitAtoms):
     d2d = Chem.Draw.MolDraw2DSVG(1250,1200)
     d2d.DrawMolecule(mol,highlightAtoms=hitAtoms, highlightBonds=hitBonds)
     d2d.FinishDrawing()
-    return d2d.GetDrawingText()
+    svgText =  d2d.GetDrawingText()
+    # add a heatmap legend to the svg
+    heaatmapLegend = ""
+    return svgText
 
 def draw_alignment(peaks1, peaks2, matched_peaks, shift = 0.1, show_text = False, show_lines = True, scale = 1, ax = None):
 

@@ -27,7 +27,16 @@ def getMatchedPeaks(usi1, usi2):
 def getDataFromUsi(usi):
     url = 'https://metabolomics-usi.gnps2.org/json/' + "?usi1=" + usi
     r = requests.get(url)
-    return json.loads(r.text)
+    data = json.loads(r.text)
+    # change key names from precaursor_mz to Precursor_MZ
+    data['Precursor_MZ'] = data.pop('precursor_mz')
+    data['Charge'] = data.pop('precursor_charge')
+
+    # if there are no adducts, add a default one
+    if 'Adduct' not in data:
+        data['Adduct'] = "M+H"
+
+    return data
 
 
 def generate_usi(id, library_membership):
@@ -47,11 +56,6 @@ def getMatchedPeaks(usi1, usi2):
     #  'annotate_peaks': 'value3',
       'grid': 'True'}
     r = requests.get('https://metabolomics-usi.gnps2.org/json/mirror/', params=payload,  timeout=5)
-    return json.loads(r.text)
-
-def getDataFromUsi(usi):
-    url = 'https://metabolomics-usi.gnps2.org/json/' + "?usi1=" + usi
-    r = requests.get(url)
     return json.loads(r.text)
 
 def usi_to_SpectrumTuple(usi):
