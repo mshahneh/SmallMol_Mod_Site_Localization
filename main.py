@@ -1,7 +1,9 @@
 import argparse
-import SiteLocator as SiteLocator
+import ModificationSiteLocator as SiteLocator
+from Compound_n import Compound
 import visualizer as visualizer
 import utils as utils
+
 import os
 import json
 import pickle
@@ -14,25 +16,21 @@ from copy import deepcopy
 import matplotlib.pyplot as plt
 from IPython.display import SVG
 
-def sitelocalize(usi1, usi2, smiles1, show_img=True):
+def sitelocalize(usi1, usi2, smiles1, smiles2 = None, show_img=True):
 
-    molMol = Chem.MolFromSmiles(smiles1)
+    # make the compounds from the usi and smiles
+    mainCompound = Compound(usi1, smiles1)
+    modCompound = Compound(usi2, smiles2)
 
-    modsite = SiteLocator.SiteLocator(usi1, usi2, molMol)
-    scores_unshifted, scores_shifted = modsite.calculate_score()
-    scores = modsite.distance_score(scores_unshifted, scores_shifted)
-    if (max(scores.values()) > 0):
-        scores = [scores[x] / max(scores.values()) for x in scores.keys()]
-    else:
-        scores = [0 for x in scores.keys()]
-    
-    svg = visualizer.highlightScores(molMol, scores)
+    modsite = SiteLocator.ModificationSiteLocator(mainCompound, modCompound)
+    likelihoods = modsite.generate_probabilities()
+    svg = visualizer.highlightScores(mainCompound.structure, likelihoods)
     
     if show_img:
         SVG(svg)
     
     result = {}
-    result["# matched peaks"] = len(modsite.matchedPeaks)
+    result["# matched peaks"] = len(modsite.matched_peaks)
     result['# unshifted peaks'] = len(modsite.unshifted)
     result['# shifted peaks'] = len(modsite.shifted)
     result["usi1"] = usi1

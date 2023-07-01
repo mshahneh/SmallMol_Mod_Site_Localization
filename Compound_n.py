@@ -3,6 +3,7 @@ import fragmentation_py as fragmentation_py
 import copy
 import json
 import utils_n as utils
+import handle_network as handle_network
 
 important_arguments = ["peaks", "Adduct", "Precursor_MZ", "Charge"]
 class Compound():
@@ -12,6 +13,9 @@ class Compound():
         
         self.args = {"ppm": 1.01, "mz_tolerance": 0.1, "filter_peaks_method": "top_k", "filter_peaks_variable": 50}
         self.args.update(args)
+
+        if type(data) == str:
+            data = handle_network.getDataFromUsi(data)
 
         self.metadata = copy.deepcopy(data)
         for arg in important_arguments:
@@ -44,6 +48,8 @@ class Compound():
                 self.structure = Chem.MolFromSmiles(structure)
             else:
                 self.structure = structure
+        else:
+            self.structure = None
         
         if self.structure != None:
             self.distances = Chem.rdmolops.GetDistanceMatrix(self.structure)
