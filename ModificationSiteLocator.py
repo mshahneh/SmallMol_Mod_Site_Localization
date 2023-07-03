@@ -1,6 +1,6 @@
 from alignment_n import align
 import json
-import utils as utils_old
+import utils_n as utils
 import numpy as np
 import calculate_scores_n as Calc_Scores
 from rdkit import Chem
@@ -14,7 +14,7 @@ class ModificationSiteLocator():
         self.main_compound = main_compound
         self.modified_compound = modified_compound
         self.cosine, self.matched_peaks = align(self.main_compound, self.modified_compound, self.args["mz_tolerance"])
-        self.shifted, self.unshifted = utils_old.separateShifted(self.matched_peaks, 
+        self.shifted, self.unshifted = utils.separateShifted(self.matched_peaks, 
                                                                  self.main_compound.peaks, self.modified_compound.peaks)
 
     

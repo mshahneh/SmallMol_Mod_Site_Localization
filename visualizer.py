@@ -1,6 +1,6 @@
 import xlsxwriter
 import os
-import utils as utils
+import utils_n as utils
 from rdkit import Chem
 from rdkit.Chem import Draw
 from PIL import Image
@@ -186,13 +186,13 @@ def highlightScores(mol, scores):
             svg += """<text x="{}" y="{}" fill="white">{}</text>""".format(5, (height+fontSize)/2, "low likelihood")
             # get width of text
             text = "high likelihood"
-            svg += """<text x="{}" y="{}" fill="white">{}</text>""".format(width-len(text)*fontSize/1.42, (height+fontSize)/2, text)
+            svg += """<text x="{}" y="{}" fill="white">{}</text>""".format(width-len(text)*fontSize/1.5, (height+fontSize)/2, text)
         else:
             # add text to svg rotated
             fontSize = 10
             text = "high likelihood"
             svg += """<text x="{}" y="{}" fill="white" transform="rotate(90, {}, {})">{}</text>""".format(5, -(width-fontSize)/2, 0, 0, "low likelihood")
-            svg += """<text x="{}" y="{}" fill="white" transform="rotate(90, {}, {})">{}</text>""".format(height-len(text)*fontSize/1.42, -(width-fontSize)/2, 0, 0, text)
+            svg += """<text x="{}" y="{}" fill="white" transform="rotate(90, {}, {})">{}</text>""".format(height-len(text)*fontSize/1.5, -(width-fontSize)/2, 0, 0, text)
 
         svg += "</svg>"
         return svg
