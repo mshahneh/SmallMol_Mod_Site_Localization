@@ -1,7 +1,7 @@
 import numpy as np
 from typing import List, Tuple
 import collections
-import utils as utils
+import utils_n as utils
 import handle_network as hn
 import json
 

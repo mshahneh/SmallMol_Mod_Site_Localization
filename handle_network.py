@@ -2,7 +2,7 @@ import os
 import json
 import requests
 import numpy as np
-from utils import convert_to_SpectrumTuple
+from utils_n import convert_to_SpectrumTuple
 
 
 def generate_usi(id, library_membership):

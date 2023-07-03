@@ -2,7 +2,7 @@ import argparse
 import ModificationSiteLocator as SiteLocator
 from Compound_n import Compound
 import visualizer as visualizer
-import utils as utils
+import utils_n as utils
 
 import os
 import json
