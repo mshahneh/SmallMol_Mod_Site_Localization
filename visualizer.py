@@ -133,6 +133,9 @@ def molToSVG(mol, substructure=None, highlightModificationSites=False):
         d2d = Chem.Draw.MolDraw2DSVG(1250,1200)
         d2d.DrawMolecule(mol)
     d2d.FinishDrawing()
+
+
+
     return d2d.GetDrawingText()
 
 def highlightScores(mol, scores):
@@ -146,7 +149,61 @@ def highlightScores(mol, scores):
         colors[i] = (vals[i], 0, 1-vals[i], 0.9)
     d2d.DrawMolecule(mol, highlightAtoms=list(range(mol.GetNumAtoms())), highlightAtomColors=colors, highlightBonds=[])
     d2d.FinishDrawing()
-    return d2d.GetDrawingText()
+    def draw_gradient_svg(length, diam, ax = 0, steps = 100):
+        '''
+        ax = 0: x axis
+        ax = 1: y axis
+        '''
+
+        width = length
+        height = diam
+        if ax == 1:
+            width = diam
+            height = length
+        
+        svg = """<svg width="{}" height="{}" xmlns="http://www.w3.org/2000/svg">""".format(width, height)
+        rectWidth = width/steps
+        rectHeight = height
+        if ax == 1:
+            rectWidth = width
+            rectHeight = height/steps
+
+
+        # else:
+        #     # add text to svg rotated
+        #     svg += """<text x="{}" y="{}" fill="black" transform="rotate(90, {}, {})">{}</text>""".format(0, height/2, 0, height/2, "low likelihood")
+        #     svg += """<text x="{}" y="{}" fill="black" transform="rotate(90, {}, {})">{}</text>""".format(0, width-100, 0, width-100, "high likelihood")
+
+        for i in range(steps, -1, -1):
+            if ax == 0:
+                svg += """<rect x="{}" y="{}" width="{}" height="{}" fill="rgb({}, 0, {})"/>""".format(i*rectWidth, 0, rectWidth, rectHeight, (i/steps)*255, (1-i/steps)*255)
+            else:
+                svg += """<rect x="{}" y="{}" width="{}" height="{}" fill="rgb({}, 0, {})"/>""".format(0, i*rectHeight, rectWidth, rectHeight, (i/steps)*255, (1-i/steps)*255)
+
+        if ax == 0:
+        #     # add text to svg
+            fontSize = 10
+            svg += """<text x="{}" y="{}" fill="white">{}</text>""".format(5, (height+fontSize)/2, "low likelihood")
+            # get width of text
+            text = "high likelihood"
+            svg += """<text x="{}" y="{}" fill="white">{}</text>""".format(width-len(text)*fontSize/1.42, (height+fontSize)/2, text)
+        else:
+            # add text to svg rotated
+            fontSize = 10
+            text = "high likelihood"
+            svg += """<text x="{}" y="{}" fill="white" transform="rotate(90, {}, {})">{}</text>""".format(5, -(width-fontSize)/2, 0, 0, "low likelihood")
+            svg += """<text x="{}" y="{}" fill="white" transform="rotate(90, {}, {})">{}</text>""".format(height-len(text)*fontSize/1.42, -(width-fontSize)/2, 0, 0, text)
+
+        svg += "</svg>"
+        return svg
+    
+    svgText = d2d.GetDrawingText()
+    svgGradient = draw_gradient_svg(1250, 20, ax = 0)
+
+    # concatenate two svg files
+    svgText = svgText.replace("</svg>", svgGradient + "</svg>")
+    
+    return svgText
 
 def highlightMolIndices(mol, hitAtoms):
     d2d = Draw.MolDraw2DSVG(1250,1200)
@@ -158,8 +215,8 @@ def highlightMolIndices(mol, hitAtoms):
     d2d.DrawMolecule(mol,highlightAtoms=hitAtoms, highlightBonds=hitBonds)
     d2d.FinishDrawing()
     svgText =  d2d.GetDrawingText()
-    # add a heatmap legend to the svg
-    heaatmapLegend = ""
+
+
     return svgText
 
 def draw_alignment(peaks1, peaks2, matched_peaks, shift = 0.1, show_text = False, show_lines = True, scale = 1, ax = None):
