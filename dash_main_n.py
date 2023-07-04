@@ -4,7 +4,7 @@ from arguments import args
 import ModificationSiteLocator as modSite
 import Compound_n as compound
 import visualizer as vis
-import utils as utils
+import utils_n as utils
 import handle_network as hn
 import dash_bootstrap_components as dbc
 

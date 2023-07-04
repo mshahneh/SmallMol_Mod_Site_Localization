@@ -15,22 +15,15 @@ def get_callbacks(app, modSite, Compound, hn):
         print("we actually get to here")
         main_info = hn.getDataFromUsi(data['USI1'])
         main_info['Adduct'] = "M+H"
-        main_info['Charge'] = "1"
         mod_info = hn.getDataFromUsi(data['USI2'])
         mod_info['Adduct'] = "M+H"
-        mod_info['Charge'] = "1"
-        print("main_info", main_info)
-        print("mod_info", mod_info)
-        print("done!")
         main_compound = Compound.Compound(main_info, data['SMILES1'])
-        print("main_compound is built")
         mod_compound = Compound.Compound(mod_info, data['SMILES2'])
         siteLocator = modSite.ModificationSiteLocator(main_compound, mod_compound)
-        print ("here and done with that!", len(siteLocator.matched_peaks), len(siteLocator.shifted))
         if siteLocator.main_compound.Precursor_MZ > siteLocator.modified_compound.Precursor_MZ:
             return None, "Molecule precursor mass is higher than modified precursor mass"
         else:
-            return base64.b64encode(pickle.dumps(siteLocator)).decode(), "Great Success!"
+            return base64.b64encode(pickle.dumps(siteLocator)).decode(), "Success"
     # scores_unshifted, scores_shifted = siteLocator.calculate_score(peak_presence_only = presense, consider_intensity = consider_intensity)
     # scores = siteLocator.distance_score(scores_unshifted, scores_shifted, combine = combine)
     

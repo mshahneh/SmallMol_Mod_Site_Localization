@@ -43,17 +43,17 @@ def get_layout():
     ])
 
 def get_callbacks(app, visualizer, utils):
-    # @app.callback(
-    #     [Output('prediction', 'src'),
-    #     Output('substr', 'src'),
-    #     Output('stats', 'children')],
-    #     Input('siteLocatorObj', 'data'),
-    #     State('InputData', 'data')
-    # )
-    # def update_stats(siteLocatorObj, args):
-    #     if (siteLocatorObj == None):
-    #         return None, None, None
-    #     siteLocator = pickle.loads(base64.b64decode(siteLocatorObj))
+    @app.callback(
+        [Output('prediction', 'src'),
+        Output('substr', 'src'),
+        Output('stats', 'children')],
+        Input('siteLocatorObj', 'data'),
+        State('InputData', 'data')
+    )
+    def update_stats(siteLocatorObj, args):
+        if (siteLocatorObj == None):
+            return None, None, None
+        siteLocator = pickle.loads(base64.b64decode(siteLocatorObj))
     #     scores_unshifted, scores_shifted = siteLocator.calculate_score(peak_presence_only = args['presence_only'], consider_intensity = args['presence_only'])
     #     print ("debugging: scores shifted:", scores_unshifted, scores_shifted, (args['shifted_only']==False), args['presence_only'], args['presence_only'])
     #     scores = siteLocator.distance_score(scores_unshifted, scores_shifted, combine = (args['shifted_only']==False))
@@ -75,20 +75,21 @@ def get_callbacks(app, visualizer, utils):
     #             html.P("cosine: " + str(round(siteLocator.cosine, 4)), style = {'margin-left': '1.5vw'}),
     #             html.P("Score: " + str(round(score, 4)), style = {'margin-left': '1.5vw'}),
     #             html.P("is Max: " + str(isMax), style = {'margin-left': '1.5vw'}),
-    #             html.P("#matches: " + str(len(siteLocator.matchedPeaks)), style = {'margin-left': '1.5vw'}),
+    #             html.P("#matches: " + str(len(siteLocator.matched_peaks)), style = {'margin-left': '1.5vw'}),
     #             html.P("#shifted: " + str(len(siteLocator.shifted)), style = {'margin-left': '1.5vw'}),
     #             html.P("delta w:" + str(round(abs(siteLocator.molPrecursorMz - siteLocator.modifPrecursorMz), 4)), style = {'margin-left': '1.5vw'}),
     #         ], style = {'display': 'flex', 'flex-direction': 'row', 'flex-wrap': 'wrap', 'justify-content': 'left', 'width': '100%', 'height': '5vh', 'align-items': 'center', 'margin-top': '1vh'})
     #     else:
     #         svg1 = None
     #         stats =  html.Div([
-    #             html.P("#matches: " + str(len(siteLocator.matchedPeaks)), style = {'margin-left': '2vw'}),
+    #             html.P("#matches: " + str(len(siteLocator.matched_peaks)), style = {'margin-left': '2vw'}),
     #             html.P("#shifted: " + str(len(siteLocator.shifted)), style = {'margin-left': '2vw'}),
     #         ], style = {'display': 'flex', 'flex-direction': 'row', 'flex-wrap': 'wrap', 'justify-content': 'left', 'width': '100%', 'height': '5vh', 'align-items': 'center', 'margin-top': '1vh'})
         
     #     print("scores are:", scores)
-    #     svg2 = visualizer.highlightScores(mol1, scores)
-    #     return dash_svg(svg1), dash_svg(svg2), stats
+        scores = siteLocator.generate_probabilities()
+        svg2 = visualizer.highlightScores(siteLocator.main_compound.structure, scores)
+        return None, dash_svg(svg2), None
 
     
     @app.callback(
@@ -105,7 +106,7 @@ def get_callbacks(app, visualizer, utils):
         typesInx = {'matched_shifted': [], 'matched_unshifted': [], 'unmatched': []}
         x1 = []
         y1 = []
-        for peak in siteLocator.molPeaks:
+        for peak in siteLocator.main_compound.peaks:
             x1.append(peak[0])
             y1.append(peak[1])
         
@@ -116,7 +117,7 @@ def get_callbacks(app, visualizer, utils):
             flag = False
             for j in siteLocator.matched_peaks:
                 if (j[0] == i):
-                    if (abs(siteLocator.molPeaks[i][0] - siteLocator.modifPeaks[j[1]][0]) > siteLocator.args['mz_tolerance']):
+                    if (abs(siteLocator.main_compound.peaks[i][0] - siteLocator.modified_compound.peaks[j[1]][0]) > siteLocator.args['mz_tolerance']):
                         typesInx['matched_shifted'].append(i)
                     else:
                         typesInx['matched_unshifted'].append(i)
@@ -138,16 +139,16 @@ def get_callbacks(app, visualizer, utils):
         typesInx = {'matched_shifted': [], 'matched_unshifted': [], 'unmatched': []}
         x2 = []
         y2 = []
-        for peak in siteLocator.modifPeaks:
+        for peak in siteLocator.modified_compound.peaks:
             x2.append(peak[0])
             y2.append(peak[1])
         
         topPeaksInxModif = sorted(range(len(y2)), key=lambda i: y2[i])[-topPeakCount:]
         for i in topPeaksInxModif:
             flag = False
-            for j in siteLocator.matchedPeaks:
+            for j in siteLocator.matched_peaks:
                 if (j[1] == i):
-                    if (abs(siteLocator.molPeaks[j[0]][0] - siteLocator.modifPeaks[j[1]][0]) > 0.1):
+                    if (abs(siteLocator.main_compound.peaks[j[0]][0] - siteLocator.modified_compound.peaks[j[1]][0]) > 0.1):
                         typesInx['matched_shifted'].append([i, j[0]])
                     else:
                         typesInx['matched_unshifted'].append([i, j[0]])
