@@ -23,11 +23,10 @@ def get_callbacks(app, modSite):
         except:
             print("error applying sirius")
             pass
-        print ("here and done with that!")
         if siteLocator.molPrecursorMz > siteLocator.modifPrecursorMz:
             return None, "Molecule precursor mass is higher than modified precursor mass"
         else:
-            return base64.b64encode(pickle.dumps(siteLocator)).decode(), "Great Success!"
+            return base64.b64encode(pickle.dumps(siteLocator)).decode(), "Successfull"
     # scores_unshifted, scores_shifted = siteLocator.calculate_score(peak_presence_only = presense, consider_intensity = consider_intensity)
     # scores = siteLocator.distance_score(scores_unshifted, scores_shifted, combine = combine)
     

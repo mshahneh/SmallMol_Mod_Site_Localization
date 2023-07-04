@@ -10,9 +10,8 @@ from tqdm import tqdm
 def get_layout(passedArgs, hn, utils):
 
     myData = [{'USI1': 'mzspec:GNPS:BERKELEY-LAB:accession:CCMSLIB00010126753', 'USI2': 'mzspec:GNPS:BERKELEY-LAB:accession:CCMSLIB00010118619', 'Smiles1': 'O=C(O)[C@@H]1CCC(O)=N1', 'Smiles2': 'CCOC(=O)C1CCC(O)=N1'}, {'USI1': 'mzspec:GNPS:BERKELEY-LAB:accession:CCMSLIB00010125637', 'USI2': 'mzspec:GNPS:BERKELEY-LAB:accession:CCMSLIB00010106370', 'Smiles1': 'COc1cc(C(=O)O)ccc1O', 'Smiles2': 'CCOC(=O)c1ccc(O)c(OC)c1'}, {'USI1': 'mzspec:GNPS:BERKELEY-LAB:accession:CCMSLIB00010125095', 'USI2': 'mzspec:GNPS:BERKELEY-LAB:accession:CCMSLIB00010120285', 'Smiles1': 'O=C(O)c1cc(O)c(O)c(O)c1', 'Smiles2': 'CCOC(=O)c1cc(O)c(O)c(O)c1'}, {'USI1': 'mzspec:GNPS:BERKELEY-LAB:accession:CCMSLIB00010122676', 'USI2': 'mzspec:GNPS:BERKELEY-LAB:accession:CCMSLIB00010108770', 'Smiles1': 'COc1cc(C=O)ccc1O', 'Smiles2': 'COc1cc(C=O)ccc1OC(C)C'}, {'USI1': 'mzspec:GNPS:BERKELEY-LAB:accession:CCMSLIB00010122675', 'USI2': 'mzspec:GNPS:BERKELEY-LAB:accession:CCMSLIB00010104696', 'Smiles1': 'COc1cc(C=O)ccc1O', 'Smiles2': 'CCCOc1ccc(C=O)cc1OC'}]
-    columns=["USI1", "Smiles1", "USI2", "Smiles2"]
     df = pd.DataFrame(myData, columns=["USI1", "Smiles1", "USI2", "Smiles2"])
-
+    columns=[{"name": i, "id": i} for i in df.columns]
     print ("passedArgs", passedArgs)
     args = {}
     for key in passedArgs:
@@ -21,7 +20,6 @@ def get_layout(passedArgs, hn, utils):
         except:
             args[key] = passedArgs[key]
     
-    # table layer
     table =         dash_table.DataTable(
         id='my_table',
         columns=columns,
@@ -42,7 +40,6 @@ def get_layout(passedArgs, hn, utils):
         row_selectable="single",
         style_table={ 'width': '95%', 'margin': 'auto'},
         )
-
     inp1 = [html.H5('Base Compound',style = {'width': '100%', 'margin': '1vh'})]
     for item in ['USI1', 'SMILES1']:
         inp1.append(dbc.InputGroup(
