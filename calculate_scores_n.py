@@ -71,6 +71,7 @@ def temp_score(G, probabilities, modificationSiteIdx):
     # score = np.exp(-self.distances[modificationSiteIdx][closestMaxAtomIndx]/3) * 0.5 + np.exp(-(localDistances/count)) * 0.5
     # score = np.exp(-self.distances[modificationSiteIdx][closestMaxAtomIndx])
     score = np.exp(-(localDistances/count))
+    print("the score is!", score, localDistances, count, graphDiameter, maxScore, modificationSiteIdx, closestMaxAtomIndx)
     return score
 
 # def calculate_spanning_graph(G, probabilities):
