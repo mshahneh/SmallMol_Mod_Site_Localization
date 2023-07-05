@@ -72,7 +72,6 @@ def get_layout(passedArgs, hn, utils):
     for item in [ 'mz_tolerance']:#, 'filter_peaks_variable', 'ppm']:
         optionArguments.append(dbc.InputGroup(
             [dbc.InputGroupText(item), dbc.Input(placeholder=item,id=item, value = args.get(item, ""))],
-            style={"height": "2vh"}
         ))
 
     return html.Div(id = 'inputs', children = 
@@ -85,7 +84,7 @@ def get_layout(passedArgs, hn, utils):
                         id='options',
                         children=myOptions,
                     style={'display': 'flex', 'flex-direction': 'row','margin-right': '1vw'}),
-                html.Div(id = 'arguments', children = optionArguments, style = {'display': 'flex', 'flex-direction': 'row', 'justify-content': 'center', 'min-height': '5vh', 'align-items': 'center', 'margin-top': '1vh'}),
+                html.Div(id = 'arguments', children = optionArguments, style = {'display': 'flex', 'flex-direction': 'row', 'justify-content': 'center', 'min-height': '5vh', 'align-items': 'center'}),
             ], style = {'display': 'flex', 'flex-direction': 'row', 'justify-content': 'center', 'align-items': 'center'}),
             
             # html.Div(children = [
