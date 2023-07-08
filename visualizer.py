@@ -149,7 +149,7 @@ def highlightScores(mol, scores):
         colors[i] = (vals[i], 0, 1-vals[i], 0.9)
     d2d.DrawMolecule(mol, highlightAtoms=list(range(mol.GetNumAtoms())), highlightAtomColors=colors, highlightBonds=[])
     d2d.FinishDrawing()
-    def draw_gradient_svg(length, diam, ax = 0, steps = 100):
+    def draw_gradient_svg(length, diam, ax = 0, steps = 100, fontSize = 10):
         '''
         ax = 0: x axis
         ax = 1: y axis
@@ -179,26 +179,24 @@ def highlightScores(mol, scores):
                 svg += """<rect x="{}" y="{}" width="{}" height="{}" fill="rgb({}, 0, {})"/>""".format(i*rectWidth, 0, rectWidth, rectHeight, (i/steps)*255, (1-i/steps)*255)
             else:
                 svg += """<rect x="{}" y="{}" width="{}" height="{}" fill="rgb({}, 0, {})"/>""".format(0, i*rectHeight, rectWidth, rectHeight, (i/steps)*255, (1-i/steps)*255)
-
+        
         if ax == 0:
-        #     # add text to svg
-            fontSize = 10
-            svg += """<text x="{}" y="{}" fill="white">{}</text>""".format(5, (height+fontSize)/2, "low likelihood")
+            svg += """<text x="{}" y="{}" font-size="{}px" fill="white">{}</text>""".format(5, (height+fontSize/2)/2, fontSize, "low likelihood")
             # get width of text
             text = "high likelihood"
-            svg += """<text x="{}" y="{}" fill="white">{}</text>""".format(width-len(text)*fontSize/1.5, (height+fontSize)/2, text)
+            svg += """<text x="{}" y="{}" font-size="{}px" fill="white">{}</text>""".format(width-len(text)*fontSize/2.4, (height+fontSize/2)/2, fontSize, text)
         else:
-            # add text to svg rotated
-            fontSize = 10
             text = "high likelihood"
-            svg += """<text x="{}" y="{}" fill="white" transform="rotate(90, {}, {})">{}</text>""".format(5, -(width-fontSize)/2, 0, 0, "low likelihood")
-            svg += """<text x="{}" y="{}" fill="white" transform="rotate(90, {}, {})">{}</text>""".format(height-len(text)*fontSize/1.5, -(width-fontSize)/2, 0, 0, text)
+            # change font size
+            
+            svg += """<text x="{}" y="{}" font-size="{}px" fill="white" transform="rotate(90, 0, 0)">{}</text>""".format(5, -(width-fontSize)/2, fontSize, "low likelihood")
+            svg += """<text x="{}" y="{}" font-size="{}px" fill="white" transform="rotate(90, 0, 0)">{}</text>""".format(height-len(text)*fontSize/1.5, -(width-fontSize)/2, fontSize, text)
 
         svg += "</svg>"
         return svg
     
     svgText = d2d.GetDrawingText()
-    svgGradient = draw_gradient_svg(1250, 20, ax = 0)
+    svgGradient = draw_gradient_svg(1250, 50, ax = 0, steps = 30, fontSize = 40)
 
     # concatenate two svg files
     svgText = svgText.replace("</svg>", svgGradient + "</svg>")

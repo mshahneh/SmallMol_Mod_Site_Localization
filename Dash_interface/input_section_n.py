@@ -76,35 +76,22 @@ def get_layout(passedArgs, hn, utils):
 
     return html.Div(id = 'inputs', children = 
         [
-            html.Div(children=[table], style = {'width': '100%', 'margin-bottom': '1vh'}),
-            layer1,
-            
-            html.Div(children = [
-                html.Div(
-                        id='options',
-                        children=myOptions,
-                    style={'display': 'flex', 'flex-direction': 'row','margin-right': '1vw'}),
-                html.Div(id = 'arguments', children = optionArguments, style = {'display': 'flex', 'flex-direction': 'row', 'justify-content': 'center', 'min-height': '5vh', 'align-items': 'center'}),
-            ], style = {'display': 'flex', 'flex-direction': 'row', 'justify-content': 'center', 'align-items': 'center'}),
-            
-            # html.Div(children = [
-            #     dcc.Input(
-            #         id="helperUSI",
-            #         type="text",
-            #         placeholder="helperUSI",
-            #         style={'width':'23%'}
-            #     ),
-            #     dcc.Input(
-            #         id="helperSMILES",
-            #         type="text",
-            #         placeholder="helperSMILES",
-            #         style={'width':'23%'}
-            #     ),
-            #         # html.Button('update', id='updateHelper', n_clicks=0)
-            # ], style={'display': 'hidden'}
-            # ),
-            dbc.Button('update', id='update', n_clicks=0)
-        ], style = {'display': 'flex', 'flex-direction': 'column', 'justify-content': 'center', 'align-items': 'center', 'width': '100%','margin-bottom': '1vh'})
+            dbc.Card(children=[html.H3("Examples"), table], style = {'margin': '1vw 1vh 1vw 1vh', 'width': '98%', "padding": "10px"}),
+            dbc.Card(children=[
+                html.H3("Input", style={'align-self': 'flex-start'}),
+                layer1,
+                
+                html.Div(children = [
+                    html.Div(
+                            id='options',
+                            children=myOptions,
+                        style={'display': 'flex', 'flex-direction': 'row','margin-right': '1vw'}),
+                    html.Div(id = 'arguments', children = optionArguments, style = {'display': 'flex', 'flex-direction': 'row', 'justify-content': 'center', 'min-height': '5vh', 'align-items': 'center'}),
+                ], style = {'display': 'flex', 'flex-direction': 'row', 'justify-content': 'center', 'align-items': 'center'}),
+                
+                dbc.Button('update', id='update', n_clicks=0, style = {'width': '300px', 'margin': 'auto'}),
+            ],  style = {'display': 'flex', 'flex-direction': 'column', 'width': '98%', 'padding': '10px', 'justify-content': 'center', 'align-items': 'center','margin': '1vw 1vh 1vw 1vh'})
+        ])
 
 def get_callbacks(app):
     with open('data/libraries/BERKELEY-LAB/cachedStructures.pkl', 'rb') as f:
