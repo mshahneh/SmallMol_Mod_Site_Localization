@@ -151,7 +151,7 @@ class ModificationSiteLocator():
             smiles = fragInfo[3]
             hitAtoms = fragInfo[1]
             substructure = Chem.MolFromSmiles(smiles, sanitize=False)
-            if self.molMol.HasSubstructMatch(substructure):
+            if self.main_compound.structure.HasSubstructMatch(substructure):
                 structures.append(smiles)
                 structure_indicies.append(hitAtoms)
         
@@ -165,8 +165,8 @@ class ModificationSiteLocator():
         structures = []
         structure_indicies = []
         ind = []
-        for i in range(len(self.molPeaks)):
-            if abs(self.molPeaks[i][0] - peak_weight) < self.args['mz_tolerance']:
+        for i in range(len(self.main_compound.peaks)):
+            if abs(self.main_compound.peaks[i][0] - peak_weight) < self.args['mz_tolerance']:
                 ind.append(i)
         for i in ind:
             structures_i, structure_indicies_i = self.get_structures_by_peak_id(i)

@@ -8,7 +8,7 @@ import handle_network as handle_network
 important_arguments = ["peaks", "Adduct", "Precursor_MZ", "Charge"]
 class Compound():
     """A class to represent a compound."""
-    def __init__(self, data, structure=None, args={}):
+    def __init__(self, data, structure = None, args={}):
         """Initialize the compound."""
         
         self.args = {"ppm": 1.01, "mz_tolerance": 0.1, "filter_peaks_method": "top_k", "filter_peaks_variable": 50}
@@ -40,12 +40,16 @@ class Compound():
         self.Adduct = utils.parse_adduct(self.Adduct)
         self.peaks = utils.filter_peaks(self.peaks, self.args['filter_peaks_method'], self.args['filter_peaks_variable'], self.Precursor_MZ, self.Charge)
 
+        print("debug: printing the structure", structure)
         if structure == None and "Smiles" in data:
             print("debug: using smiles")
             self.structure = Chem.MolFromSmiles(data["Smiles"])
         elif structure != None:
             if type(structure) == str:
-                self.structure = Chem.MolFromSmiles(structure)
+                if len(structure) > 0:
+                    self.structure = Chem.MolFromSmiles(structure)
+                else:
+                    self.structure = None
             else:
                 self.structure = structure
         else:
