@@ -17,5 +17,6 @@ dependencies:
     - IPython
     - furl
     - dash_daq
+    - Flask
     - dash-bootstrap-components
     
