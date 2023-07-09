@@ -1,5 +1,8 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 0b9606e (dash app container)
 FROM continuumio/miniconda3:4.10.3
 MAINTAINER Reza Shahneh "mzare008@ucr.edu"
 
@@ -10,6 +13,7 @@ RUN mamba env create -f conda-env.yml -n mod-site
 
 RUN /bin/bash -c 'source activate mod-site'
 RUN /bin/bash -c 'mamba install -c conda-forge gunicorn'
+<<<<<<< HEAD
 =======
 FROM mambaorg/micromamba:1.4.4
 =======
@@ -34,6 +38,8 @@ RUN mamba env create -f conda-env.yml -n mod-site
 
 RUN /bin/bash -c 'source activate mod-site'
 RUN /bin/bash -c 'mamba install -c conda-forge gunicorn'
+>>>>>>> 0b9606e (dash app container)
+=======
 >>>>>>> 0b9606e (dash app container)
 
 COPY . /app
