@@ -7,13 +7,13 @@ import visualizer as vis
 import utils_n as utils
 import handle_network as hn
 import dash_bootstrap_components as dbc
-from flask import Flask
+# from flask import Flask
 
 
-server = Flask(__name__)
+# server = Flask(__name__)
 app = Dash(external_stylesheets=[dbc.themes.BOOTSTRAP])
 app.title = 'Modification Site Locator'
-server = app.server
+# server = app.server
 
 if __name__ == '__main__':
     layout = [dcc.Store(id='siteLocatorObj'), dcc.Store(id='InputData'), dcc.Store(id='urlData'), html.P(id='ErrorMessage')]
