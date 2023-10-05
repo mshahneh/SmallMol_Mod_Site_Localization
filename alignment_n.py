@@ -1,8 +1,8 @@
 import numpy as np
 from typing import List, Tuple
 import collections
-import utils_n as utils
-import handle_network as hn
+from . import utils_n as utils
+from . import handle_network as hn
 import json
 
 SpectrumTuple = collections.namedtuple(

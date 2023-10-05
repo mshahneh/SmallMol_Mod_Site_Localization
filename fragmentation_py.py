@@ -1,8 +1,8 @@
 # 2014.10.20 12:28:02 CEST
 import numpy
-import pars
+from . import pars
 import os
-import rdkit_engine as Chem
+from . import rdkit_engine as Chem
 
 class FragmentEngine(object):
 

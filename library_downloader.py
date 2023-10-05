@@ -1,4 +1,3 @@
-  
 from prettytable import PrettyTable
 from urllib.request import urlopen
 import matplotlib.pyplot as plt
@@ -6,9 +5,10 @@ from rdkit import Chem
 from tqdm import tqdm
 import pandas as pd
 import pickle
-import utils
+from . import utils_n as utils
 import json
 import os
+import sys
 
 def disable_rdkit_logging():
     """
@@ -46,7 +46,7 @@ def calculate_matches(data_dict, weight_threshold = 1500, difference_threshold_r
     Input:
         data_dict: dictionary with the library
         weight_threshold: maximum weight to consider
-        difference_threshold_rate: maximum difference between two weights to consider
+        difference_threshold_rate: maximum difference between two weights to consider, if 0 then no threshold is applied
     Output:
         matches: dictionary with the matches, [key] = [list of matches] where key is the number of modification sites
         cachedStructures: dictionary with the cached structures (built from SMILES strings using RDKit)
@@ -59,6 +59,7 @@ def calculate_matches(data_dict, weight_threshold = 1500, difference_threshold_r
         try:
             w1 = float(data_dict[compound1]['Precursor_MZ'])
         except:
+            print("Error: while extracting weight for compound " + compound1, file=sys.stderr)
             continue
         if w1 > weight_threshold or data_dict[compound1]['Smiles'] == 'N/A' or data_dict[compound1]['Smiles'] == ' ':
             continue
@@ -67,15 +68,15 @@ def calculate_matches(data_dict, weight_threshold = 1500, difference_threshold_r
             compound2 = data_ids[j]
             if data_dict[compound1]['Adduct'] != data_dict[compound2]['Adduct']:
                 continue
-
             try:
                 w2 = float(data_dict[compound2]['Precursor_MZ'])
             except:
+                print("Error: while extracting weight for compound " + compound2, file=sys.stderr)
                 continue
             if w2 > weight_threshold or data_dict[compound2]['Smiles'] == 'N/A' or data_dict[compound2]['Smiles'] == ' ':
                 continue
             
-            if abs(w1 - w2) > difference_threshold_rate * min(w1, w2):
+            if difference_threshold_rate > 0 and abs(w1 - w2) > difference_threshold_rate * min(w1, w2):
                 continue
 
             try:
@@ -92,7 +93,6 @@ def calculate_matches(data_dict, weight_threshold = 1500, difference_threshold_r
                     if numModificationSites not in matches:
                         matches[numModificationSites] = set()
                     matches[numModificationSites].add((compound1, compound2))
-
             except:
                 pass
     
@@ -112,28 +112,46 @@ def download(url, output, weight_threshold, difference_threshold_rate):
         cachedStructures: dictionary with the cached structures (built from SMILES strings using RDKit)
     """
     disable_rdkit_logging()
-    data_json = get_gnps_library(url)
-    data_dict = json_to_dict(data_json)
-    matches, cachedStructures = calculate_matches(data_dict, weight_threshold, difference_threshold_rate)
+
+    # if data_dict_filtered, matches and cachedStructures_filtered already exist, load them
+    if os.path.exists(os.path.join(output, "data_dict_filtered.pkl")) and os.path.exists(os.path.join(output, "matches.pkl")) and os.path.exists(os.path.join(output, "cachedStructures.pkl")):
+        with open(os.path.join(output, "data_dict_filtered.pkl"), "rb") as f:
+            data_dict_filtered = pickle.load(f)
+        with open(os.path.join(output, "matches.pkl"), "rb") as f:
+            matches = pickle.load(f)
+        with open(os.path.join(output, "cachedStructures.pkl"), "rb") as f:
+            cachedStructures_filtered = pickle.load(f)
+        
+        # get compound ids that are in matches
+        unique_ids = set()
+        for key in matches:
+            for match in matches[key]:
+                unique_ids.add(match[0])
+                unique_ids.add(match[1])
+        
+    else:
+        data_json = get_gnps_library(url)
+        data_dict = json_to_dict(data_json)
+        matches, cachedStructures = calculate_matches(data_dict, weight_threshold, difference_threshold_rate)
     
-    # get compound ids that are in matches
-    unique_ids = set()
-    for key in matches:
-        for match in matches[key]:
-            unique_ids.add(match[0])
-            unique_ids.add(match[1])
+        # get compound ids that are in matches
+        unique_ids = set()
+        for key in matches:
+            for match in matches[key]:
+                unique_ids.add(match[0])
+                unique_ids.add(match[1])
     
-    # filter data_dict to only include unique_ids
-    data_dict_filtered = dict()
-    for key in data_dict:
-        if key in unique_ids:
-            data_dict_filtered[key] = data_dict[key]
-    
-    # filter cachedStructures to only include unique_ids
-    cachedStructures_filtered = dict()
-    for key in cachedStructures:
-        if key in unique_ids:
-            cachedStructures_filtered[key] = cachedStructures[key]
+        # filter data_dict to only include unique_ids
+        data_dict_filtered = dict()
+        for key in data_dict:
+            if key in unique_ids:
+                data_dict_filtered[key] = data_dict[key]
+        
+        # filter cachedStructures to only include unique_ids
+        cachedStructures_filtered = dict()
+        for key in cachedStructures:
+            if key in unique_ids:
+                cachedStructures_filtered[key] = cachedStructures[key]
 
     print("Number of compounds in the library: " + str(len(data_dict_filtered)))
     t = PrettyTable(['# modification sites', '# matches'])

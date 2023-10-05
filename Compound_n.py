@@ -1,9 +1,9 @@
 from rdkit import Chem
-import fragmentation_py as fragmentation_py
+from . import fragmentation_py as fragmentation_py
 import copy
 import json
-import utils_n as utils
-import handle_network as handle_network
+from . import utils_n as utils
+from . import handle_network as handle_network
 
 important_arguments = ["peaks", "Adduct", "Precursor_MZ", "Charge"]
 class Compound():

@@ -1,7 +1,7 @@
 from rdkit.Chem import *
 from rdkit import Chem, Geometry
 from rdkit.Chem import AllChem, Descriptors
-import pars
+from . import pars
 bondtype2string = {v:k for (k, v,) in Chem.rdchem.BondType.names.items()}
 
 class newclass(object):

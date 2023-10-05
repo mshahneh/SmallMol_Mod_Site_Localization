@@ -1,8 +1,8 @@
-from alignment_n import align
+from .alignment_n import align
 import json
-import utils_n as utils
+from . import utils_n as utils
 import numpy as np
-import calculate_scores_n as Calc_Scores
+from . import calculate_scores_n as Calc_Scores
 from rdkit import Chem
 
 class ModificationSiteLocator():
