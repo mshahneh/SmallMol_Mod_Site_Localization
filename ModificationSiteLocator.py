@@ -67,29 +67,68 @@ class ModificationSiteLocator():
         return contributions
 
     
-    def generate_probabilities(self, shifted_only = False, PPO = False, CI = False, true_modification_site = None):
+    def generate_probabilities(self, shifted_only = False, PPO = False, CI = False, true_modification_site = None, method = "multiply"):
         """"Generate the probabilities for each atom to be the modification site.
         input:
             shifted_only: bool, if True, only the shifted peaks are considered
             PPO: (Peak_Presense_only) bool, if True, only the number of contributed peaks is considered, not the number of fragments
             CO: (Consider_Intensity) bool, if True, the intensity of the peaks is considered (default: False)
         """
-        s_peakids = [_[0] for _ in self.shifted]
-        positive_contributions = self.calculate_contributions(s_peakids, PPO, CI, true_modification_site)
-        if not shifted_only:
-            u_peakids = [_[0] for _ in self.unshifted]
-            negative_contributions = self.calculate_contributions(u_peakids, PPO, CI, None)
+        
+        if method == "random_choice":
+            probabilities = np.zeros(len(self.main_compound.structure.GetAtoms()))
+            random_choice = np.random.choice(len(self.main_compound.structure.GetAtoms()))
+            probabilities[random_choice] = 1
+        elif method == "random_distribution":
+            probabilities = np.random.rand(len(self.main_compound.structure.GetAtoms()))
+            probabilities = probabilities / np.sum(probabilities)
+        elif method == "all_equal":
+            probabilities = np.ones(len(self.main_compound.structure.GetAtoms()))
+            probabilities = probabilities / np.sum(probabilities)
+        elif method == "multiply":
+            probabilities = np.zeros(len(self.main_compound.structure.GetAtoms()))
+            for atom in range(len(self.main_compound.structure.GetAtoms())):
+                positive_contributions = 1
+                for peak in self.shifted:
+                    count = 0
+                    for fragment in self.main_compound.peak_fragments_map[peak[0]]:
+                        if atom in self.main_compound.fragments.get_fragment_info(fragment, 0)[1]:
+                            count += 1
+                    eps = 0
+                    if PPO:
+                        eps = 1
+                    
+                    if (len(self.main_compound.peak_fragments_map[peak[0]]) + eps) == 0:
+                        positive_contributions *= 0
+                    else:
+                        positive_contributions *= (count + eps)/(len(self.main_compound.peak_fragments_map[peak[0]]) + eps)
+                
+
+                if shifted_only:
+                    negative_contributions = 0
+                else:
+                    # TODO: implement this
+                    negative_contributions = 1
+                
+                probabilities[atom] = positive_contributions - negative_contributions
+            
         else:
-            negative_contributions = [0 for i in range(len(self.main_compound.structure.GetAtoms()))]
+            s_peakids = [_[0] for _ in self.shifted]
+            positive_contributions = self.calculate_contributions(s_peakids, PPO, CI, true_modification_site)
+            if not shifted_only:
+                u_peakids = [_[0] for _ in self.unshifted]
+                negative_contributions = self.calculate_contributions(u_peakids, PPO, CI, None)
+            else:
+                negative_contributions = [0 for i in range(len(self.main_compound.structure.GetAtoms()))]
+            
+            probabilities = np.zeros(len(self.main_compound.structure.GetAtoms()))
+            for i in range(len(positive_contributions)):
+                probabilities[i] = positive_contributions[i] - negative_contributions[i]
         
-        probabilities = np.zeros(len(self.main_compound.structure.GetAtoms()))
-        for i in range(len(positive_contributions)):
-            probabilities[i] = positive_contributions[i] - negative_contributions[i]
-        
-        # print("debugging: probabilities1", probabilities, positive_contributions, negative_contributions)
         
         # Normalize probabilities
-        probabilities = probabilities - np.min(probabilities)
+        if np.min(probabilities) < 0:
+            probabilities = probabilities - np.min(probabilities)
         if np.sum(probabilities) != 0:
             probabilities = probabilities / np.sum(probabilities)
         else:
@@ -113,7 +152,7 @@ class ModificationSiteLocator():
         
         G = self.main_compound.distances
         
-        maxScore = max(probabilities)
+        # maxScore = max(probabilities)
         # for i in range(self.main_compound.structure.GetNumAtoms()):
         #     if probabilities[i] <= filter_ratio * maxScore:
         #         probabilities[i] = 0
@@ -128,19 +167,7 @@ class ModificationSiteLocator():
             else:
                 return 0
         
-        # call the score function from Calc_Scores based on the method
-        if method == "is_max":
-            return Calc_Scores.is_max(G, probabilities, true_modification_site)
-        elif method == "dist_from_max":
-            return Calc_Scores.dist_from_max(G, probabilities, true_modification_site)
-        elif method == "average_dist_from_max":
-            return Calc_Scores.average_dist_from_max(G, probabilities, true_modification_site)
-        elif method == "average_dist":
-            return Calc_Scores.average_dist(G, probabilities, true_modification_site)
-        elif method == "temp":
-            return Calc_Scores.temp_score(G, probabilities, true_modification_site)
-        else:
-            raise Exception("Method not found")
+        return Calc_Scores.calculate(G, probabilities, true_modification_site, method)
     
     def get_structures_by_peak_id(self, peakid):
         """Get all the annotations for a peak."""

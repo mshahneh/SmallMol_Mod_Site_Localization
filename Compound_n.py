@@ -40,9 +40,9 @@ class Compound():
         self.Adduct = utils.parse_adduct(self.Adduct)
         self.peaks = utils.filter_peaks(self.peaks, self.args['filter_peaks_method'], self.args['filter_peaks_variable'], self.Precursor_MZ, self.Charge)
 
-        print("debug: printing the structure", structure)
+        # print("debug: printing the structure", structure)
         if structure == None and "Smiles" in data:
-            print("debug: using smiles")
+            # print("debug: using smiles")
             self.structure = Chem.MolFromSmiles(data["Smiles"])
         elif structure != None:
             if type(structure) == str:

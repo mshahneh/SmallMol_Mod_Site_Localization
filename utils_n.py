@@ -2,6 +2,10 @@ import copy
 import re
 import numpy as np
 from rdkit import Chem
+import collections
+SpectrumTuple = collections.namedtuple(
+    "SpectrumTuple", ["precursor_mz", "precursor_charge", "mz", "intensity"]
+)
 
 def parse_adduct(adduct):
     adducts = ["+H", "+NH4", "+Na", "+K", "-OH", "-H", "+Cl"]
@@ -70,7 +74,6 @@ def convert_to_SpectrumTuple(peaks, precursor_mz, precursor_charge):
     Converts the peaks to SpectrumTuple.
     """
     peaks = normalize_peaks(peaks)
-    from alignment_n import SpectrumTuple
     res = {}
     res['precursor_charge'] = precursor_charge
     res['precursor_mz'] = precursor_mz

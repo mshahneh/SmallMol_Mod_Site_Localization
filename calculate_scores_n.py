@@ -42,7 +42,7 @@ def average_dist(G, probabilities, true_index):
         count += probabilities[i]
     return float(dists/count)
 
-def temp_score(G, probabilities, modificationSiteIdx):
+def regulated_exp(G, probabilities, modificationSiteIdx):
     maxScore = max(probabilities)
     if maxScore == 0:
         return 0
@@ -71,8 +71,22 @@ def temp_score(G, probabilities, modificationSiteIdx):
     # score = np.exp(-self.distances[modificationSiteIdx][closestMaxAtomIndx]/3) * 0.5 + np.exp(-(localDistances/count)) * 0.5
     # score = np.exp(-self.distances[modificationSiteIdx][closestMaxAtomIndx])
     score = np.exp(-(localDistances/count))
-    print("the score is!", score, localDistances, count, graphDiameter, maxScore, modificationSiteIdx, closestMaxAtomIndx)
+    # print("the score is!", score, localDistances, count, graphDiameter, maxScore, modificationSiteIdx, closestMaxAtomIndx)
     return score
+
+def ranking_loss(G, probabilities, modificationSiteIdx):
+    # find how far the index of the true modification site is from the max probability
+    # sort the probabilities and keep the indices
+    sorted_indices = np.argsort(probabilities)
+
+    # reverse the indices
+    sorted_indices = sorted_indices[::-1]
+
+    # find the index of the true modification site
+    true_index = np.where(sorted_indices == modificationSiteIdx)[0][0]
+
+    # return the ranking loss
+    return 1 - true_index/len(probabilities)
 
 # def calculate_spanning_graph(G, probabilities):
 #     max_val = max(probabilities)
@@ -110,3 +124,21 @@ def temp_score(G, probabilities, modificationSiteIdx):
 #         for i in range(len(spanning_graph)):
 #             for j in range(len(spanning_graph)):
 #                 spanning_graph[i][j] = min(spanning_graph[i][j], spanning_graph[i][k] + spanning_graph[k][j])
+
+
+def calculate(G, probabilities, true_modification_site, method):
+    # call the score function based on the method
+    if method == "is_max":
+        return is_max(G, probabilities, true_modification_site)
+    elif method == "dist_from_max":
+        return dist_from_max(G, probabilities, true_modification_site)
+    elif method == "average_dist_from_max":
+        return average_dist_from_max(G, probabilities, true_modification_site)
+    elif method == "average_dist":
+        return average_dist(G, probabilities, true_modification_site)
+    elif method == "regulated_exp":
+        return regulated_exp(G, probabilities, true_modification_site)
+    elif method == "ranking_loss":
+        return ranking_loss(G, probabilities, true_modification_site)
+    else:
+        raise Exception("Method not found")

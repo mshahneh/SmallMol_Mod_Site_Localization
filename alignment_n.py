@@ -1,13 +1,9 @@
 import numpy as np
 from typing import List, Tuple
-import collections
+from .utils_n import SpectrumTuple
 from . import utils_n as utils
 from . import handle_network as hn
 import json
-
-SpectrumTuple = collections.namedtuple(
-    "SpectrumTuple", ["precursor_mz", "precursor_charge", "mz", "intensity"]
-)
 
 def norm_intensity(intensity):
     return np.copy(intensity)/np.linalg.norm(intensity)
