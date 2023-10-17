@@ -8,7 +8,8 @@ SpectrumTuple = collections.namedtuple(
 )
 
 def parse_adduct(adduct):
-    adducts = ["+H", "+NH4", "+Na", "+K", "-OH", "-H", "+Cl"]
+    # adducts = ["+H", "+NH4", "+Na", "+K", "-OH", "-H", "+Cl"]
+    adducts = ["+H"]
     acceptedAdducts = ["M" + a for a in adducts]
     if "[" in adduct:
         adduct = adduct.split("[")[1]

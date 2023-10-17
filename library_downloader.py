@@ -54,8 +54,12 @@ def calculate_matches(data_dict, weight_threshold = 1500, difference_threshold_r
     matches = {}
     cachedStructures = dict()
     data_ids = list(data_dict.keys())
+    target = "CCMSLIB00011905978"
     for i in tqdm(range(len(data_ids))):   
+        
         compound1 = data_ids[i]
+        if compound1 == target:
+            print("here")
         try:
             w1 = float(data_dict[compound1]['Precursor_MZ'])
         except:
