@@ -13,6 +13,8 @@ class ModificationSiteLocator():
 
         self.main_compound = main_compound
         self.modified_compound = modified_compound
+        self.main_compound.remove_large_peaks()
+        self.modified_compound.remove_large_peaks()
         self.cosine, self.matched_peaks = align(self.main_compound, self.modified_compound, self.args["mz_tolerance"])
         self.shifted, self.unshifted = utils.separateShifted(self.matched_peaks, 
                                                                  self.main_compound.peaks, self.modified_compound.peaks)
