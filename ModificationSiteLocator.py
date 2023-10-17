@@ -198,7 +198,7 @@ class ModificationSiteLocator():
             if abs(self.main_compound.peaks[i][0] - peak_weight) < self.args['mz_tolerance']:
                 ind.append(i)
         for i in ind:
-            structures_i, structure_indicies_i = self.get_structures_by_peak_id(i)
+            structures_i, structure_indicies_i = self.get_structures_by_peak_index(i)
             structures += structures_i
             structure_indicies += structure_indicies_i
         return structures, structure_indicies
