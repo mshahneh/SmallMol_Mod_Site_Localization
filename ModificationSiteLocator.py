@@ -169,11 +169,11 @@ class ModificationSiteLocator():
         
         return Calc_Scores.calculate(G, probabilities, true_modification_site, method)
     
-    def get_structures_by_peak_id(self, peakid):
+    def get_structures_by_peak_index(self, peakindex):
         """Get all the annotations for a peak."""
         structures = []
         structure_indicies = []
-        for fragment in self.main_compound.peak_fragments_map[peakid]:
+        for fragment in self.main_compound.peak_fragments_map[peakindex]:
             fragInfo = self.main_compound.fragments.get_fragment_info(fragment, 0)
             smiles = fragInfo[3]
             hitAtoms = fragInfo[1]
