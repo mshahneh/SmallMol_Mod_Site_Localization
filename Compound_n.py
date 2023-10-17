@@ -1,9 +1,9 @@
 from rdkit import Chem
-from . import fragmentation_py as fragmentation_py
+import fragmentation_py as fragmentation_py
 import copy
 import json
-from . import utils_n as utils
-from . import handle_network as handle_network
+import utils_n as utils
+import handle_network as handle_network
 
 important_arguments = ["peaks", "Adduct", "Precursor_MZ", "Charge"]
 class Compound():
@@ -40,9 +40,9 @@ class Compound():
         self.Adduct = utils.parse_adduct(self.Adduct)
         self.peaks = utils.filter_peaks(self.peaks, self.args['filter_peaks_method'], self.args['filter_peaks_variable'], self.Precursor_MZ, self.Charge)
 
-        # print("debug: printing the structure", structure)
+        print("debug: printing the structure", structure)
         if structure == None and "Smiles" in data:
-            # print("debug: using smiles")
+            print("debug: using smiles")
             self.structure = Chem.MolFromSmiles(data["Smiles"])
         elif structure != None:
             if type(structure) == str:
