@@ -112,7 +112,7 @@ def molToSVG(mol, substructure=None, highlightModificationSites=False):
             highlightbonds = []
             for bond in mol.GetBonds():
                 # if both side are in highlightAtoms then add to highlightbonds
-                if bond.GetBeginAtomIdx() in highlightAtoms and bond.GetEndAtomIdx() in highlightAtoms:
+                if bond.GetBeginAtomIdx() in highlightAtoms or bond.GetEndAtomIdx() in highlightAtoms:
                     highlightbonds.append(bond.GetIdx())
             
 
@@ -203,13 +203,13 @@ def highlightScores(mol, scores):
     
     return svgText
 
-def highlightMolIndices(mol, hitAtoms):
+def highlightMolIndices(mol, hitAtoms, hitBonds = None):
     d2d = Draw.MolDraw2DSVG(1250,1200)
-    hitBonds = []
-    for bond in mol.GetBonds():
-        if bond.GetBeginAtomIdx() in hitAtoms and bond.GetEndAtomIdx() in hitAtoms:
-            hitBonds.append(bond.GetIdx())
-    d2d = Chem.Draw.MolDraw2DSVG(1250,1200)
+    if hitBonds is None:
+        hitBonds = []
+        for bond in mol.GetBonds():
+            if bond.GetBeginAtomIdx() in hitAtoms and bond.GetEndAtomIdx() in hitAtoms:
+                hitBonds.append(bond.GetIdx())
     d2d.DrawMolecule(mol,highlightAtoms=hitAtoms, highlightBonds=hitBonds)
     d2d.FinishDrawing()
     svgText =  d2d.GetDrawingText()

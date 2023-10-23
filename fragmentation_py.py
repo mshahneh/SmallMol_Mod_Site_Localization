@@ -159,9 +159,7 @@ class FragmentEngine(object):
 
 
     def add_fragment(self, fragment, fragmentmass, score, bondbreaks):
-        mass_range = (self.max_broken_bonds + self.max_water_losses - bondbreaks) * [0] 
-        + list(numpy.arange(-bondbreaks + self.ionisation_mode * (1 - self.molcharge), bondbreaks + self.ionisation_mode * (1 - self.molcharge) + 1) * pars.Hmass + fragmentmass) 
-        + (self.max_broken_bonds + self.max_water_losses - bondbreaks) * [0]
+        mass_range = (self.max_broken_bonds + self.max_water_losses - bondbreaks) * [0] + list(numpy.arange(-bondbreaks + self.ionisation_mode * (1 - self.molcharge), bondbreaks + self.ionisation_mode * (1 - self.molcharge) + 1) * pars.Hmass + fragmentmass) + (self.max_broken_bonds + self.max_water_losses - bondbreaks) * [0]
         if bondbreaks == 0:
             mass_range[self.max_broken_bonds + self.max_water_losses - self.ionisation_mode] = fragmentmass
         self.fragment_masses += mass_range
