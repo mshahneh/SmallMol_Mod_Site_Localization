@@ -183,7 +183,7 @@ class FragmentEngine(object):
 
 
     def find_fragments(self, mass, parent, precision, mz_precision_abs):
-        result = numpy.where(numpy.where(self.fragment_masses_np < max(mass * precision, mass + mz_precision_abs), self.fragment_masses_np, 0) > min(mass / precision, mass - mz_precision_abs))
+        result = numpy.where(numpy.where(self.fragment_masses_np < min(mass * precision, mass + mz_precision_abs), self.fragment_masses_np, 0) > max(mass / precision, mass - mz_precision_abs))
         fragment_set = []
         for i in range(len(result[0])):
             fid = result[0][i]

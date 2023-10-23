@@ -15,12 +15,19 @@ class Compound:
         """Initialize the compound."""
 
         self.args = {
-            "ppm": 1.01,
+            "ppm": 40,
             "mz_tolerance": 0.1,
             "filter_peaks_method": "intensity",
             "filter_peaks_variable": 0.01,
         }
         self.args.update(args)
+        for arg in list(args.keys()):
+            # if its a string and can be converted to float, convert it
+            if type(args[arg]) == str:
+                try:
+                    self.args[arg] = float(args[arg])
+                except:
+                    self.args[arg] = args[arg]
 
         if type(data) == str:
             data = handle_network.getDataFromUsi(data)
@@ -54,9 +61,7 @@ class Compound:
             self.Charge,
         )
 
-        print("debug: printing the structure", structure)
         if structure == None and "Smiles" in data:
-            print("debug: using smiles")
             self.structure = Chem.MolFromSmiles(data["Smiles"])
         elif structure != None:
             if type(structure) == str:
@@ -72,7 +77,7 @@ class Compound:
         if self.structure != None:
             self.distances = Chem.rdmolops.GetDistanceMatrix(self.structure)
             self.fragments = fragmentation_py.FragmentEngine(
-                Chem.MolToMolBlock(self.structure), 3, 2, 1, 0, 0
+                Chem.MolToMolBlock(self.structure), 5, 2, 1, 0, 0
             )
             self.numFrag = self.fragments.generate_fragments()
             self.generate_peak_to_fragment_map()
@@ -84,10 +89,11 @@ class Compound:
         return json.dumps(obj)
 
     def generate_peak_to_fragment_map(self):
+        base_precision = 1 + self.args["ppm"] / 1000000
         self.peak_fragments_map = [set() for i in range(len(self.peaks))]
         for i in range(len(self.peaks)):
             annotations = self.fragments.find_fragments(
-                self.peaks[i][0], 0.1, self.args["ppm"], self.args["mz_tolerance"]
+                self.peaks[i][0], 0.1, base_precision, self.args["mz_tolerance"]
             )
             for annotation in annotations:
                 self.peak_fragments_map[i].add(annotation[0])
@@ -96,7 +102,7 @@ class Compound:
         """Apply the sirius results to the compound and filter the possible annotations"""
         for i, peak in enumerate(self.peaks):
             index = utils.find_mz_in_sirius(
-                sirius["fragments"], peak[0], self.args["mz_tolerance"]
+                sirius["fragments"], peak[0], self.args["mz_tolerance"], self.args["ppm"]
             )
             if index == -1:
                 continue

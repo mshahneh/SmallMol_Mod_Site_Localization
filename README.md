@@ -11,3 +11,8 @@ conda activate mod-site
 mamba env update -n mod-site --file conda-env.yml
 
 ```
+
+<!-- compound arguments json explained -->
+## arguments description
+### compound arguments, description, type and default value
+- `mz_tolerance`: mass tolerance for matching | float | 0.01

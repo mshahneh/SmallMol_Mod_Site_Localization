@@ -12,6 +12,7 @@ def _cosine_fast(
     spec: SpectrumTuple,
     spec_other: SpectrumTuple,
     fragment_mz_tolerance: float,
+    fragment_ppm_tolerance: float,
     allow_shift: bool,
 ) -> Tuple[float, List[Tuple[int, int]]]:
     precursor_charge = max(spec.precursor_charge, 1)
@@ -44,10 +45,8 @@ def _cosine_fast(
             other_peak_i = other_peak_index[cpi] + index
             while (
                 other_peak_i < len(spec_other.mz)
-                and abs(
-                    peak_mz - (spec_other.mz[other_peak_i] + mass_diff[cpi])
-                )
-                <= fragment_mz_tolerance
+                and abs(peak_mz - (spec_other.mz[other_peak_i] + mass_diff[cpi])) <= fragment_mz_tolerance
+                and abs(peak_mz - (spec_other.mz[other_peak_i] + mass_diff[cpi])) <= (fragment_ppm_tolerance * peak_mz / 1e6)
             ):
                 peak_match_scores.append(
                     peak_intensity * spec_other.intensity[other_peak_i]
@@ -87,10 +86,11 @@ def align(
     main_compound,
     modified_compound,
     fragment_mz_tolerance: float = 0.02,
+    fragment_ppm_tolerance: float = 100.0,
 ):
     main_spectrum = utils.convert_to_SpectrumTuple(main_compound.peaks, main_compound.Precursor_MZ, main_compound.Charge)
     modified_spectrum = utils.convert_to_SpectrumTuple(modified_compound.peaks, modified_compound.Precursor_MZ, modified_compound.Charge)
     cosine, matched_peaks = _cosine_fast(
-        main_spectrum, modified_spectrum, fragment_mz_tolerance, True
+        main_spectrum, modified_spectrum, fragment_mz_tolerance, fragment_ppm_tolerance, True
     )
     return cosine, matched_peaks

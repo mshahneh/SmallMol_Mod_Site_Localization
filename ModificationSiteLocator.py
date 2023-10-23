@@ -8,14 +8,21 @@ from rdkit import Chem
 class ModificationSiteLocator():
     def __init__(self, main_compound, modified_compound, args = {}):
         
-        self.args = {"mz_tolerance": 0.1}
+        self.args = {"mz_tolerance": 0.1, "ppm": 40}
         self.args.update(args)
+
+        for arg in list(args.keys()):
+            if type(args[arg]) == str:
+                try:
+                    self.args[arg] = float(args[arg])
+                except:
+                    self.args[arg] = args[arg]
 
         self.main_compound = main_compound
         self.modified_compound = modified_compound
         self.main_compound.remove_large_peaks()
         self.modified_compound.remove_large_peaks()
-        self.cosine, self.matched_peaks = align(self.main_compound, self.modified_compound, self.args["mz_tolerance"])
+        self.cosine, self.matched_peaks = align(self.main_compound, self.modified_compound, self.args["mz_tolerance"], self.args["ppm"])
         self.shifted, self.unshifted = utils.separateShifted(self.matched_peaks, 
                                                                  self.main_compound.peaks, self.modified_compound.peaks)
 
@@ -187,15 +194,18 @@ class ModificationSiteLocator():
         return structures, structure_indicies
 
     
-    def get_structures_by_peak_weight(self, peak_weight, mz_precision_abs = None):
+    def get_structures_by_peak_weight(self, peak_weight, mz_precision_abs = None, mz_ppm_tolerance = None):
         """Get all the annotations for a peak weight."""
         if mz_precision_abs is None:
             mz_precision_abs = self.args['mz_tolerance']
+        if mz_ppm_tolerance is None:
+            mz_ppm_tolerance = self.args['ppm']
         structures = []
         structure_indicies = []
         ind = []
         for i in range(len(self.main_compound.peaks)):
-            if abs(self.main_compound.peaks[i][0] - peak_weight) < self.args['mz_tolerance']:
+            peak_diff = self.main_compound.peaks[i][0] - peak_weight
+            if abs(peak_diff) < self.args['mz_tolerance'] and abs(peak_diff) < self.args['ppm'] * peak_weight / 1e6:
                 ind.append(i)
         for i in ind:
             structures_i, structure_indicies_i = self.get_structures_by_peak_index(i)

@@ -5,7 +5,7 @@ args = {
     'SMILES1': {"name": "SMILES1", "short":'SMILES1', "defult":"COc1ccc(-c2coc3cc(OC)c(OC)cc3c2=O)cc1"}, 
     'SMILES2': {"name": "SMILES2", "short":'SMILES2', "defult":"COc1ccc(-c2coc3cc(OC)c(OC)cc3c2=O)cc1OC"},
     'mz_tolerance': {"name": "mz_tolerance", "short":'mz', "defult":0.05},
-    'ppm': {"name": "ppm", "short":'ppm', "defult":1.01},
+    'ppm': {"name": "ppm", "short":'ppm', "defult":40},
     'filter_peaks_method': {"name": "filter_peaks_method", "short":'filter', "defult":"intensity"},
     'filter_peaks_variable': {"name": "filter_peaks_variable", "short":'filter_var', "defult":0.01},
     'presence_only': {"name": "presence_only", "short":'presence', "defult":False},

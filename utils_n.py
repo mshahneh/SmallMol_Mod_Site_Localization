@@ -98,7 +98,7 @@ def SpectrumTuple_to_dict(spectrum_tuple):
         res['peaks'].append((spectrum_tuple.mz[i], spectrum_tuple.intensity[i]))
     return res
 
-def find_mz_in_sirius(fragments, search_mz, threshold):
+def find_mz_in_sirius(fragments, search_mz, mz_threshold, ppm_threshold):
     # Binary search in sirius results to find matching mass
     left = 0
     right = len(fragments)
@@ -108,7 +108,7 @@ def find_mz_in_sirius(fragments, search_mz, threshold):
         mz = fragments[mid]['mz']
         diff = abs(mz - search_mz)
         if right - left == 1:
-            if diff <= threshold:
+            if diff <= mz_threshold and diff <= (ppm_threshold * search_mz / 1e6):
                 return left
             else:
                 return -1
