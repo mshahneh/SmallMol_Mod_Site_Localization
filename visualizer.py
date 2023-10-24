@@ -100,35 +100,44 @@ def molToSVG(mol, substructure=None, highlightModificationSites=False):
         if (type(substructure) == str):
             substructure = Chem.MolFromSmarts(substructure)
         if not mol.HasSubstructMatch(substructure):
-            d2d = Chem.Draw.MolDraw2DSVG(1250,1200)
-            d2d.DrawMolecule(mol)
-        else:
-            hitAtoms, hitBonds = utils.getHitAtomsAndBonds(mol, substructure)
-            highlightAtoms = []
-            for atom in mol.GetAtoms():
-                if atom.GetIdx() not in hitAtoms[0]:
-                    highlightAtoms.append(atom.GetIdx())
-            
-            highlightbonds = []
-            for bond in mol.GetBonds():
-                # if both side are in highlightAtoms then add to highlightbonds
-                if bond.GetBeginAtomIdx() in highlightAtoms or bond.GetEndAtomIdx() in highlightAtoms:
-                    highlightbonds.append(bond.GetIdx())
-            
-
-            if highlightModificationSites:
-                modifications = utils.calculateModificationSites(mol, substructure)
-                d2d = Chem.Draw.MolDraw2DSVG(1250,1200)
-                colors = dict()
-                for hitAtom in highlightAtoms:
-                    colors[hitAtom] = (1,0.2,0.2)
-                for atom in mol.GetAtoms():
-                    if atom.GetIdx() in modifications:
-                        colors[atom.GetIdx()] = (0.2,0.2,1)
-                d2d.DrawMolecule(mol,highlightAtoms=highlightAtoms, highlightBonds=highlightbonds, highlightAtomColors=colors)
+            if substructure.HasSubstructMatch(mol):
+                print("here? and calling it with good index")
+                return molToSVG(substructure, mol, highlightModificationSites)
             else:
+                print("there")
                 d2d = Chem.Draw.MolDraw2DSVG(1250,1200)
-                d2d.DrawMolecule(mol,highlightAtoms=highlightAtoms, highlightBonds=highlightbonds)
+                d2d.DrawMolecule(mol)
+                d2d.FinishDrawing()
+                return d2d.GetDrawingText()
+        
+        hitAtoms, hitBonds = utils.getHitAtomsAndBonds(mol, substructure)
+        highlightAtoms = []
+        for atom in mol.GetAtoms():
+            if atom.GetIdx() not in hitAtoms[0]:
+                highlightAtoms.append(atom.GetIdx())
+        
+        highlightbonds = []
+        for bond in mol.GetBonds():
+            # if both side are in highlightAtoms then add to highlightbonds
+            if bond.GetBeginAtomIdx() in highlightAtoms or bond.GetEndAtomIdx() in highlightAtoms:
+                highlightbonds.append(bond.GetIdx())
+        
+
+        if highlightModificationSites:
+            print(mol.GetNumAtoms(), substructure.GetNumAtoms(), "To check the sizes!")
+            modifications = utils.calculateModificationSites(mol, substructure)
+            print(modifications)
+            d2d = Chem.Draw.MolDraw2DSVG(1250,1200)
+            colors = dict()
+            for hitAtom in highlightAtoms:
+                colors[hitAtom] = (1,0.2,0.2)
+            for atom in mol.GetAtoms():
+                if atom.GetIdx() in modifications:
+                    colors[atom.GetIdx()] = (0.2,0.2,1)
+            d2d.DrawMolecule(mol,highlightAtoms=highlightAtoms, highlightBonds=highlightbonds, highlightAtomColors=colors)
+        else:
+            d2d = Chem.Draw.MolDraw2DSVG(1250,1200)
+            d2d.DrawMolecule(mol,highlightAtoms=highlightAtoms, highlightBonds=highlightbonds)
     else:
         d2d = Chem.Draw.MolDraw2DSVG(1250,1200)
         d2d.DrawMolecule(mol)

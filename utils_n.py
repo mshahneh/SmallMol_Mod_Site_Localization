@@ -176,7 +176,7 @@ def calculateModificationSites(mol, substructure, inParent = True):
                     modificationSites.add(tempAtom)
 
     if inParent:
-        return modificationSites
+        return list(modificationSites)
     else:
         res = set()
         for atom in modificationSites:
