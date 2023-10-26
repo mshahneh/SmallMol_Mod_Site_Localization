@@ -76,8 +76,15 @@ class Compound:
 
         if self.structure != None:
             self.distances = Chem.rdmolops.GetDistanceMatrix(self.structure)
+            breaks = 5
+            if (self.structure.GetNumAtoms() > 30):
+                breaks = 4
+            if (self.structure.GetNumAtoms() > 50):
+                breaks = 3
+            if (self.structure.GetNumAtoms() > 80):
+                breaks = 2
             self.fragments = fragmentation_py.FragmentEngine(
-                Chem.MolToMolBlock(self.structure), 5, 2, 1, 0, 0
+                Chem.MolToMolBlock(self.structure), breaks, 2, 1, 0, 0
             )
             self.numFrag = self.fragments.generate_fragments()
             self.generate_peak_to_fragment_map()
