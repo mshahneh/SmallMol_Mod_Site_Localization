@@ -134,7 +134,6 @@ class ModificationSiteLocator():
             for i in range(len(positive_contributions)):
                 probabilities[i] = positive_contributions[i] - negative_contributions[i]
         
-        
         # Normalize probabilities
         if np.min(probabilities) < 0:
             probabilities = probabilities - np.min(probabilities)
@@ -182,6 +181,7 @@ class ModificationSiteLocator():
         """Get all the annotations for a peak."""
         structures = []
         structure_indicies = []
+        frags = []
         for fragment in self.main_compound.peak_fragments_map[peakindex]:
             fragInfo = self.main_compound.fragments.get_fragment_info(fragment, 0)
             smiles = fragInfo[3]
@@ -190,8 +190,9 @@ class ModificationSiteLocator():
             if self.main_compound.structure.HasSubstructMatch(substructure):
                 structures.append(smiles)
                 structure_indicies.append(hitAtoms)
+                frags.append(fragment)
         
-        return structures, structure_indicies
+        return structures, structure_indicies, frags
 
     
     def get_structures_by_peak_weight(self, peak_weight, mz_precision_abs = None, mz_ppm_tolerance = None):
@@ -202,13 +203,11 @@ class ModificationSiteLocator():
             mz_ppm_tolerance = self.args['ppm']
         structures = []
         structure_indicies = []
-        ind = []
-        for i in range(len(self.main_compound.peaks)):
-            peak_diff = self.main_compound.peaks[i][0] - peak_weight
-            if abs(peak_diff) < self.args['mz_tolerance'] and abs(peak_diff) < self.args['ppm'] * peak_weight / 1e6:
-                ind.append(i)
+        fragments = []
+        ind = self.main_compound.get_peak_index(peak_weight, {"mz_tolerance": mz_precision_abs, "ppm": mz_ppm_tolerance})
         for i in ind:
-            structures_i, structure_indicies_i = self.get_structures_by_peak_index(i)
+            structures_i, structure_indicies_i, fragments_i = self.get_structures_by_peak_index(i)
             structures += structures_i
             structure_indicies += structure_indicies_i
-        return structures, structure_indicies
+            fragments += fragments_i
+        return structures, structure_indicies, fragments

@@ -139,6 +139,55 @@ class Compound:
                 peaks.append(self.peaks[i])
         self.peaks = peaks
 
+    def get_peak_index(self, peak_weight, args={}):
+        args.update(self.args)
+        ind = []
+        for i in range(len(self.peaks)):
+            diff = abs(self.peaks[i][0] - peak_weight)
+            if diff < args["mz_tolerance"] and diff / peak_weight * 1000000 < args["ppm"]:
+                ind.append(i)
+        return ind
+
+
+    def filter_fragments_by_atoms(self, atoms):
+        """Filter the fragments by the atoms, remove fragments that do not contain the atoms"""
+        for i in range(len(self.peak_fragments_map)):
+            updated_fragments = set()
+            for fragment in self.peak_fragments_map[i]:
+                for atom in atoms:
+                    if 1 << atom & fragment:
+                        updated_fragments.add(fragment)
+                        break
+            self.peak_fragments_map[i] = updated_fragments
+
+
+    def vote_for_fragments(self, peak_index, fragments, voter="none", extra_args={}):
+        """Vote for the fragments, update the peak_fragments_map with the intersection of the fragments, and extend the intersection to other peaks if extend_to_other_peaks is true"""
+        if peak_index == -1:
+            print("in vote for fragment, Peak not found")
+            return
+
+        # get the intersection of the fragments
+        intersection = self.peak_fragments_map[peak_index].intersection(fragments)
+        self.peak_fragments_map[peak_index] = intersection
+        extra_args.update(self.args)
+        # if kwargs has extend_to_other_peaks, extend the intersection to other peaks
+        if "extend_to_other_peaks" in extra_args and extra_args["extend_to_other_peaks"]:
+            # find atoms in the intersection
+            intersect_atoms = set()
+            for atom in range(len(self.structure.GetAtoms())):
+                exists = True
+                for fragment in intersection:
+                    if not 1 << atom & fragment:
+                        exists = False
+                        break
+                if exists:
+                    intersect_atoms.add(atom)
+            
+            self.filter_fragments_by_atoms(intersect_atoms)
+        return
+    
+
     def calculate_peak_annotation_ambiguity(self, peaks=None):
         if peaks == None:
             peaks = [i for i in range(len(self.peaks))]
