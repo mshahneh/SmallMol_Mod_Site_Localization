@@ -72,7 +72,7 @@ class ModificationSiteLocator():
                 if PPO:
                     contributions[atom] += 1 * intensity_factor
                 else:
-                    contributions[atom] += len(contributions_data[atom][peak]) * intensity_factor
+                    contributions[atom] += len(contributions_data[atom][peak])/len(self.main_compound.peak_fragments_map[peak]) * intensity_factor
         return contributions
 
     

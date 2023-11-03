@@ -41,6 +41,7 @@ def getDataFromUsi(usi):
 
 def generate_usi(id, library_membership):
     return "mzspec:GNPS:" + library_membership + ":accession:" + id
+    # https://external.gnps2.org/gnpsspectrum?SpectrumID=CCMSLIB00005464251
 
 def getMatchedPeaks(usi1, usi2):
     payload = {

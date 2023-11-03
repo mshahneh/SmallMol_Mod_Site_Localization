@@ -2,6 +2,7 @@ import copy
 import re
 import numpy as np
 from rdkit import Chem
+from rdkit.Chem import AllChem, Descriptors
 import collections
 SpectrumTuple = collections.namedtuple(
     "SpectrumTuple", ["precursor_mz", "precursor_charge", "mz", "intensity"]
@@ -168,28 +169,165 @@ def calculateModificationSites(mol, substructure, inParent = True):
     intersect = set(matches)
 
     
-    modificationSites = set()
+    modificationSites = []
     for atom in mol.GetAtoms():
         if atom.GetIdx() not in intersect:
             for tempAtom in intersect:
                 if mol.GetBondBetweenAtoms(atom.GetIdx(), tempAtom) is not None:
-                    modificationSites.add(tempAtom)
+                    modificationSites.append(tempAtom)
 
     if inParent:
-        return list(modificationSites)
+        return modificationSites
     else:
-        res = set()
-        for atom in modificationSites:
-            if type(matches[0]) is tuple:
-                for match in matches:
-                    subMatches = list(match)
-                    idx = subMatches.index(atom)
-                    res.add(idx)
-            else:
+        res = []
+        if type(matches[0]) is tuple:
+            # multiple matches (substructure is happening multiple times in the parent molecule)
+            for match in matches:
+                subMatches = list(match)
+                temp_res = []
+                for atom in modificationSites:
+                    idx = subMatches.index(atom) # based on rdkit library, the value in matches array are sorted by index
+                    temp_res.append(idx)
+                res.append(temp_res)
+        else:
+            for atom in modificationSites:
                 subMatches = list(matches)
-                idx = subMatches.index(atom)
-                res.add(idx)
-        return list(res)
+                idx = subMatches.index(atom) # based on rdkit library, the value in matches array are sorted by index
+                res.append(idx)
+        return res
+    
+def get_modification_graph(main_struct, sub_struct):
+    """
+        Calculates the substructure difference between main_struct and sub_struct.
+        Input:
+            main_struct: main molecule
+            sub_struct: substructure molecule
+        Output:
+            count: the graph of the substructure difference, index of the atom of difference that is connected to substructure
+    """
+    if not main_struct.HasSubstructMatch(sub_struct):
+        raise ValueError("The substructure is not a substructure of the main structure.")
+    atoms_of_modification = []
+    atoms_of_substructure = main_struct.GetSubstructMatch(sub_struct)
+    for atom in main_struct.GetAtoms():
+        if atom.GetIdx() not in atoms_of_substructure:
+            atoms_of_modification.append(atom.GetIdx())
+
+    emol = Chem.EditableMol(main_struct)
+    for atom in reversed(range(main_struct.GetNumAtoms())):
+        if atom not in atoms_of_modification:
+            emol.RemoveAtom(atom)
+    frag = emol.GetMol()
+    if not main_struct.HasSubstructMatch(frag):
+        raise ValueError("The substructure is not a substructure of the main structure.")
+    modification_atom = calculateModificationSites(main_struct, frag, inParent = False)
+    modification_atom = modification_atom[0]
+
+    matches = main_struct.GetSubstructMatch(frag)
+    bond_type = Chem.BondType.SINGLE
+    for bond in main_struct.GetBonds():
+        if bond.GetBeginAtomIdx() in matches and bond.GetEndAtomIdx() not in matches:
+            bond_type = bond.GetBondType()
+            break
+        elif bond.GetEndAtomIdx() in matches and bond.GetBeginAtomIdx() not in matches:
+            bond_type = bond.GetBondType()
+            break
+
+    return frag, modification_atom, bond_type
+
+def attach_struct(sub_struct, frag, atom, new_modification_atom, bond_type):
+    temp_struct = Chem.CombineMols(sub_struct, frag)
+    temp_struct = Chem.RWMol(temp_struct)
+    temp_struct.AddBond(atom.GetIdx(), new_modification_atom, bond_type)
+    # temp_struct.CommitBatchEdit()
+    try:
+        temp_struct = temp_struct.GetMol()
+        # check if mol is valid
+        Chem.SanitizeMol(temp_struct)
+        modification_atom = temp_struct.GetAtomWithIdx(new_modification_atom)
+        return temp_struct
+    except:
+        temp_struct = Chem.CombineMols(sub_struct, frag)
+        temp_struct = Chem.RWMol(temp_struct)
+        for bond_type in [Chem.BondType.SINGLE, Chem.BondType.DOUBLE, Chem.BondType.TRIPLE]:
+            temp_struct.AddBond(atom.GetIdx(), new_modification_atom, bond_type)
+            temp_struct.CommitBatchEdit()
+            try:
+                temp_struct = temp_struct.GetMol()
+                Chem.SanitizeMol(temp_struct)
+                return temp_struct
+            except:
+                temp_struct = Chem.RWMol(temp_struct)
+                temp_struct.RemoveBond(atom.GetIdx(), new_modification_atom)
+                temp_struct.CommitBatchEdit()
+    
+    return None
+
+def generate_possible_stuctures(main_struct, sub_struct):
+    def fix_valence(atom, sub_struct):
+        if atom.GetNumExplicitHs() > 0:
+            temp_struct = Chem.RWMol(sub_struct)
+            # remove one explicit H
+            neighbors = atom.GetNeighbors()
+            for neighbor in neighbors:
+                if neighbor.GetSymbol() == "H":
+                    temp_struct.RemoveBond(atom.GetIdx(), neighbor.GetIdx())
+                    temp_struct.CommitBatchEdit()
+                    try:
+                            temp_struct = temp_struct.GetMol()
+                            Chem.SanitizeMol(temp_struct)
+                            return temp_struct
+                    except:
+                        pass
+        
+        else:
+            # if atom has double bond, try to remove one double bond
+            neighbors = atom.GetNeighbors()
+            for neighbor in neighbors:
+                if neighbor.GetSymbol() == "H":
+                    continue
+                temp_struct = Chem.RWMol(sub_struct)
+                # remove one double bond
+                for bond in temp_struct.GetBonds():
+                    if bond.GetBeginAtomIdx() == atom.GetIdx() and bond.GetEndAtomIdx() == neighbor.GetIdx() and bond.GetBondType() == Chem.BondType.DOUBLE:
+                        temp_struct.RemoveBond(atom.GetIdx(), neighbor.GetIdx())
+                        temp_struct.AddBond(atom.GetIdx(), neighbor.GetIdx(), Chem.BondType.SINGLE)
+                        temp_struct.CommitBatchEdit()
+                        try:
+                            temp_struct = temp_struct.GetMol()
+                            Chem.SanitizeMol(temp_struct)
+                            return temp_struct
+                        except:
+                            pass
+        
+        return None
+                
+
+    frag, modification_atom, bond_type = get_modification_graph(main_struct, sub_struct)
+    structs = []
+    new_modification_atom = modification_atom + sub_struct.GetNumAtoms()
+    # print(new_modification_atom, modification_atom, sub_struct.GetNumAtoms())
+    for atom in sub_struct.GetAtoms():
+        if atom.GetSymbol() == "H":
+            continue
+        temp_struct = attach_struct(sub_struct, frag, atom, new_modification_atom, bond_type)
+        if temp_struct is not None:
+            # check if the weight of temp_struct is the same as main_struct
+            if abs(Descriptors.ExactMolWt(temp_struct) - Descriptors.ExactMolWt(main_struct)) > 0.1:
+                continue
+            structs.append((atom.GetIdx(),temp_struct))
+        else:
+            temp_struct = fix_valence(atom, sub_struct)
+            if temp_struct is not None:
+                temp_struct = attach_struct(temp_struct, frag, atom, new_modification_atom, bond_type)
+                if temp_struct is not None:
+                    if abs(Descriptors.ExactMolWt(temp_struct) - Descriptors.ExactMolWt(main_struct)) > 0.1:
+                        continue
+                    structs.append((atom.GetIdx(),temp_struct))
+            
+                
+    return structs
+
 
 def getHitAtomsAndBonds(mol, substructure):
     """
