@@ -446,8 +446,8 @@ def is_submolecule(sub_formula, target_formula):
 
     # Check if every atom in sub-molecule is in target molecule and has less or equal count
     for element, count in sub_atom_counts.items():
-        if element == 'H':
-            continue
+        # if element == 'H':
+        #     continue
         if element not in target_atom_counts or target_atom_counts[element] < count:
             return False
 
