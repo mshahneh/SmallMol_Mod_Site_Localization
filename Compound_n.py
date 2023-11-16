@@ -163,6 +163,8 @@ class Compound:
 
     def vote_for_fragments(self, peak_index, fragments, voter="none", extra_args={}):
         """Vote for the fragments, update the peak_fragments_map with the intersection of the fragments, and extend the intersection to other peaks if extend_to_other_peaks is true"""
+        
+        print("here in vote for fragments", peak_index, fragments)
         if peak_index == -1:
             print("in vote for fragment, Peak not found")
             return
