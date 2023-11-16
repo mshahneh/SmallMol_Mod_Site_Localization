@@ -1,9 +1,11 @@
 from rdkit import Chem
+from msbuddy import assign_subformula
 from . import fragmentation_py as fragmentation_py
 import copy
 import json
 from . import utils_n as utils
 from . import handle_network as handle_network
+import re
 
 important_arguments = ["peaks", "Adduct", "Precursor_MZ", "Charge"]
 
@@ -191,6 +193,13 @@ class Compound:
     
 
     def calculate_peak_annotation_ambiguity(self, peaks=None):
+        """Calculate the peak annotation ambiguity
+        Args:
+            peaks: a list of peaks to calculate the ambiguity for, if None, use all peaks
+        Returns:
+            ambiguity: the average number of fragments per annotated peaks
+            ratio: the ratio of annotated peaks to all peaks
+        """
         if peaks == None:
             peaks = [i for i in range(len(self.peaks))]
         ambiguity = 0
@@ -199,7 +208,53 @@ class Compound:
             if len(self.peak_fragments_map[peak]) > 0:
                 annotated_peaks += 1
                 ambiguity += len(self.peak_fragments_map[peak])
+        if annotated_peaks == 0:
+            return -1, 0
+        if len(peaks) == 0:
+            return -1, -1
         return ambiguity / annotated_peaks, annotated_peaks / len(peaks)
+    
+    def apply_msbuddy(self):
+        if not "M+H" in self.Adduct:
+            raise ValueError("Adduct not supported")
+        main_compound_formula = Chem.rdMolDescriptors.CalcMolFormula(self.structure)
+        peak_mz = [peak[0] for peak in self.peaks]
+        subformla_list = assign_subformula(peak_mz,
+                                        precursor_formula=main_compound_formula, adduct="[M+H]+",
+                                        ms2_tol=self.args["ppm"], ppm=True, dbe_cutoff=-1.0)
+        
+        for i in range(len(self.peaks)):
+            possibilites = set()
+            for subformula in subformla_list[i].subform_list:
+                formula = subformula.formula
+                
+                # remove one H from the formula
+                pattern = r'([A-Z][a-z]*)(\d*)'
+                matches = re.findall(pattern, formula)  # Find all matches in the formula
+                formula = ""
+                for match in matches:
+                    if match[0] == "H":
+                        count = match[1]
+                        if count:
+                            count = int(count)
+                        else:
+                            count = 1
+                        count -= 1
+                        if count > 1:
+                            formula += "H" + str(count)
+                        elif count == 1:
+                            formula += "H"
+                    else:
+                        formula += match[0]
+                        if match[1]:
+                            formula += match[1]
+                
+                # find the fragments that contains the formula
+                for frag_id in self.peak_fragments_map[i]:
+                    molSubFormula = self.fragments.get_fragment_info(frag_id, 0)[2]
+                    if utils.is_submolecule(molSubFormula, formula) and utils.is_submolecule(formula, molSubFormula):
+                        possibilites.add(frag_id)
+            self.peak_fragments_map[i] = possibilites
 
     def apply_helper(self, helper_compound):
         # TODO: implement

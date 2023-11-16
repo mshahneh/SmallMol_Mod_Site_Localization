@@ -124,9 +124,9 @@ def molToSVG(mol, substructure=None, highlightModificationSites=False):
         
 
         if highlightModificationSites:
-            print(mol.GetNumAtoms(), substructure.GetNumAtoms(), "To check the sizes!")
+            # print(mol.GetNumAtoms(), substructure.GetNumAtoms(), "To check the sizes!")
             modifications = utils.calculateModificationSites(mol, substructure)
-            print(modifications)
+            # print(modifications)
             d2d = Chem.Draw.MolDraw2DSVG(1250,1200)
             colors = dict()
             for hitAtom in highlightAtoms:
