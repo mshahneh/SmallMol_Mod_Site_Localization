@@ -1,9 +1,9 @@
 args = {
     'adduct': {"name": "adduct", "short":'add', "defult":"M+H"},
-    'USI1': {"name": "USI1", "short":'USI1', "defult":"mzspec:GNPS:BERKELEY-LAB:accession:CCMSLIB00010105317"},
-    'USI2': {"name": "USI2", "short":'USI2', "defult":"mzspec:GNPS:BERKELEY-LAB:accession:CCMSLIB00010117740"},
-    'SMILES1': {"name": "SMILES1", "short":'SMILES1', "defult":"COc1ccc(-c2coc3cc(OC)c(OC)cc3c2=O)cc1"}, 
-    'SMILES2': {"name": "SMILES2", "short":'SMILES2', "defult":"COc1ccc(-c2coc3cc(OC)c(OC)cc3c2=O)cc1OC"},
+    'USI1': {"name": "USI1", "short":'USI1', "defult":"mzspec:GNPS:GNPS-MSMLS:accession:CCMSLIB00005463885"},
+    'USI2': {"name": "USI2", "short":'USI2', "defult":"mzspec:GNPS:GNPS-MSMLS:accession:CCMSLIB00005463907"},
+    'SMILES1': {"name": "SMILES1", "short":'SMILES1', "defult":"N[C@@H](CC1=CC(I)=C(OC2=CC=C(O)C(I)=C2)C(I)=C1)C(O)=O"}, 
+    'SMILES2': {"name": "SMILES2", "short":'SMILES2', "defult":"N[C@@H](CC1=CC(I)=C(OC2=CC(I)=C(O)C(I)=C2)C(I)=C1)C(O)=O"},
     'mz_tolerance': {"name": "mz_tolerance", "short":'mz', "defult":0.05},
     'ppm': {"name": "ppm", "short":'ppm', "defult":40},
     'filter_peaks_method': {"name": "filter_peaks_method", "short":'filter', "defult":"intensity"},
