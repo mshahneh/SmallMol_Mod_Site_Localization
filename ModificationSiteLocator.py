@@ -76,7 +76,7 @@ class ModificationSiteLocator():
         return contributions
 
     
-    def generate_probabilities(self, shifted_only = False, PPO = False, CI = False, true_modification_site = None, method = "old"):
+    def generate_probabilities(self, shifted_only = True, PPO = False, CI = False, true_modification_site = None, method = "old"):
         """"Generate the probabilities for each atom to be the modification site.
         input:
             shifted_only: bool, if True, only the shifted peaks are considered
@@ -85,15 +85,26 @@ class ModificationSiteLocator():
         """
         
         if method == "random_choice":
+            # set seed to be 0
+            np.random.seed(0)
             probabilities = np.zeros(len(self.main_compound.structure.GetAtoms()))
             random_choice = np.random.choice(len(self.main_compound.structure.GetAtoms()))
             probabilities[random_choice] = 1
         elif method == "random_distribution":
+            np.random.seed(0)
             probabilities = np.random.rand(len(self.main_compound.structure.GetAtoms()))
             probabilities = probabilities / np.sum(probabilities)
         elif method == "all_equal":
             probabilities = np.ones(len(self.main_compound.structure.GetAtoms()))
             probabilities = probabilities / np.sum(probabilities)
+        elif method == "random_skewed":
+            np.random.seed(0)
+            target =  np.random.choice(len(self.main_compound.structure.GetAtoms()))
+            probabilities = np.random.rand(len(self.main_compound.structure.GetAtoms()))
+            probabilities = probabilities * self.main_compound.distances[target]
+            probabilities = probabilities - np.min(probabilities)
+            probabilities = probabilities / np.sum(probabilities)
+
         elif method == "multiply":
             probabilities = np.zeros(len(self.main_compound.structure.GetAtoms()))
             for atom in range(len(self.main_compound.structure.GetAtoms())):
@@ -168,12 +179,12 @@ class ModificationSiteLocator():
         # if np.sum(probabilities) != 0:
         #     probabilities /= np.sum(probabilities)
 
-        maxScore = max(probabilities)  
-        if maxScore == 0:
-            if extensive_response:
-                return {'score': 0, 'count': 0, 'isMax': 0, 'closestMaxAtomDistance': 0}
-            else:
-                return 0
+        # maxScore = max(probabilities)  
+        # if maxScore == 0:
+        #     if extensive_response:
+        #         return {'score': 0, 'count': 0, 'isMax': 0, 'closestMaxAtomDistance': 0}
+        #     else:
+        #         return 0
         
         return Calc_Scores.calculate(G, probabilities, true_modification_site, method)
     
@@ -211,3 +222,19 @@ class ModificationSiteLocator():
             structure_indicies += structure_indicies_i
             fragments += fragments_i
         return structures, structure_indicies, fragments
+    
+    def get_main_shifted_index(self):
+        """Get the indexes of the shifted peaks in the main compound."""
+        return [_[0] for _ in self.shifted]
+    
+    def get_main_unshifted_index(self):
+        """Get the indexes of the unshifted peaks in the main compound."""
+        return [_[0] for _ in self.unshifted]
+    
+    def get_modified_shifted_weights(self):
+        """Get the weights of the shifted peaks in the modified compound."""
+        return [_[1] for _ in self.shifted]
+    
+    def get_modified_unshifted_weights(self):
+        """Get the weights of the unshifted peaks in the modified compound."""
+        return [_[1] for _ in self.unshifted]

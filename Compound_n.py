@@ -32,7 +32,10 @@ class Compound:
                     self.args[arg] = args[arg]
 
         if type(data) == str:
+            accession = data.split(':')[-1]
             data = handle_network.getDataFromUsi(data)
+            if structure is None:
+                library_membership, structure = handle_network.get_library_from_accession(accession, True)
 
         self.metadata = copy.deepcopy(data)
         for arg in important_arguments:
@@ -107,7 +110,7 @@ class Compound:
             for annotation in annotations:
                 self.peak_fragments_map[i].add(annotation[0])
 
-    def apply_sirius(self, sirius):
+    def apply_sirius(self, sirius, add_adduct=True):
         """Apply the sirius results to the compound and filter the possible annotations"""
         for i, peak in enumerate(self.peaks):
             index = utils.find_mz_in_sirius(
@@ -116,15 +119,16 @@ class Compound:
             if index == -1:
                 continue
             helper_peak_formula = sirius["fragments"][index]["molecularFormula"]
+            if add_adduct:
+                helper_peak_formula = utils.add_adduct_to_formula(helper_peak_formula, self.Adduct)
             possibilites = set()
             for frag_id in self.peak_fragments_map[i]:
                 molSubFormula = self.fragments.get_fragment_info(frag_id, 0)[2]
-                if utils.is_submolecule(
-                    molSubFormula, helper_peak_formula
-                ) and utils.is_submolecule(helper_peak_formula, molSubFormula):
+                if utils.is_submolecule(molSubFormula, helper_peak_formula) and utils.is_submolecule(helper_peak_formula, molSubFormula):
                     possibilites.add(frag_id)
-
-            self.peak_fragments_map[i] = possibilites
+            
+            if len(possibilites) > 0:
+                self.peak_fragments_map[i] = possibilites
 
     def apply_filter(self, filter_method, filter_value):
         self.peaks = utils.filter_peaks(
@@ -151,9 +155,11 @@ class Compound:
         return ind
 
 
-    def filter_fragments_by_atoms(self, atoms):
-        """Filter the fragments by the atoms, remove fragments that do not contain the atoms"""
-        for i in range(len(self.peak_fragments_map)):
+    def filter_fragments_by_atoms(self, atoms, peaks):
+        """Filter the fragments by the atoms, remove fragments that do not contain at least one of the atoms"""
+        if peaks == None:
+            peaks = [i for i in range(len(self.peaks))]
+        for i in peaks:
             updated_fragments = set()
             for fragment in self.peak_fragments_map[i]:
                 for atom in atoms:
@@ -186,7 +192,7 @@ class Compound:
                 if exists:
                     intersect_atoms.add(atom)
             
-            self.filter_fragments_by_atoms(intersect_atoms)
+            self.filter_fragments_by_atoms(intersect_atoms, None)
         return
     
 
@@ -225,34 +231,16 @@ class Compound:
             possibilites = set()
             for subformula in subformla_list[i].subform_list:
                 formula = subformula.formula
-                
-                # remove one H from the formula
-                pattern = r'([A-Z][a-z]*)(\d*)'
-                matches = re.findall(pattern, formula)  # Find all matches in the formula
-                formula = ""
-                for match in matches:
-                    if match[0] == "H":
-                        count = match[1]
-                        if count:
-                            count = int(count)
-                        else:
-                            count = 1
-                        count -= 1
-                        if count > 1:
-                            formula += "H" + str(count)
-                        elif count == 1:
-                            formula += "H"
-                    else:
-                        formula += match[0]
-                        if match[1]:
-                            formula += match[1]
+                # formula = utils.remove_adduct_from_formula(formula, self.Adduct)
                 
                 # find the fragments that contains the formula
                 for frag_id in self.peak_fragments_map[i]:
                     molSubFormula = self.fragments.get_fragment_info(frag_id, 0)[2]
                     if utils.is_submolecule(molSubFormula, formula) and utils.is_submolecule(formula, molSubFormula):
                         possibilites.add(frag_id)
-            self.peak_fragments_map[i] = possibilites
+            
+            if len(possibilites) > 0:
+                self.peak_fragments_map[i] = possibilites
 
     def apply_helper(self, helper_compound):
         # TODO: implement

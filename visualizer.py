@@ -147,7 +147,7 @@ def molToSVG(mol, substructure=None, highlightModificationSites=False):
 
     return d2d.GetDrawingText()
 
-def highlightScores(mol, scores):
+def highlightScores(mol, scores, add_labels = False):
     if min(scores) < 0:
         scores = [x + abs(min(scores)) for x in scores]
     vals = [x/max(scores) for x in scores]
@@ -156,6 +156,10 @@ def highlightScores(mol, scores):
     for i in range(0, mol.GetNumAtoms()):
         # heat map coloring
         colors[i] = (vals[i], 0, 1-vals[i], 0.9)
+    if add_labels:
+        for atom in mol.GetAtoms():
+            lbl = '%.2f'%(scores[atom.GetIdx()])
+            atom.SetProp('atomNote',lbl)
     d2d.DrawMolecule(mol, highlightAtoms=list(range(mol.GetNumAtoms())), highlightAtomColors=colors, highlightBonds=[])
     d2d.FinishDrawing()
     def draw_gradient_svg(length, diam, ax = 0, steps = 100, fontSize = 10):
@@ -222,8 +226,6 @@ def highlightMolIndices(mol, hitAtoms, hitBonds = None):
     d2d.DrawMolecule(mol,highlightAtoms=hitAtoms, highlightBonds=hitBonds)
     d2d.FinishDrawing()
     svgText =  d2d.GetDrawingText()
-
-
     return svgText
 
 def draw_alignment(peaks1, peaks2, matched_peaks, shift = 0.1, show_text = False, show_lines = True, scale = 1, ax = None):

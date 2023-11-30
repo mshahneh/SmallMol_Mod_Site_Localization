@@ -88,6 +88,33 @@ def ranking_loss(G, probabilities, modificationSiteIdx):
     # return the ranking loss
     return 1 - true_index/len(probabilities)
 
+
+def entropy(probabilities):
+    regulator = 1e-8
+    probabilities = probabilities + regulator
+    probabilities = probabilities / np.sum(probabilities)
+    H_max = np.log(len(probabilities))
+    H = abs(np.sum(probabilities * np.log(probabilities)))
+    return H/H_max
+
+def entropy_distance(G, probabilities, modificationSiteIdx, alpha = 0.5, gamma=1.0):
+    # penalize the entropy of the probabilities
+    H = entropy(probabilities)    
+    S = 1 - H
+    S = np.power(S, alpha)
+    
+    # penalize the distances between the modification site and the other sites normalized by the graph diameter and gamma regularization
+    graphDiameter = np.amax(G)
+    D = 0
+    for i in range(len(probabilities)):
+        D += G[modificationSiteIdx, i] / graphDiameter * probabilities[i]
+    D = 1 - D
+    D = np.power(D, gamma)
+
+    print(S, D)
+    return np.sqrt(S * D)
+
+
 # def calculate_spanning_graph(G, probabilities):
 #     max_val = max(probabilities)
 #     graph = []
@@ -126,7 +153,34 @@ def ranking_loss(G, probabilities, modificationSiteIdx):
 #                 spanning_graph[i][j] = min(spanning_graph[i][j], spanning_graph[i][k] + spanning_graph[k][j])
 
 
-def calculate(G, probabilities, true_modification_site, method):
+def softmax(probabilities):
+    if min(probabilities) < 0:
+        probabilities = probabilities - min(probabilities)
+    if max(probabilities) == 0:
+        return probabilities
+    smallest_non_zero = min([x for x in probabilities if x > 0])
+    probabilities /= smallest_non_zero
+    exp_x = np.exp(probabilities - np.max(probabilities))  # Subtracting the max value for numerical stability
+    # print(exp_x)
+    probabilities = exp_x / exp_x.sum()
+    return probabilities
+
+def linear(x):
+    if np.min(x) < 0:
+        x = x - np.min(x)
+    if np.sum(x) != 0:
+        x = x / np.sum(x)
+    return x
+
+
+def calculate(G, probabilities, true_modification_site, method, normalization_method = "linear"):
+    # Normalize probabilities
+    if normalization_method == "softmax":
+        probabilities = softmax(probabilities)
+    elif normalization_method == "linear":
+        normalization_method = linear(probabilities)
+    if max(probabilities) == 0:
+        return 0
     # call the score function based on the method
     if method == "is_max":
         return is_max(G, probabilities, true_modification_site)
@@ -140,5 +194,7 @@ def calculate(G, probabilities, true_modification_site, method):
         return regulated_exp(G, probabilities, true_modification_site)
     elif method == "ranking_loss":
         return ranking_loss(G, probabilities, true_modification_site)
+    elif method == "entropy_distance":
+        return entropy_distance(G, probabilities, true_modification_site)
     else:
         raise Exception("Method not found")

@@ -65,3 +65,46 @@ def usi_to_SpectrumTuple(usi):
     """
     data = getDataFromUsi(usi)
     return convert_to_SpectrumTuple(data['peaks'], data['precursor_mz'], data['precursor_charge'])
+
+def generate_link_accession(id):
+    return "https://external.gnps2.org/gnpsspectrum?SpectrumID={}".format(id)
+
+def get_library_from_accession(id, get_smiles=False):
+    import requests
+    res = requests.get(generate_link_accession(id))
+    parsed = res.json()
+    if get_smiles:
+        try:
+            return parsed['spectruminfo']['library_membership'], parsed['annotations'][0]['Smiles']
+        except:
+            return parsed['spectruminfo']['library_membership'], None
+    else:
+        return parsed['spectruminfo']['library_membership']
+
+def create_usi_from_accession(id, library = None):
+    if library is None:
+        library = get_library_from_accession(id)
+    return "mzspec:GNPS:{}:accession:{}".format(library, id)
+
+def create_link_from_accession(id1, id2):
+    base = "https://modsitelocalization.gnps2.org/"
+    # base = "http://localhost:5000/"
+    library1, smiles1 = get_library_from_accession(id1, True)
+    library2, smiles2 = get_library_from_accession(id2, True)
+    usi1 = create_usi_from_accession(id1, library1)
+    usi2 = create_usi_from_accession(id2, library2)
+    if smiles2 is None:
+        url = base + "?USI1=" + usi1 + "&USI2=" + usi2 + "&SMILES1=" + smiles1
+    else:
+        url = (
+            base
+            + "?USI1="
+            + usi1
+            + "&USI2="
+            + usi2
+            + "&SMILES1="
+            + smiles1
+            + "&SMILES2="
+            + smiles2
+        )
+    return url

@@ -120,39 +120,6 @@ def find_mz_in_sirius(fragments, search_mz, mz_threshold, ppm_threshold):
 
     return -1  # Return -1 if fragment not found
 
-def is_submolecule(sub_formula, target_formula):
-    # Parse the atom counts of the sub-molecule and target molecule
-
-    def parse_molecular_formula(formula):
-        pattern = r'([A-Z][a-z]*)(\d*)'
-        matches = re.findall(pattern, formula)  # Find all matches in the formula
-
-        # Create a dictionary to store element symbol and count pairs
-        atom_counts = {}
-        for match in matches:
-            element = match[0]
-            element = element.capitalize()
-            count = match[1]
-            if count:
-                count = int(count)
-            else:
-                count = 1
-            atom_counts[element] = count
-
-        return atom_counts
-
-    sub_atom_counts = parse_molecular_formula(sub_formula)
-    target_atom_counts = parse_molecular_formula(target_formula)
-
-    # Check if every atom in sub-molecule is in target molecule and has less or equal count
-    for element, count in sub_atom_counts.items():
-        if element == 'H':
-            continue
-        if element not in target_atom_counts or target_atom_counts[element] < count:
-            return False
-
-    return True
-
 
 def calculateModificationSites(mol, substructure, inParent = True):
     """
@@ -205,6 +172,7 @@ def get_modification_graph(main_struct, sub_struct):
         Output:
             count: the graph of the substructure difference, index of the atom of difference that is connected to substructure
     """
+    # print(main_struct.GetNumAtoms(), sub_struct.GetNumAtoms())
     if not main_struct.HasSubstructMatch(sub_struct):
         raise ValueError("The substructure is not a substructure of the main structure.")
     atoms_of_modification = []
@@ -301,8 +269,23 @@ def generate_possible_stuctures(main_struct, sub_struct):
                             pass
         
         return None
+    
+    def _try(sub_struct, frag, atom, new_modification_atom, bond_type):
+        temp_struct = attach_struct(sub_struct, frag, atom, new_modification_atom, bond_type)
+        if temp_struct is not None:
+            # check if the weight of temp_struct is the same as main_struct
+            if abs(Descriptors.ExactMolWt(temp_struct) - Descriptors.ExactMolWt(main_struct)) < 0.1:
+                return temp_struct
+                structs.append((atom.GetIdx(),temp_struct))
+        else:
+            temp_struct = fix_valence(atom, sub_struct)
+            if temp_struct is not None:
+                temp_struct = attach_struct(temp_struct, frag, atom, new_modification_atom, bond_type)
+                if temp_struct is not None:
+                    if abs(Descriptors.ExactMolWt(temp_struct) - Descriptors.ExactMolWt(main_struct)) < 0.1:
+                        return temp_struct
+                        
                 
-
     frag, modification_atom, bond_type = get_modification_graph(main_struct, sub_struct)
     structs = []
     new_modification_atom = modification_atom + sub_struct.GetNumAtoms()
@@ -310,21 +293,15 @@ def generate_possible_stuctures(main_struct, sub_struct):
     for atom in sub_struct.GetAtoms():
         if atom.GetSymbol() == "H":
             continue
-        temp_struct = attach_struct(sub_struct, frag, atom, new_modification_atom, bond_type)
+        temp_struct = _try(sub_struct, frag, atom, new_modification_atom, bond_type)
         if temp_struct is not None:
-            # check if the weight of temp_struct is the same as main_struct
-            if abs(Descriptors.ExactMolWt(temp_struct) - Descriptors.ExactMolWt(main_struct)) > 0.1:
-                continue
             structs.append((atom.GetIdx(),temp_struct))
         else:
-            temp_struct = fix_valence(atom, sub_struct)
-            if temp_struct is not None:
-                temp_struct = attach_struct(temp_struct, frag, atom, new_modification_atom, bond_type)
+            for additional_type in [Chem.BondType.SINGLE, Chem.BondType.DOUBLE, Chem.BondType.TRIPLE]:
+                temp_struct = _try(sub_struct, frag, atom, new_modification_atom, additional_type)
                 if temp_struct is not None:
-                    if abs(Descriptors.ExactMolWt(temp_struct) - Descriptors.ExactMolWt(main_struct)) > 0.1:
-                        continue
                     structs.append((atom.GetIdx(),temp_struct))
-            
+                    break
                 
     return structs
 
@@ -452,3 +429,63 @@ def is_submolecule(sub_formula, target_formula):
             return False
 
     return True
+
+def add_adduct_to_formula(formula, adduct):
+    if adduct != "M+H":
+        raise ValueError("Only H adduct is supported.")
+    else:
+        adduct = copy.deepcopy(adduct)
+        adduct = "H"
+    # add one H to the formula
+    pattern = r"([A-Z][a-z]*)(\d*)"
+    matches = re.findall(pattern, formula)  # Find all matches in the formula
+    formula = ""
+    Found = False
+    for match in matches:
+        if match[0] == adduct:
+            count = match[1]
+            if count:
+                count = int(count)
+            else:
+                count = 1
+            count += 1
+            formula += adduct + str(count)
+            Found = True
+        else:
+            formula += match[0]
+            if match[1]:
+                formula += match[1]
+    if not Found:
+        formula += adduct
+    
+    return formula
+
+def remove_adduct_from_formula(formula, adduct):
+    if adduct != "M+H":
+        raise ValueError("Only H adduct is supported.")
+    else:
+        adduct = copy.deepcopy(adduct)
+        adduct = "H"
+    
+    # remove one H from the formula
+    pattern = r'([A-Z][a-z]*)(\d*)'
+    matches = re.findall(pattern, formula)  # Find all matches in the formula
+    formula = ""
+    for match in matches:
+        if match[0] == "H":
+            count = match[1]
+            if count:
+                count = int(count)
+            else:
+                count = 1
+            count -= 1
+            if count > 1:
+                formula += "H" + str(count)
+            elif count == 1:
+                formula += "H"
+        else:
+            formula += match[0]
+            if match[1]:
+                formula += match[1]
+    
+    return formula
