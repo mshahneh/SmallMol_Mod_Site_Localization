@@ -174,7 +174,7 @@ def highlightScores(mol, scores, add_labels = False):
             width = diam
             height = length
         
-        svg = """<svg width="{}" height="{}" xmlns="http://www.w3.org/2000/svg">""".format(width, height)
+        svg = """<svg width="{}" height="{}" xmlns="http://www.w3.org/2000/svg">""".format(width, 1200)
         rectWidth = width/steps
         rectHeight = height
         if ax == 1:
@@ -189,15 +189,15 @@ def highlightScores(mol, scores, add_labels = False):
 
         for i in range(steps, -1, -1):
             if ax == 0:
-                svg += """<rect x="{}" y="{}" width="{}" height="{}" fill="rgb({}, 0, {})"/>""".format(i*rectWidth, 0, rectWidth, rectHeight, (i/steps)*255, (1-i/steps)*255)
+                svg += """<rect x="{}" y="{}" width="{}" height="{}" fill="rgb({}, 0, {})"/>""".format(i*rectWidth, 1200-diam, rectWidth, rectHeight, (i/steps)*255, (1-i/steps)*255)
             else:
                 svg += """<rect x="{}" y="{}" width="{}" height="{}" fill="rgb({}, 0, {})"/>""".format(0, i*rectHeight, rectWidth, rectHeight, (i/steps)*255, (1-i/steps)*255)
         
         if ax == 0:
-            svg += """<text x="{}" y="{}" font-size="{}px" fill="white">{}</text>""".format(5, (height+fontSize/2)/2, fontSize, "low likelihood")
+            svg += """<text x="{}" y="{}" font-size="{}px" fill="white">{}</text>""".format(5, 1200-diam + (height+fontSize/2)/2, fontSize, "low likelihood")
             # get width of text
             text = "high likelihood"
-            svg += """<text x="{}" y="{}" font-size="{}px" fill="white">{}</text>""".format(width-len(text)*fontSize/2.4, (height+fontSize/2)/2, fontSize, text)
+            svg += """<text x="{}" y="{}" font-size="{}px" fill="white">{}</text>""".format(width-len(text)*fontSize/2.4, 1200-diam + (height+fontSize/2)/2, fontSize, text)
         else:
             text = "high likelihood"
             # change font size
