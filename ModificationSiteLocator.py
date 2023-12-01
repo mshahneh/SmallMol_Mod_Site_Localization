@@ -145,7 +145,7 @@ class ModificationSiteLocator():
             for i in range(len(positive_contributions)):
                 probabilities[i] = positive_contributions[i] - negative_contributions[i]
 
-        probabilities = Calc_Scores.softmax(probabilities)        
+        probabilities = Calc_Scores.power_prob(probabilities)        
         # # Normalize probabilities
         # if np.min(probabilities) < 0:
         #     probabilities = probabilities - np.min(probabilities)

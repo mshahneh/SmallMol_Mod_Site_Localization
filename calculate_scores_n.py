@@ -1,6 +1,7 @@
 
 import numpy as np
 from typing import List, Tuple
+import copy
 
 def is_max(G, probabilities, true_index):
     if probabilities[true_index] == max(probabilities):
@@ -76,6 +77,8 @@ def regulated_exp(G, probabilities, modificationSiteIdx):
     
     # score = np.exp(-self.distances[modificationSiteIdx][closestMaxAtomIndx]/3) * 0.5 + np.exp(-(localDistances/count)) * 0.5
     # score = np.exp(-self.distances[modificationSiteIdx][closestMaxAtomIndx])
+    if count == 0:
+        return 0
     score = np.exp(-(localDistances/count))
     # print("the score is!", score, localDistances, count, graphDiameter, maxScore, modificationSiteIdx, closestMaxAtomIndx)
     return score
@@ -96,18 +99,27 @@ def ranking_loss(G, probabilities, modificationSiteIdx):
 
 
 def entropy(probabilities):
+    if len(probabilities) == 0:
+        return 1
+    if min(probabilities) < 0:
+        probabilities = probabilities - min(probabilities)
     regulator = 1e-8
     probabilities = probabilities + regulator
     probabilities = probabilities / np.sum(probabilities)
     H_max = np.log(len(probabilities))
     H = abs(np.sum(probabilities * np.log(probabilities)))
+    # print(H, probabilities, H_max, H/H_max)
     return H/H_max
 
 def entropy_distance(G, probabilities, modificationSiteIdx, alpha = 0.5, gamma=1.0):
     # penalize the entropy of the probabilities
     H = entropy(probabilities)    
+    # print("H", H, 1-H, alpha)
     S = 1 - H
-    S = np.power(S, alpha)
+    if S > 1e-8:
+        S = np.power(S, alpha)
+    else:
+        S = 0
     
     # penalize the distances between the modification site and the other sites normalized by the graph diameter and gamma regularization
     graphDiameter = np.amax(G)
@@ -117,7 +129,7 @@ def entropy_distance(G, probabilities, modificationSiteIdx, alpha = 0.5, gamma=1
     D = 1 - D
     D = np.power(D, gamma)
 
-    print(S, D)
+    # print(S, D)
     return np.sqrt(S * D)
 
 
@@ -177,6 +189,22 @@ def linear(x):
     if np.sum(x) != 0:
         x = x / np.sum(x)
     return x
+
+def power_prob(probabilities):
+    # copy the probabilities to avoid changing the original
+    probabilities2 = copy.deepcopy(probabilities)
+    if min(probabilities2) < 0:
+        probabilities2 = probabilities2 - min(probabilities2)
+    if max(probabilities2) == 0:
+        return probabilities2
+    # make anythin less than half of the max value zero
+    probabilities2[probabilities2 < max(probabilities2) / 2] = 0
+
+    probabilities2 = np.power(probabilities2, 4)
+    if sum(probabilities2) == 0:
+        return probabilities2
+    probabilities2 = probabilities2 / probabilities2.sum()
+    return probabilities2
 
 
 def calculate(G, probabilities, true_modification_site, method, normalization_method = "linear"):
