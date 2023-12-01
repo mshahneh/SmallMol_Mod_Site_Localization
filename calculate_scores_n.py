@@ -4,7 +4,13 @@ from typing import List, Tuple
 
 def is_max(G, probabilities, true_index):
     if probabilities[true_index] == max(probabilities):
-        return 1
+        # find how many times the max value appears
+        count = 0
+        for i in range(len(probabilities)):
+            if probabilities[i] == max(probabilities):
+                count += 1
+
+        return 1/count
     else:
         return 0
 
@@ -175,10 +181,10 @@ def linear(x):
 
 def calculate(G, probabilities, true_modification_site, method, normalization_method = "linear"):
     # Normalize probabilities
-    if normalization_method == "softmax":
-        probabilities = softmax(probabilities)
-    elif normalization_method == "linear":
-        normalization_method = linear(probabilities)
+    # if normalization_method == "softmax":
+    #     probabilities = softmax(probabilities)
+    # elif normalization_method == "linear":
+    probabilities = linear(probabilities)
     if max(probabilities) == 0:
         return 0
     # call the score function based on the method

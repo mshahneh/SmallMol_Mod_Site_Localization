@@ -144,14 +144,15 @@ class ModificationSiteLocator():
             probabilities = np.zeros(len(self.main_compound.structure.GetAtoms()))
             for i in range(len(positive_contributions)):
                 probabilities[i] = positive_contributions[i] - negative_contributions[i]
-        
-        # Normalize probabilities
-        if np.min(probabilities) < 0:
-            probabilities = probabilities - np.min(probabilities)
-        if np.sum(probabilities) != 0:
-            probabilities = probabilities / np.sum(probabilities)
-        else:
-            probabilities = np.zeros(len(self.main_compound.structure.GetAtoms()))
+
+        probabilities = Calc_Scores.softmax(probabilities)        
+        # # Normalize probabilities
+        # if np.min(probabilities) < 0:
+        #     probabilities = probabilities - np.min(probabilities)
+        # if np.sum(probabilities) != 0:
+        #     probabilities = probabilities / np.sum(probabilities)
+        # else:
+        #     probabilities = np.zeros(len(self.main_compound.structure.GetAtoms()))
         
         # print("debugging: probabilities2", probabilities, positive_contributions, negative_contributions)
         return probabilities
