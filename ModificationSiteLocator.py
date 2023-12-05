@@ -86,19 +86,19 @@ class ModificationSiteLocator():
         
         if method == "random_choice":
             # set seed to be 0
-            np.random.seed(0)
+            # np.random.seed(0)
             probabilities = np.zeros(len(self.main_compound.structure.GetAtoms()))
             random_choice = np.random.choice(len(self.main_compound.structure.GetAtoms()))
             probabilities[random_choice] = 1
         elif method == "random_distribution":
-            np.random.seed(0)
+            # np.random.seed(0)
             probabilities = np.random.rand(len(self.main_compound.structure.GetAtoms()))
             probabilities = probabilities / np.sum(probabilities)
         elif method == "all_equal":
             probabilities = np.ones(len(self.main_compound.structure.GetAtoms()))
             probabilities = probabilities / np.sum(probabilities)
         elif method == "random_skewed":
-            np.random.seed(0)
+            # np.random.seed(0)
             target =  np.random.choice(len(self.main_compound.structure.GetAtoms()))
             probabilities = np.random.rand(len(self.main_compound.structure.GetAtoms()))
             probabilities = probabilities * self.main_compound.distances[target]

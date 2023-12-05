@@ -150,7 +150,10 @@ def molToSVG(mol, substructure=None, highlightModificationSites=False):
 def highlightScores(mol, scores, add_labels = False):
     if min(scores) < 0:
         scores = [x + abs(min(scores)) for x in scores]
-    vals = [x/max(scores) for x in scores]
+    if max(scores) > 0:
+        vals = [x/max(scores) for x in scores]
+    else:
+        vals = [0 for x in scores]
     d2d = Draw.MolDraw2DSVG(1250,1200)
     colors = dict()
     for i in range(0, mol.GetNumAtoms()):

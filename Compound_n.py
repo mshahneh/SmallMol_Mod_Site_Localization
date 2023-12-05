@@ -18,9 +18,10 @@ class Compound:
 
         self.args = {
             "ppm": 40,
-            "mz_tolerance": 0.1,
+            "mz_tolerance": 1,
             "filter_peaks_method": "intensity",
             "filter_peaks_variable": 0.01,
+            "fragmentation_depth": -1,
         }
         self.args.update(args)
         for arg in list(args.keys()):
@@ -32,10 +33,13 @@ class Compound:
                     self.args[arg] = args[arg]
 
         if type(data) == str:
-            accession = data.split(':')[-1]
+            if data.count(':') == 0:
+                data = handle_network.create_usi_from_accession(data)
+            self.accession = data.split(':')[-1]
             data = handle_network.getDataFromUsi(data)
             if structure is None:
-                library_membership, structure = handle_network.get_library_from_accession(accession, True)
+                library_membership, structure = handle_network.get_library_from_accession(self.accession, True)
+                self.library_membership = library_membership
 
         self.metadata = copy.deepcopy(data)
         for arg in important_arguments:
@@ -81,13 +85,21 @@ class Compound:
 
         if self.structure != None:
             self.distances = Chem.rdmolops.GetDistanceMatrix(self.structure)
-            breaks = 5
-            if (self.structure.GetNumAtoms() > 30):
-                breaks = 4
-            if (self.structure.GetNumAtoms() > 50):
-                breaks = 3
-            if (self.structure.GetNumAtoms() > 80):
-                breaks = 2
+            if self.args["fragmentation_depth"] == -1:
+                breaks = 5
+                if (self.structure.GetNumAtoms() > 30):
+                    breaks = 4
+                if (self.structure.GetNumAtoms() > 50):
+                    breaks = 3
+                if (self.structure.GetNumAtoms() > 80):
+                    breaks = 2
+            else:
+                breaks = self.args["fragmentation_depth"]
+                # if string, convert to int
+                if type(breaks) != int:
+                    breaks = int(breaks)
+                if (self.structure.GetNumAtoms() > 80):
+                    breaks = min(breaks, 2)
             self.fragments = fragmentation_py.FragmentEngine(
                 Chem.MolToMolBlock(self.structure), breaks, 2, 1, 0, 0
             )
