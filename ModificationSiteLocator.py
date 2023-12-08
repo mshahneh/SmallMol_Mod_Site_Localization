@@ -8,7 +8,9 @@ from rdkit import Chem
 class ModificationSiteLocator():
     def __init__(self, main_compound, modified_compound, args = {}):
         
-        self.args = {"mz_tolerance": 0.1, "ppm": 40}
+        self.args = {"mz_tolerance": 0.1,
+                      "ppm": 40,
+                      }
         self.args.update(args)
 
         for arg in list(args.keys()):
@@ -31,52 +33,55 @@ class ModificationSiteLocator():
         obj = {"main_compound": self.main_compound, "modified_compound": self.modified_compound}
         return json.dumps(obj)
     
-    def find_contributions(self, peakids, true_modification_site = None):
+    def find_existance(self, peakids):
         """
         For the given peaks, finds the fragments that each atom contributes to
         input:
             peakids: list of peak ids
-            true_modification_site: int, if not None, only fragments that contain this atom are considered
         output:
-            contributions: list of dicts for each atom, each dict contains the peak ids as keys and the fragments as values
+            existance: list of dicts for each atom, each dict contains the peak ids as keys and the fragments as values
         """
-        contributions = [dict() for i in range(len(self.main_compound.structure.GetAtoms()))]
+        existance = [dict() for i in range(len(self.main_compound.structure.GetAtoms()))]
         for peak in peakids:
             for fragment in self.main_compound.peak_fragments_map[peak]:
                 hitAtoms = self.main_compound.fragments.get_fragment_info(fragment, 0)[1]
-                if true_modification_site != None and true_modification_site not in hitAtoms:
-                    continue
                 for atom in hitAtoms:
-                    if peak not in contributions[atom]:
-                        contributions[atom][peak] = []
-                    contributions[atom][peak].append(fragment)
-        return contributions
+                    if peak not in existance[atom]:
+                        existance[atom][peak] = []
+                    existance[atom][peak].append(fragment)
+        return existance
     
-    def calculate_contributions(self, peakids, PPO = False, CI = False, true_modification_site = None):
+    def calculate_contributions(self, peakids, CI = False, CPA = True, CFA = True):
         """ 
         input:
             peakids: list of peak ids
-            PPO: (Peak_Presense_only) bool, if True, only the number of contributed peaks is considered, not the number of fragments in each peak
             CI: (Consider_Intensity) bool, if True, the intensity of the peaks is considered (default: False)
-            true_modification_site: int, if not None, only fragments that contain this atom are considered
+            CPA: (Consider_Peak_Ambiguity) bool, if True, the peak ambiguity (number of fragments assigned to a peak) is considered (default: True)
+            CFA: (Consider_Fragment_Ambiguity) bool, if True, the fragment ambiguity (number of atoms in fragment) is considered (default: True)
         """
-        contributions_data = self.find_contributions(peakids, true_modification_site)
-        # print("debugging: contributions_data", contributions_data)
+        existance_data = self.find_existance(peakids)
         contributions = [0 for i in range(len(self.main_compound.structure.GetAtoms()))]
-        for atom in range(len(contributions_data)):
-            for peak in contributions_data[atom]:
+        for atom in range(len(existance_data)):
+            for peak in existance_data[atom]:
                 intensity_factor = 1
+                atom_peak_ambiguity_factor = 1
+                fragment_ambiguity_factor = 1
+
                 if CI:
                     intensity_factor = self.main_compound.peaks[peak][1]
+                if CPA:
+                    atom_peak_ambiguity_factor = len(existance_data[atom][peak])/len(self.main_compound.peak_fragments_map[peak])
                 
-                if PPO:
-                    contributions[atom] += 1 * intensity_factor
-                else:
-                    contributions[atom] += len(contributions_data[atom][peak])/len(self.main_compound.peak_fragments_map[peak]) * intensity_factor
+                for frag in existance_data[atom][peak]:
+                    if CFA:
+                        fragment_ambiguity_factor = len(self.main_compound.fragments.get_fragment_info(frag, 0)[1])/len(self.main_compound.structure.GetAtoms())
+                    
+                    contributions[atom] += intensity_factor * atom_peak_ambiguity_factor * fragment_ambiguity_factor
+        
         return contributions
 
     
-    def generate_probabilities(self, shifted_only = True, PPO = False, CI = False, true_modification_site = None, method = "old"):
+    def generate_probabilities(self, shifted_only = True, CI = False, CPA = True, CFA = True, method = "old"):
         """"Generate the probabilities for each atom to be the modification site.
         input:
             shifted_only: bool, if True, only the shifted peaks are considered
@@ -85,53 +90,33 @@ class ModificationSiteLocator():
         """
         
         if method == "random_choice":
-            # set seed to be 0
-            # np.random.seed(0)
             n = len(self.main_compound.structure.GetAtoms())
             probabilities = np.zeros(n)
             random_choice = np.random.choice(n)
             probabilities[random_choice] = 1
-            probabilities = probabilities.tolist()
             return probabilities
-        elif method == "multiple_random_choice":
-            # set seed to be 0
-            np.random.seed(0)
-            res = []
-            for i in range(50):
-                res.append(self.generate_probabilities("random_choice"))
-            return res
         elif method == "random_distribution":
-            # np.random.seed(0)
             probabilities = np.random.rand(len(self.main_compound.structure.GetAtoms()))
             probabilities = probabilities / np.sum(probabilities)
-            probabilities = probabilities.tolist()
             return probabilities
-        elif method == "multiple_random_distribution":
-            # set seed to be 0
-            np.random.seed(0)
-            res = []
-            for i in range(50):
-                res.append(self.generate_probabilities("random_distribution"))
-            return res
         elif method == "all_equal":
             probabilities = np.ones(len(self.main_compound.structure.GetAtoms()))
             probabilities = probabilities / np.sum(probabilities)
             return probabilities
         elif method == "random_skewed":
-            # np.random.seed(0)
             target =  np.random.choice(len(self.main_compound.structure.GetAtoms()))
             probabilities = np.random.rand(len(self.main_compound.structure.GetAtoms()))
             probabilities = probabilities * self.main_compound.distances[target]
             probabilities = probabilities - np.min(probabilities)
             probabilities = probabilities / np.sum(probabilities)
-            probabilities = probabilities.tolist()
             return probabilities
-        elif method == "multiple_random_skewed":
+        elif method.startswith("multiple"):
             # set seed to be 0
             np.random.seed(0)
             res = []
+            method_name = method[9:]
             for i in range(50):
-                res.append(self.generate_probabilities("random_skewed"))
+                res.append(self.generate_probabilities(method=method_name))
             return res
         elif method == "multiply":
             probabilities = np.zeros(len(self.main_compound.structure.GetAtoms()))
@@ -162,27 +147,18 @@ class ModificationSiteLocator():
             
         else:
             s_peakids = [_[0] for _ in self.shifted]
-            positive_contributions = self.calculate_contributions(s_peakids, PPO, CI, true_modification_site)
+            positive_contributions = self.calculate_contributions(s_peakids, CI=CI, CPA=CPA, CFA=CFA)
             if not shifted_only:
                 u_peakids = [_[0] for _ in self.unshifted]
-                negative_contributions = self.calculate_contributions(u_peakids, PPO, CI, None)
+                negative_contributions = self.calculate_contributions(u_peakids, CI=CI, CPA=CPA, CFA=CFA)
             else:
                 negative_contributions = [0 for i in range(len(self.main_compound.structure.GetAtoms()))]
             
             probabilities = np.zeros(len(self.main_compound.structure.GetAtoms()))
             for i in range(len(positive_contributions)):
                 probabilities[i] = positive_contributions[i] - negative_contributions[i]
+            probabilities = Calc_Scores.power_prob(probabilities) 
 
-        probabilities = Calc_Scores.power_prob(probabilities)        
-        # # Normalize probabilities
-        # if np.min(probabilities) < 0:
-        #     probabilities = probabilities - np.min(probabilities)
-        # if np.sum(probabilities) != 0:
-        #     probabilities = probabilities / np.sum(probabilities)
-        # else:
-        #     probabilities = np.zeros(len(self.main_compound.structure.GetAtoms()))
-        
-        # print("debugging: probabilities2", probabilities, positive_contributions, negative_contributions)
         return probabilities
     
     def calculate_score(self, true_modification_site, method, probabilities = None, extensive_response = False, filter_ratio = 0.5):
@@ -199,22 +175,6 @@ class ModificationSiteLocator():
             probabilities = self.generate_probabilities()
         
         G = self.main_compound.distances
-        
-        # maxScore = max(probabilities)
-        # for i in range(self.main_compound.structure.GetNumAtoms()):
-        #     if probabilities[i] <= filter_ratio * maxScore:
-        #         probabilities[i] = 0
-        
-        # if np.sum(probabilities) != 0:
-        #     probabilities /= np.sum(probabilities)
-
-        # maxScore = max(probabilities)  
-        # if maxScore == 0:
-        #     if extensive_response:
-        #         return {'score': 0, 'count': 0, 'isMax': 0, 'closestMaxAtomDistance': 0}
-        #     else:
-        #         return 0
-        
         return Calc_Scores.calculate(G, probabilities, true_modification_site, method)
     
     def get_structures_by_peak_index(self, peakindex):
@@ -226,11 +186,9 @@ class ModificationSiteLocator():
             fragInfo = self.main_compound.fragments.get_fragment_info(fragment, 0)
             smiles = fragInfo[3]
             hitAtoms = fragInfo[1]
-            substructure = Chem.MolFromSmiles(smiles, sanitize=False)
-            if self.main_compound.structure.HasSubstructMatch(substructure):
-                structures.append(smiles)
-                structure_indicies.append(hitAtoms)
-                frags.append(fragment)
+            structures.append(smiles)
+            structure_indicies.append(hitAtoms)
+            frags.append(fragment)
         
         return structures, structure_indicies, frags
 

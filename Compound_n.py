@@ -6,6 +6,7 @@ import json
 from . import utils_n as utils
 from . import handle_network as handle_network
 import re
+import math
 
 important_arguments = ["peaks", "Adduct", "Precursor_MZ", "Charge"]
 
@@ -22,6 +23,7 @@ class Compound:
             "filter_peaks_method": "intensity",
             "filter_peaks_variable": 0.01,
             "fragmentation_depth": -1,
+            "formula_ignore_H": True,
         }
         self.args.update(args)
         for arg in list(args.keys()):
@@ -136,7 +138,7 @@ class Compound:
             possibilites = set()
             for frag_id in self.peak_fragments_map[i]:
                 molSubFormula = self.fragments.get_fragment_info(frag_id, 0)[2]
-                if utils.is_submolecule(molSubFormula, helper_peak_formula) and utils.is_submolecule(helper_peak_formula, molSubFormula):
+                if utils.is_submolecule(molSubFormula, helper_peak_formula, self.args["formula_ignore_H"]) and utils.is_submolecule(helper_peak_formula, molSubFormula, self.args["formula_ignore_H"]):
                     possibilites.add(frag_id)
             
             if len(possibilites) > 0:
@@ -250,11 +252,37 @@ class Compound:
                 # find the fragments that contains the formula
                 for frag_id in self.peak_fragments_map[i]:
                     molSubFormula = self.fragments.get_fragment_info(frag_id, 0)[2]
-                    if utils.is_submolecule(molSubFormula, formula) and utils.is_submolecule(formula, molSubFormula):
+                    if utils.is_submolecule(molSubFormula, formula, self.args["formula_ignore_H"]) and utils.is_submolecule(formula, molSubFormula, self.args["formula_ignore_H"]):
                         possibilites.add(frag_id)
             
             if len(possibilites) > 0:
                 self.peak_fragments_map[i] = possibilites
+    
+    def calculate_annotation_entropy(self, peaks=None):
+        """Calculate the entropy of the annotation
+        Args:
+            peaks: a list of peaks to calculate the entropy for, if None, use all peaks
+        Returns:
+            entropy: the entropy of the annotation
+        """
+        if peaks == None:
+            peaks = [i for i in range(len(self.peaks))]
+        peak_entropies = [0 for i in range(len(self.peaks))]
+        n = len(self.structure.GetAtoms())
+        for peak in peaks:
+            atoms_appearance = [0 for i in range(n)]
+            for fragment in self.peak_fragments_map[peak]:
+                for atom in range(n):
+                    if 1 << atom & fragment:
+                        atoms_appearance[atom] += 1
+            entropy = 0
+            for atom in range(n):
+                if atoms_appearance[atom] > 0:
+                    p = atoms_appearance[atom] / len(self.peak_fragments_map[peak])
+                    entropy -= p * math.log(p)
+            peak_entropies[peak] = entropy
+        entropy = sum(peak_entropies) / len(peak_entropies)
+        return entropy
 
     def apply_helper(self, helper_compound):
         # TODO: implement
