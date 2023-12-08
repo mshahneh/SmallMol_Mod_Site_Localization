@@ -207,12 +207,22 @@ def power_prob(probabilities):
     return probabilities2
 
 
-def calculate(G, probabilities, true_modification_site, method, normalization_method = "linear"):
-    # Normalize probabilities
-    # if normalization_method == "softmax":
-    #     probabilities = softmax(probabilities)
-    # elif normalization_method == "linear":
-    probabilities = linear(probabilities)
+def calculate(G, input_probabilities, true_modification_site, method, normalization_method = "linear"):
+    # if input_probabilities is list of lists, calculate the average
+    if isinstance(input_probabilities[0], list):
+        average = 0
+        for i in range(len(input_probabilities)):
+            average += calculate(G, input_probabilities[i], true_modification_site, method, normalization_method)
+        return average / len(input_probabilities)
+    
+    # if input_probabilities is a 2d array, calculate the average
+    if isinstance(input_probabilities[0], np.ndarray):
+        average = 0
+        for i in range(len(input_probabilities)):
+            average += calculate(G, input_probabilities[i], true_modification_site, method, normalization_method)
+        return average / len(input_probabilities)
+    
+    probabilities = linear(input_probabilities)
     if max(probabilities) == 0:
         return 0
     # call the score function based on the method

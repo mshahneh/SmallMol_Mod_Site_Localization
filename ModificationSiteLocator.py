@@ -87,16 +87,36 @@ class ModificationSiteLocator():
         if method == "random_choice":
             # set seed to be 0
             # np.random.seed(0)
-            probabilities = np.zeros(len(self.main_compound.structure.GetAtoms()))
-            random_choice = np.random.choice(len(self.main_compound.structure.GetAtoms()))
+            n = len(self.main_compound.structure.GetAtoms())
+            probabilities = np.zeros(n)
+            random_choice = np.random.choice(n)
             probabilities[random_choice] = 1
+            probabilities = probabilities.tolist()
+            return probabilities
+        elif method == "multiple_random_choice":
+            # set seed to be 0
+            np.random.seed(0)
+            res = []
+            for i in range(50):
+                res.append(self.generate_probabilities("random_choice"))
+            return res
         elif method == "random_distribution":
             # np.random.seed(0)
             probabilities = np.random.rand(len(self.main_compound.structure.GetAtoms()))
             probabilities = probabilities / np.sum(probabilities)
+            probabilities = probabilities.tolist()
+            return probabilities
+        elif method == "multiple_random_distribution":
+            # set seed to be 0
+            np.random.seed(0)
+            res = []
+            for i in range(50):
+                res.append(self.generate_probabilities("random_distribution"))
+            return res
         elif method == "all_equal":
             probabilities = np.ones(len(self.main_compound.structure.GetAtoms()))
             probabilities = probabilities / np.sum(probabilities)
+            return probabilities
         elif method == "random_skewed":
             # np.random.seed(0)
             target =  np.random.choice(len(self.main_compound.structure.GetAtoms()))
@@ -104,7 +124,15 @@ class ModificationSiteLocator():
             probabilities = probabilities * self.main_compound.distances[target]
             probabilities = probabilities - np.min(probabilities)
             probabilities = probabilities / np.sum(probabilities)
-
+            probabilities = probabilities.tolist()
+            return probabilities
+        elif method == "multiple_random_skewed":
+            # set seed to be 0
+            np.random.seed(0)
+            res = []
+            for i in range(50):
+                res.append(self.generate_probabilities("random_skewed"))
+            return res
         elif method == "multiply":
             probabilities = np.zeros(len(self.main_compound.structure.GetAtoms()))
             for atom in range(len(self.main_compound.structure.GetAtoms())):
