@@ -18,4 +18,7 @@ dependencies:
     - furl
     - dash_daq
     - dash-bootstrap-components
+    - pillow
+    - openpyxl
+    - openpyxl-image-loader
     

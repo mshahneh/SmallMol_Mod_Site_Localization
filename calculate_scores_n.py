@@ -40,11 +40,23 @@ def average_dist_from_max(G, probabilities, true_index):
 
 def average_dist(G, probabilities, true_index):
     eps = 0.000001
+    dists = 0
+    count = 0
+    for i in range(len(probabilities)):
+        value = np.exp(-G[true_index, i])
+        # value = 1/(G[true_index, i]+ 1)
+        dists += value * probabilities[i]
+        count += probabilities[i]
+    return float(dists/count)
+
+def average_dist_normalized(G, probabilities, true_index):
+    eps = 0.000001
     graph_diameter = np.amax(G)
     dists = 0
     count = 0
     for i in range(len(probabilities)):
         value = np.exp(-G[true_index, i]/(graph_diameter-G[true_index, i]+eps))
+        # value  = (graph_diameter - G[true_index, i])/graph_diameter
         dists += value * probabilities[i]
         count += probabilities[i]
     return float(dists/count)
@@ -234,6 +246,8 @@ def calculate(G, input_probabilities, true_modification_site, method, normalizat
         return average_dist_from_max(G, probabilities, true_modification_site)
     elif method == "average_dist":
         return average_dist(G, probabilities, true_modification_site)
+    elif method == "average_dist_normalized":
+        return average_dist_normalized(G, probabilities, true_modification_site)
     elif method == "regulated_exp":
         return regulated_exp(G, probabilities, true_modification_site)
     elif method == "ranking_loss":

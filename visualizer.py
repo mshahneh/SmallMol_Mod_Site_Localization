@@ -9,6 +9,7 @@ import cairosvg
 import pandas as pd
 import urllib.parse
 import matplotlib.pyplot as plt
+import uuid
 
 def make_url(base_url = "http://localhost:8050/", USI1=None, USI2=None, SMILES1=None, SMILES2=None, args=None):
     query_params = {k: v for k, v in {
@@ -26,50 +27,44 @@ def make_url(base_url = "http://localhost:8050/", USI1=None, USI2=None, SMILES1=
 
 def table_to_xlsx(data, path):
     """
-    Converts a dictionary to an Excel file.
+    Converts a dataframe to an Excel file.
     """
     wb = xlsxwriter.Workbook(path)
+    my_format = wb.add_format()
+    my_format.set_align('vcenter')
     ws = wb.add_worksheet('Sheet 1')
     col = 0
+    temp_file_names = []
     for key in data:
-        if key != 'image':
+        if 'image' not in key and key != 'structure':
+            # print(key, data[key])
             ws.write(0, col, key)
             ws.write(1, col, data[key])
+            ws.set_column(col, col, None, my_format)
             col += 1
         else:
             ws.write(0, col, key)
             # write svg to file
-            with open("temp.svg", "w") as f:
+            filename = str(uuid.uuid4())
+            with open("{}.svg".format(filename), "w") as f:
                 f.write(data[key])
+                temp_file_names.append("{}.svg".format(filename))
             # svg image to bitmap
-            cairosvg.svg2png(url="temp.svg", write_to="temp.png", parent_width=250, parent_height=200)
-            # # convert png to bitmap
-            # img = Image.open("temp.png")
-            # image_parts = img.split()
-            # r = image_parts[0]
-            # g = image_parts[1]
-            # b = image_parts[2]
-            # img = Image.merge("RGB", (r, g, b))
-            # fo = BytesIO()
-            # img.save(fo, format='bmp')
+            cairosvg.svg2png(url="{}.svg".format(filename), write_to="{}.png".format(filename), parent_width=250, parent_height=200)
+            temp_file_names.append("{}.png".format(filename))
 
-            # ws.insert_bitmap_data(fo.getvalue(), col, 0)
-            # img.close()
-            ws.insert_image(1, col, "temp.png")
-
-
+            # make image fit in cell
+            ws.set_column_pixels(col, col, 150)
+            ws.set_row_pixels(1, 150)
+            ws.insert_image(1, col, "{}.png".format(filename), {'x_scale': 0.12, 'y_scale': 0.12, 'x_offset': 1, 'y_offset': 1})
             col += 1
-        
+    
     wb.close()
-    #delete temp files
-    try:
-        os.remove("temp.svg")
-    except:
-        pass
-    try:
-        os.remove("temp.png")
-    except:
-        pass
+    for filename in temp_file_names:
+        try:
+            os.remove(filename)
+        except:
+            pass
 
 def table_to_tsv(data, path_to_tsv, path_to_img_folder):
     import uuid

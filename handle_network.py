@@ -108,3 +108,22 @@ def create_link_from_accession(id1, id2):
             + smiles2
         )
     return url
+
+def create_link(usi1, usi2, smiles1, smiles2 = None):
+    base = "https://modsitelocalization.gnps2.org/"
+    # base = "http://localhost:5000/"
+    if smiles2 is None:
+        url = base + "?USI1=" + usi1 + "&USI2=" + usi2 + "&SMILES1=" + smiles1
+    else:
+        url = (
+            base
+            + "?USI1="
+            + usi1
+            + "&USI2="
+            + usi2
+            + "&SMILES1="
+            + smiles1
+            + "&SMILES2="
+            + smiles2
+        )
+    return url

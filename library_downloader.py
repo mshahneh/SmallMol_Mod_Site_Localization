@@ -178,10 +178,13 @@ def store_cached_values(url, library_name, output, weight_threshold, difference_
         
         data_dict_filtered, matches, cachedStructures_filtered = download(url, output, weight_threshold, difference_threshold_rate, library_name, log)
 
+
+        # print("here1")
         # create matches dataframe
         columns = ['id_bigger', 'id_smaller', 'num_modif_sites', 'weight_bigger', 'weight_smaller', 'difference', "adduct", "weight_threshold", "difference_threshold_rate"]
         matches_df = pd.DataFrame(columns=columns)
 
+        # print("here2")
         for num_modif_sites in matches:
             for match in matches[num_modif_sites]:
                 try:
@@ -198,7 +201,7 @@ def store_cached_values(url, library_name, output, weight_threshold, difference_
         if not os.path.exists(os.path.join(output, "matches")):
             os.makedirs(os.path.join(output, "matches"))
         matches_df.to_csv(os.path.join(output, "matches", library_name + ".csv"), index=False)
-
+        # print("here3")
         def store_cached_values(dictionary, name):
             # create directory for dictionary if it does not exist
             if not os.path.exists(os.path.join(output, name)):
@@ -206,6 +209,7 @@ def store_cached_values(url, library_name, output, weight_threshold, difference_
             for key in dictionary:
                 with open(os.path.join(output, name, key + ".pkl"), "wb") as f:
                     pickle.dump(dictionary[key], f)
+            
         # store compounds_data
         store_cached_values(data_dict_filtered, "compounds_data")
         with open(os.path.join(output, "compounds_data", library_name+".pkl"), "wb") as f:
@@ -214,8 +218,57 @@ def store_cached_values(url, library_name, output, weight_threshold, difference_
         store_cached_values(cachedStructures_filtered, "cached_structures")
         with open(os.path.join(output, "cached_structures", library_name+".pkl"), "wb") as f:
             pickle.dump(cachedStructures_filtered, f)
+        
+        # print("here4")
+
+        # store helpers
+        helpers = {}
+        for i, row in matches_df.iterrows():
+            id_smaller = row["id_smaller"]
+            id_larger = row["id_bigger"]
+            if id_smaller not in helpers:
+                helpers[id_smaller] = []
+            helpers[id_smaller].append(id_larger)
+            if id_larger not in helpers:
+                helpers[id_larger] = []
+            helpers[id_larger].append(id_smaller)
+        
+        # print("here5")
+        count = []
+        # remove duplicates
+        for key in helpers:
+            helpers[key] = list(set(helpers[key]))
+            count.append(len(helpers[key]) - 1)
+
+        # create helpers for each pair
+        for i, row in matches_df.iterrows():
+            id_smaller = row["id_smaller"]
+            id_larger = row["id_bigger"]
+            helper_list = list(helpers[id_smaller])
+            # remove id_bigger from the list
+            to_remove = []
+            try:
+                for i in range(len(helper_list)):
+                    # print(i, data_dict_filtered[helper_list[i]]['Precursor_MZ'], data_dict_filtered[id_larger]['Precursor_MZ'])
+                    if abs(float(data_dict_filtered[helper_list[i]]['Precursor_MZ']) - float(data_dict_filtered[id_larger]['Precursor_MZ'])) < 0.5:
+                        to_remove.append(i)
+                for i in to_remove[::-1]:
+                    del helper_list[i]
+                # print("Number of helpers for {} and {}: {}, and removed: {}".format(id_smaller, id_larger, len(helper_list), len(to_remove)))
+            except:
+                # print("issue with removing", helper_list, to_remove)
+                pass
+            # if folder does not exist, create it
+            if not os.path.exists(os.path.join(output, "helpers")):
+                os.makedirs(os.path.join(output, "helpers"))
+            # write the list to a jason file
+            with open(os.path.join(output, "helpers", "{}_{}.json".format(id_smaller, id_larger)), 'w') as f:
+                json.dump(helper_list, f)
+            
+
         return True
     except:
+        print("here")
         return False
 
 if __name__ == "__main__":

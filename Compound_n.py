@@ -19,7 +19,7 @@ class Compound:
 
         self.args = {
             "ppm": 40,
-            "mz_tolerance": 1,
+            "mz_tolerance": 0.1,
             "filter_peaks_method": "intensity",
             "filter_peaks_variable": 0.01,
             "fragmentation_depth": -1,
@@ -35,13 +35,19 @@ class Compound:
                     self.args[arg] = args[arg]
 
         if type(data) == str:
+            # if data contains substring accession
             if data.count(':') == 0:
                 data = handle_network.create_usi_from_accession(data)
-            self.accession = data.split(':')[-1]
+            if "accession" in data:
+                self.accession = data.split(':')[-1]
             data = handle_network.getDataFromUsi(data)
             if structure is None:
-                library_membership, structure = handle_network.get_library_from_accession(self.accession, True)
-                self.library_membership = library_membership
+                try:
+                    library_membership, structure = handle_network.get_library_from_accession(self.accession, True)
+                    self.library_membership = library_membership
+                except:
+                    library_membership = None
+                    structure = None
 
         self.metadata = copy.deepcopy(data)
         for arg in important_arguments:
@@ -170,7 +176,11 @@ class Compound:
 
 
     def filter_fragments_by_atoms(self, atoms, peaks):
-        """Filter the fragments by the atoms, remove fragments that do not contain at least one of the atoms"""
+        """Filter the fragments by the atoms, remove fragments that do not contain at least one of the atoms
+        Args:
+            atoms: a list of atoms to filter the fragments
+            peaks: a list of peaks to filter their fragments, if None, use all peaks
+        """
         if peaks == None:
             peaks = [i for i in range(len(self.peaks))]
         for i in peaks:
@@ -284,9 +294,65 @@ class Compound:
         entropy = sum(peak_entropies) / len(peak_entropies)
         return entropy
 
-    def apply_helper(self, helper_compound):
-        # TODO: implement
-        pass
+    def apply_helper(self, helper_compound, shifted, unshifted, unshifted_mode = "union"):
+        """use helper compound to update the peak_fragments_map
+        Args:
+            helper_compound: the helper compound
+            shifted: array of pairs of the shifted peaks, each pair is (self_peak_index, helper_peak_index)
+            unshifted: array pf pairs of the unshifted peaks, each pair is (self_peak_index, helper_peak_index)
+            unshifted_mode: the mode to update the unshifted peaks, can be "union", "intersection", None
+        """
+        if not (self.structure.HasSubstructMatch(helper_compound.structure) or helper_compound.structure.HasSubstructMatch(self.structure)):
+            print("helper compound and main compound do not have common substructure, no change applied")
+            return
+
+
+        if helper_compound.Precursor_MZ < self.Precursor_MZ:
+            modification_site = utils.calculateModificationSites(self.structure, helper_compound.structure, True)
+        else:
+            modification_site = utils.calculateModificationSites(helper_compound.structure, self.structure, False)
+        
+        # update the shifted peaks
+        ## get shifted indices of self
+        shifted_indices = [_[0] for _ in shifted]
+        self.filter_fragments_by_atoms(modification_site, shifted_indices)
+
+        if unshifted_mode == None or unshifted_mode == "none":
+            return
+        # update the unshifted peaks
+        ## get a mapping from the helper atoms index to the self aoms index
+        if helper_compound.Precursor_MZ < self.Precursor_MZ:
+            sub_match_indices = self.structure.GetSubstructMatch(helper_compound.structure)
+            mapping = {}
+            for i, atom in enumerate(sub_match_indices):
+                mapping[i] = atom
+        else:
+            sub_match_indices = helper_compound.structure.GetSubstructMatch(self.structure)
+            mapping = {}
+            for i, atom in enumerate(sub_match_indices):
+                mapping[atom] = i
+
+        for peak in unshifted:
+            helper_peak_fragment_map = set()
+            for fragment in helper_compound.peak_fragments_map[peak[1]]:
+                new_fragment = 0
+                for i in range(len(helper_compound.structure.GetAtoms())):
+                    if 1 << i & fragment:
+                        if i not in mapping:
+                            new_fragment = -1
+                            break
+                        else:
+                            new_fragment += 1 << mapping[i]
+                if new_fragment != -1:
+                    helper_peak_fragment_map.add(new_fragment)
+            if unshifted_mode == "union":
+                self.peak_fragments_map[peak[0]] = self.peak_fragments_map[peak[0]].union(helper_peak_fragment_map)
+            elif unshifted_mode == "intersection":
+                self.peak_fragments_map[peak[0]] = self.peak_fragments_map[peak[0]].intersection(helper_peak_fragment_map)
+            else:
+                raise ValueError("unshifted_mode not supported")
+        return
+
 
     def apply_iceberg(self, iceberg):
         # TODO: implement

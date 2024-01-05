@@ -3,6 +3,7 @@ import json
 from . import utils_n as utils
 import numpy as np
 from . import calculate_scores_n as Calc_Scores
+from . import Compound_n as Compound
 from rdkit import Chem
 
 class ModificationSiteLocator():
@@ -10,7 +11,7 @@ class ModificationSiteLocator():
         
         self.args = {"mz_tolerance": 0.1,
                       "ppm": 40,
-                      }
+                    }
         self.args.update(args)
 
         for arg in list(args.keys()):
@@ -19,6 +20,12 @@ class ModificationSiteLocator():
                     self.args[arg] = float(args[arg])
                 except:
                     self.args[arg] = args[arg]
+        
+        if type(main_compound) == str:
+            main_compound = Compound.Compound(main_compound, args=self.args)
+        
+        if type(modified_compound) == str:
+            modified_compound = Compound.Compound(modified_compound, args=self.args)
 
         self.main_compound = main_compound
         self.modified_compound = modified_compound
@@ -85,8 +92,9 @@ class ModificationSiteLocator():
         """"Generate the probabilities for each atom to be the modification site.
         input:
             shifted_only: bool, if True, only the shifted peaks are considered
-            PPO: (Peak_Presense_only) bool, if True, only the number of contributed peaks is considered, not the number of fragments
-            CO: (Consider_Intensity) bool, if True, the intensity of the peaks is considered (default: False)
+            CI: (Consider_Intensity) bool, if True, the intensity of the peaks is considered (default: False)
+            CPA: (Consider_Peak_Ambiguity) bool, if True, the peak ambiguity (number of fragments assigned to a peak) is considered when calculating the contribution (default: True)
+            CFA: (Consider_Fragment_Ambiguity) bool, if True, the fragment ambiguity (number of atoms in fragment) is considered (default: True)
         """
         
         if method == "random_choice":
@@ -128,7 +136,7 @@ class ModificationSiteLocator():
                         if atom in self.main_compound.fragments.get_fragment_info(fragment, 0)[1]:
                             count += 1
                     eps = 0
-                    if PPO:
+                    if CPA:
                         eps = 1
                     
                     if (len(self.main_compound.peak_fragments_map[peak[0]]) + eps) == 0:
@@ -218,10 +226,18 @@ class ModificationSiteLocator():
         """Get the indexes of the unshifted peaks in the main compound."""
         return [_[0] for _ in self.unshifted]
     
-    def get_modified_shifted_weights(self):
-        """Get the weights of the shifted peaks in the modified compound."""
+    def get_modified_shifted_index(self):
+        """Get the index of the shifted peaks in the modified compound."""
         return [_[1] for _ in self.shifted]
     
-    def get_modified_unshifted_weights(self):
-        """Get the weights of the unshifted peaks in the modified compound."""
+    def get_modified_unshifted_index(self):
+        """Get the index of the unshifted peaks in the modified compound."""
         return [_[1] for _ in self.unshifted]
+    
+    def apply_helpers(self, helpers, unshifted_mode = None):
+        """Apply the helpers to the main compound."""
+        for helper in helpers:
+            helper_compound = Compound.Compound(helper, args=self.args)
+            cosine, matched_peaks = align(self.main_compound, helper_compound, self.args["mz_tolerance"], self.args["ppm"])
+            shifted, unshifted = utils.separateShifted(matched_peaks, self.main_compound.peaks, helper_compound.peaks)
+            self.main_compound.apply_helper(helper_compound, shifted, unshifted, unshifted_mode)
