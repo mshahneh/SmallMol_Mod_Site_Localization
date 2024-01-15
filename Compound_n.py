@@ -10,21 +10,29 @@ import math
 
 important_arguments = ["peaks", "Adduct", "Precursor_MZ", "Charge"]
 
+default_args = {
+    "ppm": (int, 40), # the ppm tolerance used for matching peaks
+    "mz_tolerance": (float, 0.1), # the mz tolerance for matching peaks
+    "filter_peaks_method": (str, "intensity"), # can be "intensity", "top_k", "none"
+    "filter_peaks_variable": (float, 0.01), # if intensity, the percentage of the highest peak, if top_k, the k (int)
+    "fragmentation_depth": (int, -1), # -1 means auto, otherwise, the number of breaks
+    "formula_ignore_H": (bool, True), # whether to ignore H when comparing formulas
+    "should_fragment": (bool, True), # whether to fragment the compound
+}
+
 
 class Compound:
     """A class to represent a compound."""
 
     def __init__(self, data, structure=None, args={}):
-        """Initialize the compound."""
 
-        self.args = {
-            "ppm": 40,
-            "mz_tolerance": 0.1,
-            "filter_peaks_method": "intensity",
-            "filter_peaks_variable": 0.01,
-            "fragmentation_depth": -1,
-            "formula_ignore_H": True,
-        }
+        """Initialize the compound."""
+        
+        # Adding the args -----------------------------------------------
+        self.args = {}
+        ## set the default args and update it with the args passed in
+        for arg in default_args:
+            self.args[arg] = default_args[arg][1]
         self.args.update(args)
         for arg in list(args.keys()):
             # if its a string and can be converted to float, convert it
@@ -34,21 +42,48 @@ class Compound:
                 except:
                     self.args[arg] = args[arg]
 
+        # defining the attributes ----------------------------------------
+        self.name = None
+        self.accession = None
+        self.library_membership = None
+        self.peaks = None
+        self.Adduct = None
+        self.Precursor_MZ = None
+        self.Charge = None
+        self.metadata = None
+        self.fragments = None
+        self.numFrag = None
+        self.peak_fragments_map = None
+        self.Smiles = None
+        self.structure = None
+        self.distances = None
+        
+        # if data is a string (USI or accession), get the data from the network
         if type(data) == str:
-            # if data contains substring accession
-            if data.count(':') == 0:
-                data = handle_network.create_usi_from_accession(data)
-            if "accession" in data:
-                self.accession = data.split(':')[-1]
-            data = handle_network.getDataFromUsi(data)
-            if structure is None:
-                try:
-                    library_membership, structure = handle_network.get_library_from_accession(self.accession, True)
-                    self.library_membership = library_membership
-                except:
-                    library_membership = None
-                    structure = None
-
+            try:
+                # if data contains substring accession
+                if data.count(':') == 0 or "accession" in data:
+                    accession = data
+                    if "accession" in data:
+                        accession = data.split(':')[-1]
+                    self.accession = accession
+                    data = handle_network.getDataFromAccession(accession)
+                    data_part_one = data["annotations"][0]
+                    data_part_two = data["spectruminfo"]
+                    data = {**data_part_one, **data_part_two}
+                else:
+                    data = handle_network.getDataFromUsi(data)
+            except:
+                raise ValueError("Invalid input, error getting data from network")
+        
+        # setting the attributes -----------------------------------------
+        if "Compound_Name" in data:
+            self.name = data["Compound_Name"]
+        if "library_membership" in data:
+            self.library_membership = data["library_membership"]
+        if "spectrum_id" in data:
+            self.accession = data["spectrum_id"]
+            
         self.metadata = copy.deepcopy(data)
         for arg in important_arguments:
             if not arg in data and not arg.lower() in data:
@@ -67,9 +102,11 @@ class Compound:
                     setattr(self, arg, data[arg])
                     self.metadata.pop(arg)
 
+        # adjusting the attributes ---------------------------------------
         self.Charge = int(self.Charge)
         self.Precursor_MZ = float(self.Precursor_MZ)
         self.Adduct = utils.parse_adduct(self.Adduct)
+
         self.peaks = utils.filter_peaks(
             self.peaks,
             self.args["filter_peaks_method"],
@@ -79,10 +116,12 @@ class Compound:
         )
 
         if structure == None and "Smiles" in data:
+            self.Smiles = data["Smiles"]
             self.structure = Chem.MolFromSmiles(data["Smiles"])
         elif structure != None:
             if type(structure) == str:
                 if len(structure) > 0:
+                    self.Smiles = structure
                     self.structure = Chem.MolFromSmiles(structure)
                 else:
                     self.structure = None
@@ -91,34 +130,39 @@ class Compound:
         else:
             self.structure = None
 
-        if self.structure != None:
-            self.distances = Chem.rdmolops.GetDistanceMatrix(self.structure)
-            if self.args["fragmentation_depth"] == -1:
-                breaks = 5
-                if (self.structure.GetNumAtoms() > 30):
-                    breaks = 4
-                if (self.structure.GetNumAtoms() > 50):
-                    breaks = 3
-                if (self.structure.GetNumAtoms() > 80):
-                    breaks = 2
-            else:
-                breaks = self.args["fragmentation_depth"]
-                # if string, convert to int
-                if type(breaks) != int:
-                    breaks = int(breaks)
-                if (self.structure.GetNumAtoms() > 80):
-                    breaks = min(breaks, 2)
-            self.fragments = fragmentation_py.FragmentEngine(
-                Chem.MolToMolBlock(self.structure), breaks, 2, 1, 0, 0
-            )
-            self.numFrag = self.fragments.generate_fragments()
-            self.generate_peak_to_fragment_map()
+        if self.structure != None and self.args["should_fragment"]:
+            self.generate_fragments()
 
-    def __repr__(self):
-        """Return a string representation of the instance."""
-        obj = self.metadata
-        obj.update({arg: getattr(self, arg) for arg in important_arguments})
-        return json.dumps(obj)
+
+    # def __repr__(self):
+    #     """Return a string representation of the instance."""
+    #     obj = self.metadata
+    #     obj.update({arg: getattr(self, arg) for arg in important_arguments})
+    #     return json.dumps(obj)
+    
+    def generate_fragments(self):
+        self.distances = Chem.rdmolops.GetDistanceMatrix(self.structure)
+        if self.args["fragmentation_depth"] == -1:
+            breaks = 5
+            if (self.structure.GetNumAtoms() > 30):
+                breaks = 4
+            if (self.structure.GetNumAtoms() > 50):
+                breaks = 3
+            if (self.structure.GetNumAtoms() > 80):
+                breaks = 2
+        else:
+            breaks = self.args["fragmentation_depth"]
+            # if string, convert to int
+            if type(breaks) != int:
+                breaks = int(breaks)
+            if (self.structure.GetNumAtoms() > 80):
+                breaks = min(breaks, 2)
+        self.fragments = fragmentation_py.FragmentEngine(
+            Chem.MolToMolBlock(self.structure), breaks, 2, 1, 0, 0
+        )
+        self.numFrag = self.fragments.generate_fragments()
+        self.generate_peak_to_fragment_map()
+
 
     def generate_peak_to_fragment_map(self):
         base_precision = 1 + self.args["ppm"] / 1000000
