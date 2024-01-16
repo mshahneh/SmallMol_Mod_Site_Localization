@@ -13,8 +13,8 @@ important_arguments = ["peaks", "Adduct", "Precursor_MZ", "Charge"]
 default_args = {
     "ppm": (int, 40), # the ppm tolerance used for matching peaks
     "mz_tolerance": (float, 0.1), # the mz tolerance for matching peaks
-    "filter_peaks_method": (str, "intensity"), # can be "intensity", "top_k", "none"
-    "filter_peaks_variable": (float, 0.01), # if intensity, the percentage of the highest peak, if top_k, the k (int)
+    "filter_peaks_method": (str, "both"), # can be "intensity", "top_k", "none", "both"
+    "filter_peaks_variable": (float, 0.01), # if intensity, the percentage of the highest peak, if top_k, the k (int), if both, the percentage of the highest peak
     "fragmentation_depth": (int, -1), # -1 means auto, otherwise, the number of breaks
     "formula_ignore_H": (bool, True), # whether to ignore H when comparing formulas
     "should_fragment": (bool, True), # whether to fragment the compound
@@ -131,6 +131,8 @@ class Compound:
             self.structure = None
 
         if self.structure != None and self.args["should_fragment"]:
+            if self.structure.GetNumAtoms() > 100:
+                raise ValueError("Too many atoms to handle")
             self.generate_fragments()
 
 

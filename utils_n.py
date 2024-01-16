@@ -4,6 +4,8 @@ import numpy as np
 from rdkit import Chem
 from rdkit.Chem import AllChem, Descriptors
 import collections
+import math
+
 SpectrumTuple = collections.namedtuple(
     "SpectrumTuple", ["precursor_mz", "precursor_charge", "mz", "intensity"]
 )
@@ -58,6 +60,9 @@ def filter_peaks(peaks, method, variable, precursor_mz = None, charge = None):
         return normalize_peaks(intensity(tempPeaks, variable))
     elif method == "top_k":
         return normalize_peaks(top_k(tempPeaks, variable))
+    elif method == "both":
+        tempPeaks = intensity(tempPeaks, variable)
+        return normalize_peaks(top_k(tempPeaks, 1/variable))
     else:
         return tempPeaks
 
@@ -489,3 +494,21 @@ def remove_adduct_from_formula(formula, adduct):
                 formula += match[1]
     
     return formula
+
+def entropy(probabilities):
+    # if probabilities is not numpy array, convert it to numpy array
+    probabilities = np.array(probabilities)
+    # if probabilities is not float, convert it to float
+    probabilities = probabilities.astype(float)
+    
+    if len(probabilities) == 0:
+        return 1
+    if min(probabilities) < 0:
+        probabilities = probabilities - min(probabilities)
+    regulator = 1e-8
+    probabilities = probabilities + regulator
+    probabilities = probabilities / np.sum(probabilities)
+    H_max = np.log(len(probabilities))
+    H = abs(np.sum(probabilities * np.log(probabilities)))
+    # print(H, probabilities, H_max, H/H_max)
+    return H/H_max

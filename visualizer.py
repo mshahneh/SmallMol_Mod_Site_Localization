@@ -10,6 +10,10 @@ import pandas as pd
 import urllib.parse
 import matplotlib.pyplot as plt
 import uuid
+import math
+import numpy as np
+import matplotlib.image as mpimg
+import io
 
 def make_url(base_url = "http://localhost:8050/", USI1=None, USI2=None, SMILES1=None, SMILES2=None, args=None):
     query_params = {k: v for k, v in {
@@ -332,3 +336,38 @@ def draw_alignment(peaks1, peaks2, matched_peaks, shift = 0.1, show_text = False
     ax.legend(prop={'size': 20*scale})
 
     return ax
+
+
+def render_svg_to_png(svg_content):
+    """Render SVG content to PNG using cairosvg."""
+    s_png = cairosvg.svg2png(bytestring=svg_content)
+    s_img = mpimg.imread(io.BytesIO(s_png))
+    return s_img
+
+def draw_frags_of_peak(modSiteLocator, peak_index, fig = None):
+    structures, locations, frags = modSiteLocator.get_structures_by_peak_index(peak_index)
+    subplotsRows = math.ceil(len(locations)/3)
+    if fig is None:
+        fig, ax = plt.subplots(subplotsRows, 3, figsize=(10, 5))
+    else:
+        ax = []
+        for i in range(subplotsRows):
+            row = []
+            for j in range(3):
+                row.append(fig.add_subplot(subplotsRows, 3, i*3+j+1))
+            ax.append(row)
+        ax = np.array(ax)
+        if subplotsRows == 1:
+            ax = ax[0]
+    for i, location in enumerate(locations):
+        svgText = highlightMolIndices(modSiteLocator.main_compound.structure, location)
+        img = render_svg_to_png(svgText)
+        if subplotsRows == 1:
+            ax[i].imshow(img)
+            # set title to fragment
+            ax[i].set_title("fragment " + str(frags[i]))
+
+        else:
+            ax[i//3, i%3].imshow(img)
+            # set title to fragment
+            ax[i//3, i%3].set_title("fragment " + str(frags[i]))

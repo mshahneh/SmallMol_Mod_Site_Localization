@@ -58,43 +58,77 @@ class ModificationSiteLocator():
                     existance[atom][peak].append(fragment)
         return existance
     
-    def calculate_contributions(self, peakids, CI = False, CPA = True, CFA = True):
+    def calculate_contribution_atom_in_peak(self, atom, peak, existance_data, CI = False, CPA = True, CFA = True):
+        contribution = 0
+        if peak not in existance_data[atom]:
+            return contribution
+        
+        intensity_factor = 1
+        atom_peak_ambiguity_factor = 1
+        fragment_ambiguity_factor = 1
+
+        if CI:
+            intensity_factor = self.main_compound.peaks[peak][1]
+        if CPA:
+            atom_peak_ambiguity_factor = 1/len(self.main_compound.peak_fragments_map[peak])
+
+        for frag in existance_data[atom][peak]:
+            if CFA:
+                # fragment_ambiguity_factor = 1 - len(self.main_compound.fragments.get_fragment_info(frag, 0)[1])/len(self.main_compound.structure.GetAtoms())
+                fragment_ambiguity_factor = 1/len(self.main_compound.fragments.get_fragment_info(frag, 0)[1])
+            
+            contribution += intensity_factor * atom_peak_ambiguity_factor * fragment_ambiguity_factor
+        
+        return contribution
+    
+    def calculate_contributions(self, peakids, CI = False, CPA = True, CFA = True, CPE = True):
         """ 
         input:
             peakids: list of peak ids
             CI: (Consider_Intensity) bool, if True, the intensity of the peaks is considered (default: False)
             CPA: (Consider_Peak_Ambiguity) bool, if True, the peak ambiguity (number of fragments assigned to a peak) is considered (default: True)
             CFA: (Consider_Fragment_Ambiguity) bool, if True, the fragment ambiguity (number of atoms in fragment) is considered (default: True)
+            CPA: (Consider_Peak_Entropy) bool, if True, the peak entropy (how ambiguis the fragments are) is considered (default: True
         """
+        num_atoms = len(self.main_compound.structure.GetAtoms())
         existance_data = self.find_existance(peakids)
-        contributions = [0 for i in range(len(self.main_compound.structure.GetAtoms()))]
-        for atom in range(len(existance_data)):
-            for peak in existance_data[atom]:
-                intensity_factor = 1
-                atom_peak_ambiguity_factor = 1
-                fragment_ambiguity_factor = 1
-
-                if CI:
-                    intensity_factor = self.main_compound.peaks[peak][1]
-                if CPA:
-                    atom_peak_ambiguity_factor = len(existance_data[atom][peak])/len(self.main_compound.peak_fragments_map[peak])
-                
-                for frag in existance_data[atom][peak]:
-                    if CFA:
-                        fragment_ambiguity_factor = len(self.main_compound.fragments.get_fragment_info(frag, 0)[1])/len(self.main_compound.structure.GetAtoms())
-                    
-                    contributions[atom] += intensity_factor * atom_peak_ambiguity_factor * fragment_ambiguity_factor
+        contributions = [0 for i in range(num_atoms)]
+        peak_atom_contributions = np.zeros((len(peakids), num_atoms))
+        for i, peak in enumerate(peakids):
+            for atom in range(num_atoms):
+                peak_atom_contributions[i][atom] = self.calculate_contribution_atom_in_peak(atom, peak, existance_data, CI=CI, CPA=CPA, CFA=CFA)
+        
+        if CPE:
+            peak_entropies = np.zeros(len(peakids))
+            for i in range(len(peakids)):
+                peak_entropies[i] = 1 - utils.entropy(peak_atom_contributions[i])
+            
+            # peak_entropies = peak_entropies / np.max(peak_entropies)
+        else:
+            peak_entropies = np.ones(len(peakids))
+            
+        
+        for i in range(num_atoms):
+            for j in range(len(peakids)):
+                contributions[i] += peak_atom_contributions[j][i] * peak_entropies[j]
+        
+        
+        # for atom in range(len(existance_data)):
+        #     for peak in existance_data[atom]:
+        #         contributions[atom] += self.calculate_contribution_atom_in_peak(atom, peak, existance_data, CI=CI, CPA=CPA, CFA=CFA)
         
         return contributions
 
     
-    def generate_probabilities(self, shifted_only = True, CI = False, CPA = True, CFA = True, method = "old"):
+    def generate_probabilities(self, shifted_only = True, CI = False, CPA = True, CFA = True, CPE = True, method = "old"):
         """"Generate the probabilities for each atom to be the modification site.
         input:
             shifted_only: bool, if True, only the shifted peaks are considered
             CI: (Consider_Intensity) bool, if True, the intensity of the peaks is considered (default: False)
             CPA: (Consider_Peak_Ambiguity) bool, if True, the peak ambiguity (number of fragments assigned to a peak) is considered when calculating the contribution (default: True)
             CFA: (Consider_Fragment_Ambiguity) bool, if True, the fragment ambiguity (number of atoms in fragment) is considered (default: True)
+            CPE: (Consider_Peak_Entropy) bool, if True, the peak entropy (how ambiguis the fragments are) is considered (default: True)
+            method: str, the method to generate the probabilities (default: "old")
         """
         
         if method == "random_choice":
@@ -154,18 +188,24 @@ class ModificationSiteLocator():
                 probabilities[atom] = positive_contributions - negative_contributions
             
         else:
-            s_peakids = [_[0] for _ in self.shifted]
-            positive_contributions = self.calculate_contributions(s_peakids, CI=CI, CPA=CPA, CFA=CFA)
+            s_peakids = self.get_main_shifted_index()
+            positive_contributions = self.calculate_contributions(s_peakids, CI=CI, CPA=CPA, CFA=CFA, CPE=CPE)
             if not shifted_only:
-                u_peakids = [_[0] for _ in self.unshifted]
-                negative_contributions = self.calculate_contributions(u_peakids, CI=CI, CPA=CPA, CFA=CFA)
+                u_peakids = self.get_main_unshifted_index()
+                negative_contributions = self.calculate_contributions(u_peakids, CI=CI, CPA=CPA, CFA=CFA, CPE=CPE)
             else:
                 negative_contributions = [0 for i in range(len(self.main_compound.structure.GetAtoms()))]
             
             probabilities = np.zeros(len(self.main_compound.structure.GetAtoms()))
             for i in range(len(positive_contributions)):
                 probabilities[i] = positive_contributions[i] - negative_contributions[i]
-            probabilities = Calc_Scores.power_prob(probabilities) 
+            
+            if np.min(probabilities) < 0:
+                probabilities = probabilities - np.min(probabilities)
+            if np.sum(probabilities) > 0:
+                probabilities = probabilities / np.sum(probabilities)
+
+            probabilities = Calc_Scores.power_prob(probabilities)
 
         return probabilities
     

@@ -2,6 +2,7 @@
 import numpy as np
 from typing import List, Tuple
 import copy
+from . import utils_n as utils
 
 def is_max(G, probabilities, true_index):
     if probabilities[true_index] == max(probabilities):
@@ -110,22 +111,11 @@ def ranking_loss(G, probabilities, modificationSiteIdx):
     return 1 - true_index/len(probabilities)
 
 
-def entropy(probabilities):
-    if len(probabilities) == 0:
-        return 1
-    if min(probabilities) < 0:
-        probabilities = probabilities - min(probabilities)
-    regulator = 1e-8
-    probabilities = probabilities + regulator
-    probabilities = probabilities / np.sum(probabilities)
-    H_max = np.log(len(probabilities))
-    H = abs(np.sum(probabilities * np.log(probabilities)))
-    # print(H, probabilities, H_max, H/H_max)
-    return H/H_max
+
 
 def entropy_distance(G, probabilities, modificationSiteIdx, alpha = 0.5, gamma=1.0):
     # penalize the entropy of the probabilities
-    H = entropy(probabilities)    
+    H = utils.entropy(probabilities)    
     # print("H", H, 1-H, alpha)
     S = 1 - H
     if S > 1e-8:
