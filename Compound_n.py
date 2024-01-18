@@ -130,10 +130,13 @@ class Compound:
         else:
             self.structure = None
 
-        if self.structure != None and self.args["should_fragment"]:
+        if self.structure != None:
             if self.structure.GetNumAtoms() > 100:
                 raise ValueError("Too many atoms to handle")
-            self.generate_fragments()
+            self.distances = Chem.rdmolops.GetDistanceMatrix(self.structure)
+            
+            if self.args["should_fragment"]:
+                self.generate_fragments()
 
 
     # def __repr__(self):
@@ -143,7 +146,6 @@ class Compound:
     #     return json.dumps(obj)
     
     def generate_fragments(self):
-        self.distances = Chem.rdmolops.GetDistanceMatrix(self.structure)
         if self.args["fragmentation_depth"] == -1:
             breaks = 5
             if (self.structure.GetNumAtoms() > 30):

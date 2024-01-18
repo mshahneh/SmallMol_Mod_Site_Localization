@@ -146,7 +146,7 @@ def molToSVG(mol, substructure=None, highlightModificationSites=False):
 
     return d2d.GetDrawingText()
 
-def highlightScores(mol, scores, add_labels = False):
+def highlightScores(mol, scores, add_labels = False, shrink_labels = False, label_size = 0.5):
     if min(scores) < 0:
         scores = [x + abs(min(scores)) for x in scores]
     if max(scores) > 0:
@@ -159,9 +159,13 @@ def highlightScores(mol, scores, add_labels = False):
         # heat map coloring
         colors[i] = (vals[i], 0, 1-vals[i], 0.9)
     if add_labels:
+        d2d.drawOptions().annotationFontScale = label_size
         for atom in mol.GetAtoms():
-            lbl = '%.2f'%(scores[atom.GetIdx()])
+            lbl = str(round(scores[atom.GetIdx()], 2))
+            if shrink_labels:
+                lbl = str(int(round(scores[atom.GetIdx()], 2)*100))
             atom.SetProp('atomNote',lbl)
+            # set font size for labels
     d2d.DrawMolecule(mol, highlightAtoms=list(range(mol.GetNumAtoms())), highlightAtomColors=colors, highlightBonds=[])
     d2d.FinishDrawing()
     def draw_gradient_svg(length, diam, ax = 0, steps = 100, fontSize = 10):
@@ -215,6 +219,12 @@ def highlightScores(mol, scores, add_labels = False):
 
     # concatenate two svg files
     svgText = svgText.replace("</svg>", svgGradient + "</svg>")
+
+    if add_labels:
+        # remove labels
+        for atom in mol.GetAtoms():
+            # lbl = '%.2f'%(scores[atom.GetIdx()])
+            atom.SetProp('atomNote', '')
     
     return svgText
 
@@ -230,7 +240,7 @@ def highlightMolIndices(mol, hitAtoms, hitBonds = None):
     svgText =  d2d.GetDrawingText()
     return svgText
 
-def draw_alignment(peaks1, peaks2, matched_peaks, shift = 0.1, show_text = False, show_lines = True, scale = 1, ax = None):
+def draw_alignment(peaks1, peaks2, matched_peaks, shift = 0.1, show_text = False, show_lines = True, scale = 1, ax = None, flip = True, x_lim = None):
 
     if ax is None:
         fig, ax = plt.subplots(figsize=(20*scale, 10*scale))
@@ -260,41 +270,50 @@ def draw_alignment(peaks1, peaks2, matched_peaks, shift = 0.1, show_text = False
 
     x = [_[0] for _ in peaks1 ]
     y = [ _[1] for _ in peaks1 ]
-    shift_array = [shift for _ in peaks1 ]
-    ax.bar(x, shift_array, width=0.2*scale, color="white", alpha = 0)
-    ax.bar(x, y, width=0.2*scale, color="gray", bottom=shift_array)
+    flip_shift = 0
+    if not flip:
+        flip_shift = 1
+    shift_array = [shift + flip_shift for _ in peaks1 ]
+    ax.bar(x, shift_array, width=0.3*scale, color="white", alpha = 0)
+    ax.bar(x, y, width=0.3*scale, color="gray", bottom=shift_array)
 
     x_shifted = [peaks1[_][0] for _ in molShifted]
     y_shifted = [ peaks1[_][1] for _ in molShifted]
-    shift_array = [shift for _ in molShifted]
-    ax.bar(x_shifted, shift_array, width=0.2*scale, color="white", alpha = 0)
-    ax.bar(x_shifted, y_shifted, width=0.2*scale, color="red", bottom=shift_array)
+    shift_array = [shift + flip_shift for _ in molShifted]
+    ax.bar(x_shifted, shift_array, width=0.3*scale, color="white", alpha = 0)
+    ax.bar(x_shifted, y_shifted, width=0.3*scale, color="red", bottom=shift_array)
 
     x_unshifted = [peaks1[_][0] for _ in molUnshifted]
     y_unshifted = [ peaks1[_][1] for _ in molUnshifted]
-    shift_array = [shift for _ in molUnshifted]
-    ax.bar(x_unshifted, shift_array, width=0.2*scale, color="white", alpha = 0)
-    ax.bar(x_unshifted, y_unshifted, width=0.2*scale, color="blue", bottom=shift_array)
+    shift_array = [shift + flip_shift for _ in molUnshifted]
+    ax.bar(x_unshifted, shift_array, width=0.3*scale, color="white", alpha = 0)
+    ax.bar(x_unshifted, y_unshifted, width=0.3*scale, color="blue", bottom=shift_array)
 
     #plot modified peaks as reversed
     x = [_[0] for _ in peaks2]
-    y = [-_[1] for _ in peaks2]
-    ax.bar(x, y, width=0.2*scale, color="gray")
-
+    if not flip:
+        y = [_[1] for _ in peaks2]
+        y_shifted = [peaks2[_][1] for _ in modifiedShifted]
+        y_unshifted = [peaks2[_][1] for _ in modifiedUnshifted]
+    else:
+        y = [-_[1] for _ in peaks2]
+        y_shifted = [-peaks2[_][1] for _ in modifiedShifted]
+        y_unshifted = [-peaks2[_][1] for _ in modifiedUnshifted]
+    ax.bar(x, y, width=0.3*scale, color="gray")
     x_shifted = [peaks2[_][0] for _ in modifiedShifted]
-    y_shifted = [-peaks2[_][1] for _ in modifiedShifted]
-    ax.bar(x_shifted, y_shifted, width=0.2*scale, color="red")
-
+    ax.bar(x_shifted, y_shifted, width=0.3*scale, color="red")
     x_unshifted = [peaks2[_][0] for _ in modifiedUnshifted]
-    y_unshifted = [-peaks2[_][1] for _ in modifiedUnshifted]
-    ax.bar(x_unshifted, y_unshifted, width=0.2*scale, color="blue")
+    ax.bar(x_unshifted, y_unshifted, width=0.3*scale, color="blue")
 
     if show_lines:
         for peak in shifted:
             x1 = peaks1[peak[0]][0]
             x2 = peaks2[peak[1]][0]
+
+            y1 = shift + flip_shift
+            y2 = 0
             # draw line with text in the middle
-            ax.plot([x1, x2], [shift, 0], color="red", linewidth=0.2*scale, linestyle="--")
+            ax.plot([x1, x2], [y1, y2], color="red", linewidth=0.25*scale, linestyle="--")
             val = abs(peaks1[peak[0]][0] - peaks2[peak[1]][0])
             val = round(val, 2)
             if show_text:
@@ -303,15 +322,20 @@ def draw_alignment(peaks1, peaks2, matched_peaks, shift = 0.1, show_text = False
         for peak in unshifted:
             x1 = peaks1[peak[0]][0]
             x2 = peaks2[peak[1]][0]
-            ax.plot([x1, x2], [shift, 0], color="blue", linewidth=0.2*scale, linestyle="--")
+            y1 = shift + flip_shift
+            y2 = peaks2[peak[1]][1]
+            ax.plot([x1, x2], [y1, y2], color="blue", linewidth=0.25*scale, linestyle="--")
 
     #draw horizontal line
-    ax.plot([5, max_x], [shift, shift], color="gray", linewidth=0.2*scale, linestyle="-")
+    ax.plot([5, max_x], [shift + flip_shift, shift + flip_shift], color="gray", linewidth=0.2*scale, linestyle="-")
     ax.plot([5, max_x], [0, 0], color="gray", linewidth=0.2*scale, linestyle="-")
 
     # custom y axis ticks
-    y_ticks1 = [i/10 + shift for i in range(0, 11, 2)]
-    y_ticks2 = [-i/10 for i in range(0, 11, 2)]
+    y_ticks1 = [i/10 + shift + flip_shift for i in range(0, 11, 2)]
+    if flip:
+        y_ticks2 = [-i/10 for i in range(0, 11, 2)]
+    else:
+        y_ticks2 = [i/10 for i in range(0, 11, 2)]
     # reverse y ticks2
     y_ticks2 = y_ticks2[::-1]
     y_ticks =  y_ticks2 + y_ticks1 
@@ -331,9 +355,17 @@ def draw_alignment(peaks1, peaks2, matched_peaks, shift = 0.1, show_text = False
     ax.plot([], [], color="red", linewidth=2*scale, linestyle="-", label="Shifted Matched Peaks")
     ax.plot([], [], color="blue", linewidth=2*scale, linestyle="-", label="Unshifted Matched Peaks")
     ax.plot([], [], color="gray", linewidth=2*scale, linestyle="-", label="Unmatched Peaks")
-    ax.legend(loc='upper left')
-    # legend font size
-    ax.legend(prop={'size': 20*scale})
+    
+    # legend font size and position
+    ax.legend(prop={'size': 20*scale}, loc='upper left')
+
+    # set x range
+    if x_lim is not None:
+        ax.set_xlim(x_lim[0], x_lim[1])
+
+    # remove top and right borders
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
 
     return ax
 
@@ -346,15 +378,16 @@ def render_svg_to_png(svg_content):
 
 def draw_frags_of_peak(modSiteLocator, peak_index, fig = None):
     structures, locations, frags = modSiteLocator.get_structures_by_peak_index(peak_index)
-    subplotsRows = math.ceil(len(locations)/3)
+    subplotCols = 2
+    subplotsRows = math.ceil(len(locations)/subplotCols)
     if fig is None:
-        fig, ax = plt.subplots(subplotsRows, 3, figsize=(10, 5))
+        fig, ax = plt.subplots(subplotsRows, subplotCols, figsize=(100, 100))
     else:
         ax = []
         for i in range(subplotsRows):
             row = []
             for j in range(3):
-                row.append(fig.add_subplot(subplotsRows, 3, i*3+j+1))
+                row.append(fig.add_subplot(subplotsRows, subplotCols, i*subplotCols+j+1))
             ax.append(row)
         ax = np.array(ax)
         if subplotsRows == 1:
@@ -366,8 +399,14 @@ def draw_frags_of_peak(modSiteLocator, peak_index, fig = None):
             ax[i].imshow(img)
             # set title to fragment
             ax[i].set_title("fragment " + str(frags[i]))
-
+            ax[i].axis('off')
         else:
-            ax[i//3, i%3].imshow(img)
+            ax[i//subplotCols, i%subplotCols].imshow(img)
             # set title to fragment
-            ax[i//3, i%3].set_title("fragment " + str(frags[i]))
+            ax[i//subplotCols, i%subplotCols].set_title("fragment " + str(frags[i]))
+        
+            # remove axis
+            ax[i//subplotCols, i%subplotCols].axis('off')
+    
+    # make the ax tight
+    fig.tight_layout()
