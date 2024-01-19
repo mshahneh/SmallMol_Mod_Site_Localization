@@ -120,7 +120,7 @@ class ModificationSiteLocator():
         return contributions
 
     
-    def generate_probabilities(self, shifted_only = True, CI = False, CPA = True, CFA = True, CPE = True, method = "old"):
+    def generate_probabilities(self, shifted_only = False, CI = False, CPA = True, CFA = True, CPE = True, method = "old"):
         """"Generate the probabilities for each atom to be the modification site.
         input:
             shifted_only: bool, if True, only the shifted peaks are considered

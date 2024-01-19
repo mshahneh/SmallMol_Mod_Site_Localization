@@ -158,6 +158,62 @@ def download(url, output, weight_threshold, difference_threshold_rate, library_n
     
     return data_dict_filtered, matches, cachedStructures_filtered
 
+def calculate_helpers(matches, data_dict_filtered, output, max_num_modifications_allowed = 1):
+    """
+    Calculates the helpers for each compound.
+    Input:
+        matches: dataframe of matches
+        max_num_modifications_allowed: maximum number of modification sites allowed
+    Output:
+        helpers: dictionary with the helpers, [key] = [list of helpers] where key is the compound id
+    """
+    helpers = {}
+    for i, row in matches.iterrows():
+        t_id_smaller = row["id_smaller"]
+        t_id_larger = row["id_bigger"]
+        num_modifs = row["num_modif_sites"]
+        if t_id_smaller not in helpers:
+            helpers[t_id_smaller] = []
+        helpers[t_id_smaller].append((t_id_larger, num_modifs))
+        if t_id_larger not in helpers:
+            helpers[t_id_larger] = []
+        helpers[t_id_larger].append((t_id_smaller, num_modifs))
+    
+    count = []
+    # remove duplicates
+    for key in helpers:
+        helpers[key] = list(set(helpers[key]))
+        count.append(len(helpers[key]) - 1)
+
+    # create helpers for each pair (to remove the bigger one)
+    for i, row in matches.iterrows():
+        if row["num_modif_sites"] > max_num_modifications_allowed:
+            continue
+        id_smaller = row["id_smaller"]
+        id_larger = row["id_bigger"]
+        helper_list = list(helpers[id_smaller])
+        # remove id_bigger from the list
+        to_remove = []
+        try:
+            for i in range(len(helper_list)):
+                # print(i, data_dict_filtered[helper_list[i]]['Precursor_MZ'], data_dict_filtered[id_larger]['Precursor_MZ'])
+                if abs(float(data_dict_filtered[helper_list[i][0]]['Precursor_MZ']) - float(data_dict_filtered[id_larger]['Precursor_MZ'])) < 0.5:
+                    to_remove.append(helper_list[i][0])
+                elif helper_list[i][1] > max_num_modifications_allowed:
+                    to_remove.append(helper_list[i][0])
+            # print("Number of helpers for {} and {}: {}, and removed: {}".format(id_smaller, id_larger, len(helper_list), len(to_remove)))
+        except:
+            print("issue with removing", helper_list, to_remove)
+            pass
+        
+        # filter to_remove
+        helper_list = [x[0] for x in helper_list if x[0] not in to_remove]
+        # if folder does not exist, create it
+        if not os.path.exists(os.path.join(output, "helpers")):
+            os.makedirs(os.path.join(output, "helpers"))
+            # write the list to a jason file
+        with open(os.path.join(output, "helpers", "{}_{}.json".format(id_smaller, id_larger)), 'w') as f:
+            json.dump(helper_list, f)
 
 def store_cached_values(url, library_name, output, weight_threshold, difference_threshold_rate, log = True):
     """
@@ -202,7 +258,7 @@ def store_cached_values(url, library_name, output, weight_threshold, difference_
             os.makedirs(os.path.join(output, "matches"))
         matches_df.to_csv(os.path.join(output, "matches", library_name + ".csv"), index=False)
         # print("here3")
-        def store_cached_values(dictionary, name):
+        def local_store_cached_values(dictionary, name):
             # create directory for dictionary if it does not exist
             if not os.path.exists(os.path.join(output, name)):
                 os.makedirs(os.path.join(output, name))
@@ -211,60 +267,15 @@ def store_cached_values(url, library_name, output, weight_threshold, difference_
                     pickle.dump(dictionary[key], f)
             
         # store compounds_data
-        store_cached_values(data_dict_filtered, "compounds_data")
+        local_store_cached_values(data_dict_filtered, "compounds_data")
         with open(os.path.join(output, "compounds_data", library_name+".pkl"), "wb") as f:
             pickle.dump(data_dict_filtered, f)
         # store cachedStructures
-        store_cached_values(cachedStructures_filtered, "cached_structures")
+        local_store_cached_values(cachedStructures_filtered, "cached_structures")
         with open(os.path.join(output, "cached_structures", library_name+".pkl"), "wb") as f:
             pickle.dump(cachedStructures_filtered, f)
         
-        # print("here4")
-
-        # store helpers
-        helpers = {}
-        for i, row in matches_df.iterrows():
-            id_smaller = row["id_smaller"]
-            id_larger = row["id_bigger"]
-            if id_smaller not in helpers:
-                helpers[id_smaller] = []
-            helpers[id_smaller].append(id_larger)
-            if id_larger not in helpers:
-                helpers[id_larger] = []
-            helpers[id_larger].append(id_smaller)
-        
-        # print("here5")
-        count = []
-        # remove duplicates
-        for key in helpers:
-            helpers[key] = list(set(helpers[key]))
-            count.append(len(helpers[key]) - 1)
-
-        # create helpers for each pair
-        for i, row in matches_df.iterrows():
-            id_smaller = row["id_smaller"]
-            id_larger = row["id_bigger"]
-            helper_list = list(helpers[id_smaller])
-            # remove id_bigger from the list
-            to_remove = []
-            try:
-                for i in range(len(helper_list)):
-                    # print(i, data_dict_filtered[helper_list[i]]['Precursor_MZ'], data_dict_filtered[id_larger]['Precursor_MZ'])
-                    if abs(float(data_dict_filtered[helper_list[i]]['Precursor_MZ']) - float(data_dict_filtered[id_larger]['Precursor_MZ'])) < 0.5:
-                        to_remove.append(i)
-                for i in to_remove[::-1]:
-                    del helper_list[i]
-                # print("Number of helpers for {} and {}: {}, and removed: {}".format(id_smaller, id_larger, len(helper_list), len(to_remove)))
-            except:
-                # print("issue with removing", helper_list, to_remove)
-                pass
-            # if folder does not exist, create it
-            if not os.path.exists(os.path.join(output, "helpers")):
-                os.makedirs(os.path.join(output, "helpers"))
-            # write the list to a jason file
-            with open(os.path.join(output, "helpers", "{}_{}.json".format(id_smaller, id_larger)), 'w') as f:
-                json.dump(helper_list, f)
-            
+        calculate_helpers(matches_df, data_dict_filtered, output)
 
         return True
     except:

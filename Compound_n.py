@@ -115,20 +115,14 @@ class Compound:
             self.Charge,
         )
 
-        if structure == None and "Smiles" in data:
+        if "Smiles" in data or (structure != None and type(structure) == str and len(structure) > 0):
             self.Smiles = data["Smiles"]
-            self.structure = Chem.MolFromSmiles(data["Smiles"])
-        elif structure != None:
-            if type(structure) == str:
-                if len(structure) > 0:
-                    self.Smiles = structure
-                    self.structure = Chem.MolFromSmiles(structure)
-                else:
-                    self.structure = None
-            else:
-                self.structure = structure
-        else:
-            self.structure = None
+
+        self.structure = None
+        if structure != None and type(structure) != str:
+            self.structure = structure
+        elif self.Smiles != None:
+            self.structure = Chem.MolFromSmiles(self.Smiles)
 
         if self.structure != None:
             if self.structure.GetNumAtoms() > 100:

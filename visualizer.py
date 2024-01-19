@@ -100,7 +100,6 @@ def molToSVG(mol, substructure=None, highlightModificationSites=False):
             substructure = Chem.MolFromSmarts(substructure)
         if not mol.HasSubstructMatch(substructure):
             if substructure.HasSubstructMatch(mol):
-                print("here? and calling it with good index")
                 return molToSVG(substructure, mol, highlightModificationSites)
             else:
                 print("there")
