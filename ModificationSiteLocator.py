@@ -9,10 +9,12 @@ from rdkit import Chem
 class ModificationSiteLocator():
     def __init__(self, main_compound, modified_compound, args = {}):
         
-        self.args = {"mz_tolerance": 0.1,
+        self.args = {"mz_tolerance": 1,
                       "ppm": 40,
                     }
         self.args.update(args)
+
+        self.helpers = []
 
         for arg in list(args.keys()):
             if type(args[arg]) == str:
@@ -202,6 +204,8 @@ class ModificationSiteLocator():
             
             if np.min(probabilities) < 0:
                 probabilities = probabilities - np.min(probabilities)
+                # mask only the atoms with positive contribution
+                # probabilities = [probabilities[i] if positive_contributions[i] > 0 else 0 for i in range(len(probabilities))]
             if np.sum(probabilities) > 0:
                 probabilities = probabilities / np.sum(probabilities)
 
@@ -281,3 +285,9 @@ class ModificationSiteLocator():
             cosine, matched_peaks = align(self.main_compound, helper_compound, self.args["mz_tolerance"], self.args["ppm"])
             shifted, unshifted = utils.separateShifted(matched_peaks, self.main_compound.peaks, helper_compound.peaks)
             self.main_compound.apply_helper(helper_compound, shifted, unshifted, unshifted_mode)
+        
+        self.helpers += helpers
+    
+    def summerise_data():
+        pass
+        # implement has ring information

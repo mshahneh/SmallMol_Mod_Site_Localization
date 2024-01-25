@@ -12,10 +12,10 @@ important_arguments = ["peaks", "Adduct", "Precursor_MZ", "Charge"]
 
 default_args = {
     "ppm": (int, 40), # the ppm tolerance used for matching peaks
-    "mz_tolerance": (float, 0.1), # the mz tolerance for matching peaks
+    "mz_tolerance": (float, 1), # the mz tolerance for matching peaks
     "filter_peaks_method": (str, "both"), # can be "intensity", "top_k", "none", "both"
     "filter_peaks_variable": (float, 0.01), # if intensity, the percentage of the highest peak, if top_k, the k (int), if both, the percentage of the highest peak
-    "fragmentation_depth": (int, -1), # -1 means auto, otherwise, the number of breaks
+    "fragmentation_depth": (int, 2), # -1 means auto, otherwise, the number of breaks
     "formula_ignore_H": (bool, True), # whether to ignore H when comparing formulas
     "should_fragment": (bool, True), # whether to fragment the compound
 }
@@ -50,7 +50,6 @@ class Compound:
         self.Adduct = None
         self.Precursor_MZ = None
         self.Charge = None
-        self.metadata = None
         self.fragments = None
         self.numFrag = None
         self.peak_fragments_map = None
@@ -84,10 +83,8 @@ class Compound:
         if "spectrum_id" in data:
             self.accession = data["spectrum_id"]
             
-        self.metadata = copy.deepcopy(data)
         for arg in important_arguments:
             if not arg in data and not arg.lower() in data:
-                # print("debug: missing argument: " + arg + " in " + str(data))
                 if arg != "peaks":
                     raise ValueError("Missing argument: " + arg)
                 elif "peaks_json" in data:
@@ -97,10 +94,8 @@ class Compound:
             else:
                 if arg.lower() in data:
                     setattr(self, arg, data[arg.lower()])
-                    self.metadata.pop(arg.lower())
                 else:
                     setattr(self, arg, data[arg])
-                    self.metadata.pop(arg)
 
         # adjusting the attributes ---------------------------------------
         self.Charge = int(self.Charge)
@@ -115,6 +110,8 @@ class Compound:
             self.Charge,
         )
 
+
+        # set the smiles and structure-----------------------------------
         if "Smiles" in data or (structure != None and type(structure) == str and len(structure) > 0):
             self.Smiles = data["Smiles"]
 
@@ -124,6 +121,7 @@ class Compound:
         elif self.Smiles != None:
             self.structure = Chem.MolFromSmiles(self.Smiles)
 
+        # perform fragmentation------------------------------------------
         if self.structure != None:
             if self.structure.GetNumAtoms() > 100:
                 raise ValueError("Too many atoms to handle")
@@ -131,23 +129,14 @@ class Compound:
             
             if self.args["should_fragment"]:
                 self.generate_fragments()
-
-
-    # def __repr__(self):
-    #     """Return a string representation of the instance."""
-    #     obj = self.metadata
-    #     obj.update({arg: getattr(self, arg) for arg in important_arguments})
-    #     return json.dumps(obj)
     
     def generate_fragments(self):
         if self.args["fragmentation_depth"] == -1:
-            breaks = 5
-            if (self.structure.GetNumAtoms() > 30):
-                breaks = 4
-            if (self.structure.GetNumAtoms() > 50):
-                breaks = 3
-            if (self.structure.GetNumAtoms() > 80):
+            breaks = 4
+            if (self.structure.GetNumAtoms() < 20):
                 breaks = 2
+            elif (self.structure.GetNumAtoms() < 40):
+                breaks = 3
         else:
             breaks = self.args["fragmentation_depth"]
             # if string, convert to int
@@ -212,7 +201,7 @@ class Compound:
         ind = []
         for i in range(len(self.peaks)):
             diff = abs(self.peaks[i][0] - peak_weight)
-            if diff < args["mz_tolerance"] and diff / peak_weight * 1000000 < args["ppm"]:
+            if diff < args["mz_tolerance"] and ((diff / peak_weight) * 1000000) < args["ppm"]:
                 ind.append(i)
         return ind
 
