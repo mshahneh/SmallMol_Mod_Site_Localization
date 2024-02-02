@@ -253,7 +253,7 @@ class ModificationSiteLocator():
             mz_ppm_tolerance = self.args['ppm']
         structures = []
         structure_indicies = []
-        fragments = []
+        fragments = [] 
         ind = self.main_compound.get_peak_index(peak_weight, {"mz_tolerance": mz_precision_abs, "ppm": mz_ppm_tolerance})
         for i in ind:
             structures_i, structure_indicies_i, fragments_i = self.get_structures_by_peak_index(i)

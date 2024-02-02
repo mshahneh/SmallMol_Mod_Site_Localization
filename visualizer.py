@@ -156,13 +156,19 @@ def highlightScores(mol, scores, add_labels = False, shrink_labels = False, labe
     colors = dict()
     for i in range(0, mol.GetNumAtoms()):
         # heat map coloring
-        colors[i] = (vals[i], 0, 1-vals[i], 0.9)
+        if vals[i] == 0:
+            colors[i] = (vals[i], 0.2*(1-vals[i]), 1-vals[i], 0.4)
+        else:
+            colors[i] = (vals[i], 0.2*(1-vals[i]), 1-vals[i], vals[i]*0.3 + 0.65)
     if add_labels:
         d2d.drawOptions().annotationFontScale = label_size
         for atom in mol.GetAtoms():
             lbl = str(round(scores[atom.GetIdx()], 2))
             if shrink_labels:
-                lbl = str(int(round(scores[atom.GetIdx()], 2)*100))
+                if scores[atom.GetIdx()] == 0:
+                    lbl = ""
+                else:
+                    lbl = str(int(round(scores[atom.GetIdx()], 2)*100))
             atom.SetProp('atomNote',lbl)
             # set font size for labels
     d2d.DrawMolecule(mol, highlightAtoms=list(range(mol.GetNumAtoms())), highlightAtomColors=colors, highlightBonds=[])
@@ -194,9 +200,9 @@ def highlightScores(mol, scores, add_labels = False, shrink_labels = False, labe
 
         for i in range(steps, -1, -1):
             if ax == 0:
-                svg += """<rect x="{}" y="{}" width="{}" height="{}" fill="rgb({}, 0, {})"/>""".format(i*rectWidth, 1200-diam, rectWidth, rectHeight, (i/steps)*255, (1-i/steps)*255)
+                svg += """<rect x="{}" y="{}" width="{}" height="{}" fill="rgba({}, {}, {}, {})"/>""".format(i*rectWidth, 1200-diam, rectWidth*1.01, rectHeight, (i/steps)*255, 0.2*(1-i/steps)*255,(1-i/steps)*255,  ((i/steps)*0.3) + 0.65)
             else:
-                svg += """<rect x="{}" y="{}" width="{}" height="{}" fill="rgb({}, 0, {})"/>""".format(0, i*rectHeight, rectWidth, rectHeight, (i/steps)*255, (1-i/steps)*255)
+                svg += """<rect x="{}" y="{}" width="{}" height="{}" fill="rgba({}, {}, {}, {})"/>""".format(0, i*rectHeight, rectWidth(1.01), rectHeight, (i/steps)*255, 0.2*(1-i/steps)*255, (1-i/steps)*255,  ((i/steps)*0.3) + 0.65)
         
         if ax == 0:
             svg += """<text x="{}" y="{}" font-size="{}px" fill="white">{}</text>""".format(5, 1200-diam + (height+fontSize/2)/2, fontSize, "low likelihood")
@@ -239,10 +245,10 @@ def highlightMolIndices(mol, hitAtoms, hitBonds = None):
     svgText =  d2d.GetDrawingText()
     return svgText
 
-def draw_alignment(peaks1, peaks2, matched_peaks, shift = 0.1, show_text = False, show_lines = True, scale = 1, ax = None, flip = True, x_lim = None):
+def draw_alignment(peaks1, peaks2, matched_peaks, shift = 0.1, show_text = False, show_lines = True, scale = 1, ax = None, flip = True, x_lim = None, legend_loc = 'upper right', text_size = 1):
 
     if ax is None:
-        fig, ax = plt.subplots(figsize=(20*scale, 10*scale))
+        fig, ax = plt.subplots(figsize=(20*scale, 5*scale))
 
     shifted, unshifted = utils.separateShifted(matched_peaks, peaks1, peaks2)
     max_y = max([_[1] for _ in peaks1])
@@ -298,6 +304,7 @@ def draw_alignment(peaks1, peaks2, matched_peaks, shift = 0.1, show_text = False
         y = [-_[1] for _ in peaks2]
         y_shifted = [-peaks2[_][1] for _ in modifiedShifted]
         y_unshifted = [-peaks2[_][1] for _ in modifiedUnshifted]
+
     ax.bar(x, y, width=0.3*scale, color="gray")
     x_shifted = [peaks2[_][0] for _ in modifiedShifted]
     ax.bar(x_shifted, y_shifted, width=0.3*scale, color="red")
@@ -309,10 +316,14 @@ def draw_alignment(peaks1, peaks2, matched_peaks, shift = 0.1, show_text = False
             x1 = peaks1[peak[0]][0]
             x2 = peaks2[peak[1]][0]
 
+            if x_lim is not None:
+                if x1 < x_lim[0] or x1 > x_lim[1] or x2 < x_lim[0] or x2 > x_lim[1]:
+                    continue
+
             y1 = shift + flip_shift
             y2 = 0
             # draw line with text in the middle
-            ax.plot([x1, x2], [y1, y2], color="red", linewidth=0.25*scale, linestyle="--")
+            ax.plot([x1, x2], [y1, y2], color="red", linewidth=0.5*scale, linestyle="--")
             val = abs(peaks1[peak[0]][0] - peaks2[peak[1]][0])
             val = round(val, 2)
             if show_text:
@@ -322,12 +333,12 @@ def draw_alignment(peaks1, peaks2, matched_peaks, shift = 0.1, show_text = False
             x1 = peaks1[peak[0]][0]
             x2 = peaks2[peak[1]][0]
             y1 = shift + flip_shift
-            y2 = peaks2[peak[1]][1]
-            ax.plot([x1, x2], [y1, y2], color="blue", linewidth=0.25*scale, linestyle="--")
+            y2 = 0
+            ax.plot([x1, x2], [y1, y2], color="blue", linewidth=0.5*scale, linestyle="--")
 
     #draw horizontal line
-    ax.plot([5, max_x], [shift + flip_shift, shift + flip_shift], color="gray", linewidth=0.2*scale, linestyle="-")
-    ax.plot([5, max_x], [0, 0], color="gray", linewidth=0.2*scale, linestyle="-")
+    ax.plot([2, max_x], [shift + flip_shift, shift + flip_shift], color="gray", linewidth=0.3*scale, linestyle="-")
+    ax.plot([2, max_x], [0, 0], color="gray", linewidth=0.2*scale, linestyle="-")
 
     # custom y axis ticks
     y_ticks1 = [i/10 + shift + flip_shift for i in range(0, 11, 2)]
@@ -338,17 +349,15 @@ def draw_alignment(peaks1, peaks2, matched_peaks, shift = 0.1, show_text = False
     # reverse y ticks2
     y_ticks2 = y_ticks2[::-1]
     y_ticks =  y_ticks2 + y_ticks1 
-    print(y_ticks)
     y_ticks_labels1 = [i for i in range(0, 110, 20)]
     y_ticks_labels2 = [i for i in range(0, 110, 20)]
     # reverse y ticks2
     y_ticks_labels2 = y_ticks_labels2[::-1]
     y_ticks_labels = y_ticks_labels2 + y_ticks_labels1
-    print(y_ticks_labels)
     ax.set_yticks(y_ticks, y_ticks_labels)
 
     # set font size
-    ax.tick_params(axis='both', which='major', labelsize=20*scale)
+    ax.tick_params(axis='both', which='major', labelsize=20*text_size)
 
     # add legend
     ax.plot([], [], color="red", linewidth=2*scale, linestyle="-", label="Shifted Matched Peaks")
@@ -356,7 +365,7 @@ def draw_alignment(peaks1, peaks2, matched_peaks, shift = 0.1, show_text = False
     ax.plot([], [], color="gray", linewidth=2*scale, linestyle="-", label="Unmatched Peaks")
     
     # legend font size and position
-    ax.legend(prop={'size': 20*scale}, loc='upper left')
+    ax.legend(prop={'size': 20*text_size}, loc=legend_loc)
 
     # set x range
     if x_lim is not None:
