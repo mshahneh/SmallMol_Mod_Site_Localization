@@ -175,139 +175,95 @@ def get_modification_graph(main_struct, sub_struct):
             main_struct: main molecule
             sub_struct: substructure molecule
         Output:
-            count: the graph of the substructure difference, index of the atom of difference that is connected to substructure
+            frag: modified fragment mol
+            index_in_frag: index of the modification atom in the fragment
+            bondType: bond type of the modification bond
     """
-    # print(main_struct.GetNumAtoms(), sub_struct.GetNumAtoms())
-    if not main_struct.HasSubstructMatch(sub_struct):
-        raise ValueError("The substructure is not a substructure of the main structure.")
-    atoms_of_modification = []
     atoms_of_substructure = main_struct.GetSubstructMatch(sub_struct)
-    for atom in main_struct.GetAtoms():
-        if atom.GetIdx() not in atoms_of_substructure:
-            atoms_of_modification.append(atom.GetIdx())
-
-    emol = Chem.EditableMol(main_struct)
-    for atom in reversed(range(main_struct.GetNumAtoms())):
-        if atom not in atoms_of_modification:
-            emol.RemoveAtom(atom)
-    frag = emol.GetMol()
-    if not main_struct.HasSubstructMatch(frag):
-        raise ValueError("The substructure is not a substructure of the main structure.")
-    modification_atom = calculateModificationSites(main_struct, frag, inParent = False)
-    modification_atom = modification_atom[0]
-
-    matches = main_struct.GetSubstructMatch(frag)
-    bond_type = Chem.BondType.SINGLE
     for bond in main_struct.GetBonds():
-        if bond.GetBeginAtomIdx() in matches and bond.GetEndAtomIdx() not in matches:
-            bond_type = bond.GetBondType()
-            break
-        elif bond.GetEndAtomIdx() in matches and bond.GetBeginAtomIdx() not in matches:
-            bond_type = bond.GetBondType()
+        count = 0
+        if bond.GetBeginAtomIdx() in atoms_of_substructure:
+            count += 1
+        if bond.GetEndAtomIdx() in atoms_of_substructure:
+            count += 1
+        if count == 1:
+            frag_modif_atom = bond.GetBeginAtomIdx()
+            bondType = bond.GetBondType()
+            if bond.GetBeginAtomIdx() in atoms_of_substructure:
+                frag_modif_atom = bond.GetEndAtomIdx()
             break
 
-    return frag, modification_atom, bond_type
+    # create a copy of the main structure
+    main_struct_copy = Chem.Mol(main_struct)
+    main_struct_copy.GetAtomWithIdx(frag_modif_atom).SetProp("atomNote", "modification")
+    emol = Chem.EditableMol(main_struct_copy)
 
-def attach_struct(sub_struct, frag, atom, new_modification_atom, bond_type):
-    temp_struct = Chem.CombineMols(sub_struct, frag)
-    temp_struct = Chem.RWMol(temp_struct)
-    temp_struct.AddBond(atom.GetIdx(), new_modification_atom, bond_type)
-    # temp_struct.CommitBatchEdit()
-    try:
-        temp_struct = temp_struct.GetMol()
-        # check if mol is valid
-        Chem.SanitizeMol(temp_struct)
-        modification_atom = temp_struct.GetAtomWithIdx(new_modification_atom)
-        return temp_struct
-    except:
-        temp_struct = Chem.CombineMols(sub_struct, frag)
-        temp_struct = Chem.RWMol(temp_struct)
-        for bond_type in [Chem.BondType.SINGLE, Chem.BondType.DOUBLE, Chem.BondType.TRIPLE]:
-            temp_struct.AddBond(atom.GetIdx(), new_modification_atom, bond_type)
-            temp_struct.CommitBatchEdit()
-            try:
-                temp_struct = temp_struct.GetMol()
-                Chem.SanitizeMol(temp_struct)
-                return temp_struct
-            except:
-                temp_struct = Chem.RWMol(temp_struct)
-                temp_struct.RemoveBond(atom.GetIdx(), new_modification_atom)
-                temp_struct.CommitBatchEdit()
+    for atom in reversed(range(main_struct_copy.GetNumAtoms())):
+        if atom in atoms_of_substructure:
+            emol.RemoveAtom(atom)
     
+    frag = emol.GetMol()
+    # get the atom index of the modification atom in the fragment
+    for i in frag.GetAtoms():
+        if i.HasProp("atomNote"):
+            index_in_frag = i.GetIdx()
+            i.ClearProp("atomNote")
+            break
+    
+    return frag, index_in_frag, bondType
+
+def attach_struct(main_struct, frag, main_location, frag_location, bond_type):
+    """
+        Attaches the frag to main_struct at the main_location and frag_location with bond_type.
+        Input:
+            main_struct: main molecule
+            frag: substructure molecule
+            main_location: the atom index of main_struct to attach frag
+            frag_location: the atom index of frag to attach main_struct
+            bond_type: the bond type to attach
+        Output:
+            new_mol: the new molecule after attachment
+    """
+    new_mol = Chem.CombineMols(main_struct, frag)
+    new_mol = Chem.EditableMol(new_mol)
+    new_mol.AddBond(main_location, frag_location + main_struct.GetNumAtoms(), bond_type)
+    new_mol = new_mol.GetMol()
+    return new_mol
+
+def attach_struct_try(main_struct, frag, main_location, frag_location, bond_type):
+    mol = attach_struct(main_struct, frag, main_location, frag_location, bond_type)
+    try:
+        Chem.SanitizeMol(mol)
+        return mol
+    except:
+        for bond in [Chem.BondType.SINGLE, Chem.BondType.DOUBLE, Chem.BondType.TRIPLE]:
+            if bond != bond_type:
+                try:
+                    mol = attach_struct(main_struct, frag, main_location, frag_location, bond)
+                    Chem.SanitizeMol(mol)
+                    return mol
+                except:
+                    continue
     return None
 
 def generate_possible_stuctures(main_struct, sub_struct):
-    def fix_valence(atom, sub_struct):
-        if atom.GetNumExplicitHs() > 0:
-            temp_struct = Chem.RWMol(sub_struct)
-            # remove one explicit H
-            neighbors = atom.GetNeighbors()
-            for neighbor in neighbors:
-                if neighbor.GetSymbol() == "H":
-                    temp_struct.RemoveBond(atom.GetIdx(), neighbor.GetIdx())
-                    temp_struct.CommitBatchEdit()
-                    try:
-                            temp_struct = temp_struct.GetMol()
-                            Chem.SanitizeMol(temp_struct)
-                            return temp_struct
-                    except:
-                        pass
-        
-        else:
-            # if atom has double bond, try to remove one double bond
-            neighbors = atom.GetNeighbors()
-            for neighbor in neighbors:
-                if neighbor.GetSymbol() == "H":
-                    continue
-                temp_struct = Chem.RWMol(sub_struct)
-                # remove one double bond
-                for bond in temp_struct.GetBonds():
-                    if bond.GetBeginAtomIdx() == atom.GetIdx() and bond.GetEndAtomIdx() == neighbor.GetIdx() and bond.GetBondType() == Chem.BondType.DOUBLE:
-                        temp_struct.RemoveBond(atom.GetIdx(), neighbor.GetIdx())
-                        temp_struct.AddBond(atom.GetIdx(), neighbor.GetIdx(), Chem.BondType.SINGLE)
-                        temp_struct.CommitBatchEdit()
-                        try:
-                            temp_struct = temp_struct.GetMol()
-                            Chem.SanitizeMol(temp_struct)
-                            return temp_struct
-                        except:
-                            pass
-        
-        return None
-    
-    def _try(sub_struct, frag, atom, new_modification_atom, bond_type):
-        temp_struct = attach_struct(sub_struct, frag, atom, new_modification_atom, bond_type)
-        if temp_struct is not None:
-            # check if the weight of temp_struct is the same as main_struct
-            if abs(Descriptors.ExactMolWt(temp_struct) - Descriptors.ExactMolWt(main_struct)) < 0.1:
-                return temp_struct
-                structs.append((atom.GetIdx(),temp_struct))
-        else:
-            temp_struct = fix_valence(atom, sub_struct)
-            if temp_struct is not None:
-                temp_struct = attach_struct(temp_struct, frag, atom, new_modification_atom, bond_type)
-                if temp_struct is not None:
-                    if abs(Descriptors.ExactMolWt(temp_struct) - Descriptors.ExactMolWt(main_struct)) < 0.1:
-                        return temp_struct
-                        
-                
-    frag, modification_atom, bond_type = get_modification_graph(main_struct, sub_struct)
+    """
+        Generates all possible structures after attaching sub_struct to main_struct.
+        Input:
+            main_struct: main molecule
+            sub_struct: substructure molecule
+        Output:
+            list of possible_structures: all possible structures after attachment with the index of the atom
+    """
+    frag, index_in_frag, bondType = get_modification_graph(main_struct, sub_struct)
+
     structs = []
-    new_modification_atom = modification_atom + sub_struct.GetNumAtoms()
-    # print(new_modification_atom, modification_atom, sub_struct.GetNumAtoms())
     for atom in sub_struct.GetAtoms():
-        if atom.GetSymbol() == "H":
+        temp_struct = attach_struct_try(sub_struct, frag, atom.GetIdx(), index_in_frag, bondType)
+        if temp_struct is None:
             continue
-        temp_struct = _try(sub_struct, frag, atom, new_modification_atom, bond_type)
-        if temp_struct is not None:
-            structs.append((atom.GetIdx(),temp_struct))
-        else:
-            for additional_type in [Chem.BondType.SINGLE, Chem.BondType.DOUBLE, Chem.BondType.TRIPLE]:
-                temp_struct = _try(sub_struct, frag, atom, new_modification_atom, additional_type)
-                if temp_struct is not None:
-                    structs.append((atom.GetIdx(),temp_struct))
-                    break
-                
+        structs.append((atom.GetIdx(), temp_struct))
+    
     return structs
 
 

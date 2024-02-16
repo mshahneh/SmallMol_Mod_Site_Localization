@@ -145,6 +145,14 @@ def molToSVG(mol, substructure=None, highlightModificationSites=False):
 
     return d2d.GetDrawingText()
 
+def draw_png(mol):
+    d2d = Draw.MolDraw2DCairo(1200, 1200)
+    d2d.DrawMolecule(mol)
+    d2d.FinishDrawing()
+    png = d2d.GetDrawingText()
+    img = mpimg.imread(io.BytesIO(png))
+    return img
+
 def highlightScores(mol, scores, add_labels = False, shrink_labels = False, label_size = 0.5):
     if min(scores) < 0:
         scores = [x + abs(min(scores)) for x in scores]
