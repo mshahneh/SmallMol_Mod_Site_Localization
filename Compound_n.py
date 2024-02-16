@@ -126,8 +126,6 @@ class Compound:
 
         # perform fragmentation------------------------------------------
         if self.structure != None:
-            if self.structure.GetNumAtoms() > 100:
-                raise ValueError("Too many atoms to handle")
             self.distances = Chem.rdmolops.GetDistanceMatrix(self.structure)
             
             if self.args["should_fragment"]:
@@ -325,6 +323,8 @@ class Compound:
                     p = atoms_appearance[atom] / len(self.peak_fragments_map[peak])
                     entropy -= p * math.log(p)
             peak_entropies[peak] = entropy
+        if len(peak_entropies) == 0:
+            return -1
         entropy = sum(peak_entropies) / len(peak_entropies)
         return entropy
 
