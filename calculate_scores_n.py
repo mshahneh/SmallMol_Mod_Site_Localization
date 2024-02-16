@@ -24,7 +24,17 @@ def dist_from_max(G, probabilities, true_index):
     for i in range(len(probabilities)):
         if probabilities[i] == max_val:
             min_dist = min(min_dist, G[true_index, i])
-    return float(np.exp(-min_dist/(graph_diameter-min_dist+eps)))
+    return float(min_dist/(graph_diameter))
+
+def proximity(G, probabilities, true_index):
+    min_dist = 100000
+    eps = 0.000001
+    max_val = max(probabilities)
+    graph_diameter = np.amax(G)
+    for i in range(len(probabilities)):
+        if probabilities[i] == max_val:
+            min_dist = min(min_dist, G[true_index, i])
+    return (graph_diameter - min_dist)/graph_diameter
 
 def average_dist_from_max(G, probabilities, true_index):
     eps = 0.000001
@@ -34,7 +44,7 @@ def average_dist_from_max(G, probabilities, true_index):
     count = 0
     for i in range(len(probabilities)):
         if probabilities[i] == max_val:
-            value = np.exp(-G[true_index,i]/(graph_diameter-G[true_index,i]+eps))
+            value = G[true_index,i]/(graph_diameter)
             dists += value * probabilities[i]
             count += probabilities[i]
     return float(dists/count)
@@ -109,6 +119,18 @@ def ranking_loss(G, probabilities, modificationSiteIdx):
 
     # return the ranking loss
     return 1 - true_index/len(probabilities)
+
+
+def sorted_rank(G, probabilities, modificationSiteIdx):
+    # find how far the index of the true modification site is from the max probability
+    # sort the probabilities and keep the indices
+    sorted_indices = np.argsort(probabilities)
+
+    # find the index of the true modification site
+    true_index = np.where(sorted_indices == modificationSiteIdx)[0][0]
+
+    # return the ranking loss
+    return true_index/(len(probabilities)-1)
 
 
 
@@ -244,5 +266,9 @@ def calculate(G, input_probabilities, true_modification_site, method, normalizat
         return ranking_loss(G, probabilities, true_modification_site)
     elif method == "entropy_distance":
         return entropy_distance(G, probabilities, true_modification_site)
+    elif method == "sorted_rank":
+        return sorted_rank(G, probabilities, true_modification_site)
+    elif method == "proximity":
+        return proximity(G, probabilities, true_modification_site)
     else:
         raise Exception("Method not found")
