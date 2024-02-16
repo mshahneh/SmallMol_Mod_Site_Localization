@@ -281,6 +281,8 @@ class Compound:
             raise ValueError("Adduct not supported")
         main_compound_formula = Chem.rdMolDescriptors.CalcMolFormula(self.structure)
         peak_mz = [peak[0] for peak in self.peaks]
+        if len(peak_mz) == 0:
+            return
         subformla_list = assign_subformula(peak_mz,
                                         precursor_formula=main_compound_formula, adduct="[M+H]+",
                                         ms2_tol=self.args["ppm"], ppm=True, dbe_cutoff=-1.0)

@@ -4,7 +4,7 @@ import requests
 import numpy as np
 from .utils_n import convert_to_SpectrumTuple
 
-tool_base = "https://modsitelocalization.gnps2.org/"
+tool_base = "https://modifinder.gnps2.org/"
 
 def generate_usi(id, library_membership):
     return "mzspec:GNPS:" + library_membership + ":accession:" + id

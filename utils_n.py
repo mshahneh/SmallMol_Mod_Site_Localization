@@ -16,9 +16,10 @@ def parse_adduct(adduct):
     acceptedAdducts = ["M" + a for a in adducts]
     if "[" in adduct:
         adduct = adduct.split("[")[1]
+    if "]" in adduct:
         adduct = adduct.split("]")[0]
     if adduct not in acceptedAdducts:
-        raise ValueError("Adduct not supported: " + adduct)
+        raise ValueError("Adduct not supported:", adduct)
     return adduct
 
 
