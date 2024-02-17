@@ -278,6 +278,17 @@ class ModificationSiteLocator():
         """Get the index of the unshifted peaks in the modified compound."""
         return [_[1] for _ in self.unshifted]
     
+
+    def apply_helpers_compound_array(self, array_of_helpers, unshifted_mode = None):
+        """Apply the helpers to the main compound."""
+        for helper_compound in array_of_helpers:
+            cosine, matched_peaks = align(self.main_compound, helper_compound, self.args["mz_tolerance"], self.args["ppm"])
+            shifted, unshifted = utils.separateShifted(matched_peaks, self.main_compound.peaks, helper_compound.peaks)
+            self.main_compound.apply_helper(helper_compound, shifted, unshifted, unshifted_mode)
+        
+        self.helpers += array_of_helpers
+
+
     def apply_helpers(self, helpers, unshifted_mode = None):
         """Apply the helpers to the main compound."""
         for helper in helpers:
