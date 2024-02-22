@@ -241,8 +241,11 @@ def highlightScores(mol, scores, add_labels = False, shrink_labels = False, labe
     
     return svgText
 
-def highlightMolIndices(mol, hitAtoms, hitBonds = None):
-    d2d = Draw.MolDraw2DSVG(1250,1200)
+def highlightMolIndices(mol, hitAtoms, hitBonds = None, resolution = None):
+    if resolution is not None:
+        d2d = Draw.MolDraw2DSVG(resolution[0], resolution[1])
+    else:
+        d2d = Draw.MolDraw2DSVG(1250,1200)
     if hitBonds is None:
         hitBonds = []
         for bond in mol.GetBonds():

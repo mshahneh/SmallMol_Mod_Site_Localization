@@ -16,7 +16,6 @@ dependencies:
     - tqdm
     - IPython
     - furl
-    - dash_daq
     - dash-bootstrap-components
     - pillow
     - openpyxl
