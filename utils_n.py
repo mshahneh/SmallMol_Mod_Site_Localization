@@ -11,15 +11,14 @@ SpectrumTuple = collections.namedtuple(
 )
 
 def parse_adduct(adduct):
-    # adducts = ["+H", "+NH4", "+Na", "+K", "-OH", "-H", "+Cl"]
-    adducts = ["+H"]
-    acceptedAdducts = ["M" + a for a in adducts]
-    if "[" in adduct:
-        adduct = adduct.split("[")[1]
-    if "]" in adduct:
-        adduct = adduct.split("]")[0]
-    if adduct not in acceptedAdducts:
-        raise ValueError("Adduct not supported:", adduct)
+    acceptedAdductsFormat = re.compile(r'\[M(?:\+[A-Za-z0-9]|\-[A-Za-z0-9])*\][1-9][0-9]*[+-]')
+    if not acceptedAdductsFormat.match(adduct):
+        # TODO: try to parse it to the acceptable format
+        raise ValueError("The adduct is not in the accepted format.")
+
+    accepted_adducts = ['[M+H]1+', '[M+Na]1+', '[M-H]1-', '[M+NH4]1+', '[M+K]1+', '[M+Cl]1-', '[M+Br]1-']
+    if adduct not in accepted_adducts:
+        raise ValueError("The adduct is not in the accepted format.")
     return adduct
 
 

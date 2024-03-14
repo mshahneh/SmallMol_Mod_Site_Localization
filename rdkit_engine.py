@@ -2,6 +2,7 @@ from rdkit.Chem import *
 from rdkit import Chem, Geometry
 from rdkit.Chem import AllChem, Descriptors
 from . import pars
+import re
 bondtype2string = {v:k for (k, v,) in Chem.rdchem.BondType.names.items()}
 
 class newclass(object):
@@ -91,3 +92,46 @@ def SmilesToMol(smiles, name = None):
     mol.SetProp('_Name', name)
     AllChem.Compute2DCoords(mol)
     return mol
+
+
+def GetFormulaMass(formula):
+    weight = 0
+    pattern = r'([A-Z][a-z]*)(\d*)'
+    matches = re.findall(pattern, formula)  # Find all matches in the formula
+
+    # Create a dictionary to store element symbol and count pairs
+    for match in matches:
+        element = match[0]
+        count = match[1]
+        if count:
+            weight += int(count) * pars.mims[element]
+        else:
+            weight += pars.mims[element]
+    return weight
+
+def GetAdductMass(adduct):
+    weight = 0
+    acceptedAdductsFormat = re.compile(r'\[M(?:\+[A-Za-z0-9]+|\-[A-Za-z0-9]+)*\][1-9][0-9]*[+-]')
+    if not acceptedAdductsFormat.match(adduct):
+        raise ValueError('Adduct format not accepted')
+
+    charge = adduct.split(']')[1]
+    remaining = adduct.split(']')[0]
+    remaining = remaining.replace('[','')
+    
+    regexPattern = re.compile(r'\+[A-Za-z0-9]*|\-[A-Za-z0-9]*')
+    subformulas = regexPattern.findall(remaining)
+    for subformula in subformulas:
+        if subformula[0] == '+':
+            weight += GetFormulaMass(subformula[1:])
+        else:
+            weight -= GetFormulaMass(subformula[1:])
+    
+    if charge[-1] == '+':
+        chargeCount = int(charge[:-1])
+        weight -= pars.elmass * chargeCount
+    else:
+        chargeCount = int(charge[:-1])
+        weight += pars.elmass * chargeCount
+
+    return weight
