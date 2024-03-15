@@ -158,7 +158,7 @@ class Compound:
         base_precision = 1 + self.args["ppm"] / 1000000
         self.peak_fragments_map = [set() for i in range(len(self.peaks))]
         for i in range(len(self.peaks)):
-            search_weight = self.peaks[i][0] + self.Adduct_Mass
+            search_weight = self.peaks[i][0] - self.Adduct_Mass
             annotations = self.fragments.find_fragments(search_weight, 0.1, base_precision, self.args["mz_tolerance"])
             for annotation in annotations:
                 self.peak_fragments_map[i].add(annotation[0])

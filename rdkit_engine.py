@@ -119,7 +119,7 @@ def GetAdductMass(adduct):
     remaining = adduct.split(']')[0]
     remaining = remaining.replace('[','')
     
-    regexPattern = re.compile(r'\+[A-Za-z0-9]*|\-[A-Za-z0-9]*')
+    regexPattern = re.compile(r'\+[A-Za-z0-9]+|\-[A-Za-z0-9]+')
     subformulas = regexPattern.findall(remaining)
     for subformula in subformulas:
         if subformula[0] == '+':
