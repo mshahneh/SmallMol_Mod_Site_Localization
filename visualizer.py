@@ -102,7 +102,6 @@ def molToSVG(mol, substructure=None, highlightModificationSites=False):
             if substructure.HasSubstructMatch(mol):
                 return molToSVG(substructure, mol, highlightModificationSites)
             else:
-                print("there")
                 d2d = Chem.Draw.MolDraw2DSVG(1250,1200)
                 d2d.DrawMolecule(mol)
                 d2d.FinishDrawing()
@@ -120,22 +119,20 @@ def molToSVG(mol, substructure=None, highlightModificationSites=False):
             if bond.GetBeginAtomIdx() in highlightAtoms or bond.GetEndAtomIdx() in highlightAtoms:
                 highlightbonds.append(bond.GetIdx())
         
-
+        d2d = Chem.Draw.MolDraw2DSVG(1250,1200)
+        colors = dict()
+        for hitAtom in highlightAtoms:
+            colors[hitAtom] = (0.9,0.2,0.2, 0.8)
         if highlightModificationSites:
             # print(mol.GetNumAtoms(), substructure.GetNumAtoms(), "To check the sizes!")
             modifications = utils.calculateModificationSites(mol, substructure)
-            # print(modifications)
-            d2d = Chem.Draw.MolDraw2DSVG(1250,1200)
-            colors = dict()
-            for hitAtom in highlightAtoms:
-                colors[hitAtom] = (1,0.2,0.2)
             for atom in mol.GetAtoms():
                 if atom.GetIdx() in modifications:
-                    colors[atom.GetIdx()] = (0.2,0.2,1)
-            d2d.DrawMolecule(mol,highlightAtoms=highlightAtoms, highlightBonds=highlightbonds, highlightAtomColors=colors)
-        else:
-            d2d = Chem.Draw.MolDraw2DSVG(1250,1200)
-            d2d.DrawMolecule(mol,highlightAtoms=highlightAtoms, highlightBonds=highlightbonds)
+                    # highlightAtoms.append(atom.GetIdx())
+                    colors[atom.GetIdx()] = (0.2,0.2,0.9, 0.8)
+
+                    
+        d2d.DrawMolecule(mol,highlightAtoms=highlightAtoms, highlightBonds=highlightbonds, highlightAtomColors=colors)
     else:
         d2d = Chem.Draw.MolDraw2DSVG(1250,1200)
         d2d.DrawMolecule(mol)
@@ -165,9 +162,9 @@ def highlightScores(mol, scores, add_labels = False, shrink_labels = False, labe
     for i in range(0, mol.GetNumAtoms()):
         # heat map coloring
         if vals[i] == 0:
-            colors[i] = (vals[i], 0.2*(1-vals[i]), 1-vals[i], 0.4)
+            colors[i] = (vals[i], 0.2*(1-vals[i]), (1-vals[i]), 0.4)
         else:
-            colors[i] = (vals[i], 0.2*(1-vals[i]), 1-vals[i], vals[i]*0.3 + 0.65)
+            colors[i] = (0.95*vals[i], 0.2*(1-vals[i]), (1-vals[i]), vals[i]*0.3 + 0.40)
     if add_labels:
         d2d.drawOptions().annotationFontScale = label_size
         for atom in mol.GetAtoms():
@@ -208,9 +205,9 @@ def highlightScores(mol, scores, add_labels = False, shrink_labels = False, labe
 
         for i in range(steps, -1, -1):
             if ax == 0:
-                svg += """<rect x="{}" y="{}" width="{}" height="{}" fill="rgba({}, {}, {}, {})"/>""".format(i*rectWidth, 1200-diam, rectWidth*1.01, rectHeight, (i/steps)*255, 0.2*(1-i/steps)*255,(1-i/steps)*255,  ((i/steps)*0.3) + 0.65)
+                svg += """<rect x="{}" y="{}" width="{}" height="{}" fill="rgba({}, {}, {}, {})"/>""".format(i*rectWidth, 1200-diam, rectWidth*1.01, rectHeight, (i/steps)*255, 0.2*(1-i/steps)*255,(1-i/steps)*255,  ((i/steps)*0.3) + 0.45)
             else:
-                svg += """<rect x="{}" y="{}" width="{}" height="{}" fill="rgba({}, {}, {}, {})"/>""".format(0, i*rectHeight, rectWidth(1.01), rectHeight, (i/steps)*255, 0.2*(1-i/steps)*255, (1-i/steps)*255,  ((i/steps)*0.3) + 0.65)
+                svg += """<rect x="{}" y="{}" width="{}" height="{}" fill="rgba({}, {}, {}, {})"/>""".format(0, i*rectHeight, rectWidth(1.01), rectHeight, (i/steps)*255, 0.2*(1-i/steps)*255, (1-i/steps)*255,  ((i/steps)*0.3) + 0.45)
         
         if ax == 0:
             svg += """<text x="{}" y="{}" font-size="{}px" fill="white">{}</text>""".format(5, 1200-diam + (height+fontSize/2)/2, fontSize, "low likelihood")
