@@ -11,14 +11,18 @@ SpectrumTuple = collections.namedtuple(
 )
 
 def parse_adduct(adduct):
-    acceptedAdductsFormat = re.compile(r'\[M(?:\+[A-Za-z0-9]|\-[A-Za-z0-9])*\][1-9][0-9]*[+-]')
+    acceptedAdductsFormat = re.compile(r'\[M(?:\+[A-Za-z0-9]|\-[A-Za-z0-9])*\][0-9]*[+-]')
+    accepted_adducts = ['+H', '+Na', '-H', '+NH4', '+K', '+Cl', '+Br']
+
     if not acceptedAdductsFormat.match(adduct):
-        # TODO: try to parse it to the acceptable format
         raise ValueError("The adduct is not in the accepted format.")
 
-    accepted_adducts = ['[M+H]1+', '[M+Na]1+', '[M-H]1-', '[M+NH4]1+', '[M+K]1+', '[M+Cl]1-', '[M+Br]1-']
-    if adduct not in accepted_adducts:
-        raise ValueError("The adduct is not in the accepted format.")
+    adduct_part = adduct.split(']')[0]
+    regexPattern = re.compile(r'\+[A-Za-z0-9]*|\-[A-Za-z0-9]*')
+    subformulas = regexPattern.findall(adduct_part)
+    for subformula in subformulas:
+        if subformula not in accepted_adducts:
+            raise ValueError("The adduct is not in the accepted format.")
     return adduct
 
 

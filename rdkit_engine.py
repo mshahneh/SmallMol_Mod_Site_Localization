@@ -111,7 +111,7 @@ def GetFormulaMass(formula):
 
 def GetAdductMass(adduct):
     weight = 0
-    acceptedAdductsFormat = re.compile(r'\[M(?:\+[A-Za-z0-9]+|\-[A-Za-z0-9]+)*\][1-9][0-9]*[+-]')
+    acceptedAdductsFormat = re.compile(r'\[M(?:\+[A-Za-z0-9]+|\-[A-Za-z0-9]+)*\][0-9]*[+-]')
     if not acceptedAdductsFormat.match(adduct):
         raise ValueError('Adduct format not accepted')
 
@@ -128,10 +128,16 @@ def GetAdductMass(adduct):
             weight -= GetFormulaMass(subformula[1:])
     
     if charge[-1] == '+':
-        chargeCount = int(charge[:-1])
+        if len(charge) == 1:
+            chargeCount = 1
+        else:
+            chargeCount = int(charge[:-1])
         weight -= pars.elmass * chargeCount
     else:
-        chargeCount = int(charge[:-1])
+        if len(charge) == 1:
+            chargeCount = 1
+        else:
+            chargeCount = int(charge[:-1])
         weight += pars.elmass * chargeCount
 
     return weight
