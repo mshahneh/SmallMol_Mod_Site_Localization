@@ -5,6 +5,7 @@ import copy
 import json
 from . import utils_n as utils
 from . import handle_network as handle_network
+from . import rdkit_engine as rdkit_engine
 import re
 import math
 
@@ -101,6 +102,7 @@ class Compound:
         self.Charge = int(self.Charge)
         self.Precursor_MZ = float(self.Precursor_MZ)
         self.Adduct = utils.parse_adduct(self.Adduct)
+        self.Adduct_Mass = rdkit_engine.GetAdductMass(self.Adduct)
 
         self.peaks = utils.filter_peaks(
             self.peaks,
@@ -145,20 +147,19 @@ class Compound:
                 breaks = int(breaks)
             if (self.structure.GetNumAtoms() > 80):
                 breaks = min(breaks, 2)
-        self.fragments = fragmentation_py.FragmentEngine(
-            Chem.MolToMolBlock(self.structure), breaks, 2, 1, 0, 0
-        )
+        self.fragments = fragmentation_py.FragmentEngine(Chem.MolToMolBlock(self.structure), breaks, 2, 0, 0, 0)
         self.numFrag = self.fragments.generate_fragments()
         self.generate_peak_to_fragment_map()
+        self.fragments.fragment_masses = []
+        self.fragments.fragment_info = []
 
 
     def generate_peak_to_fragment_map(self):
         base_precision = 1 + self.args["ppm"] / 1000000
         self.peak_fragments_map = [set() for i in range(len(self.peaks))]
         for i in range(len(self.peaks)):
-            annotations = self.fragments.find_fragments(
-                self.peaks[i][0], 0.1, base_precision, self.args["mz_tolerance"]
-            )
+            search_weight = self.peaks[i][0] + self.Adduct_Mass
+            annotations = self.fragments.find_fragments(search_weight, 0.1, base_precision, self.args["mz_tolerance"])
             for annotation in annotations:
                 self.peak_fragments_map[i].add(annotation[0])
 
