@@ -11,6 +11,11 @@ SpectrumTuple = collections.namedtuple(
 )
 
 def parse_adduct(adduct):
+    if adduct == "M+H":
+        return "[M+H]1+"
+    elif adduct == "M-H":
+        return "[M-H]1-"
+        
     acceptedAdductsFormat = re.compile(r'\[M(?:\+[A-Za-z0-9]+|\-[A-Za-z0-9]+)*\][0-9]*[+-]')
     accepted_adducts = ['+H', '+Na', '-H', '+NH4', '+K', '+Cl', '+Br']
 
