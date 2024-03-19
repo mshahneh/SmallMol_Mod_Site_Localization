@@ -8,6 +8,8 @@ from . import handle_network as handle_network
 from . import rdkit_engine as rdkit_engine
 import re
 import math
+import os
+import pickle 
 
 important_arguments = ["peaks", "Adduct", "Precursor_MZ", "Charge"]
 
@@ -19,6 +21,7 @@ default_args = {
     "fragmentation_depth": (int, 2), # -1 means auto, otherwise, the number of breaks
     "formula_ignore_H": (bool, True), # whether to ignore H when comparing formulas
     "should_fragment": (bool, True), # whether to fragment the compound
+    "fragmentation_method": (str, "MAGMa") # the fragmentation method, can be "MAGMa", "iceburg"
 }
 
 
@@ -133,25 +136,63 @@ class Compound:
             if self.args["should_fragment"]:
                 self.generate_fragments()
     
+    
     def generate_fragments(self):
-        if self.args["fragmentation_depth"] == -1:
-            breaks = 4
-            if (self.structure.GetNumAtoms() < 20):
-                breaks = 2
-            elif (self.structure.GetNumAtoms() < 40):
-                breaks = 3
+        """Generate the fragments of the compound"""
+
+        if self.args["fragmentation_method"] == "MAGMa":
+            if self.args["fragmentation_depth"] == -1:
+                breaks = 4
+                if (self.structure.GetNumAtoms() < 20):
+                    breaks = 2
+                elif (self.structure.GetNumAtoms() < 40):
+                    breaks = 3
+            else:
+                breaks = self.args["fragmentation_depth"]
+                # if string, convert to int
+                if type(breaks) != int:
+                    breaks = int(breaks)
+                if (self.structure.GetNumAtoms() > 80):
+                    breaks = min(breaks, 2)
+            self.fragments = fragmentation_py.FragmentEngine(Chem.MolToMolBlock(self.structure), breaks, 2, 0, 0, 0)
+            self.numFrag = self.fragments.generate_fragments()
+            self.generate_peak_to_fragment_map()
+            self.fragments.fragment_masses = []
+            self.fragments.fragment_info = []
+
+        elif self.args["fragmentation_method"] == "iceburg":
+            # iceburg not implemented yet, must read from cached file
+            def get_iceburg_structure(proposed, structure):
+                frags = set()
+                for item in proposed:
+                    struct = item['smiles']
+                    mol = Chem.MolFromSmiles(struct, sanitize=False)
+                    matches = structure.GetSubstructMatches(mol)
+                    if len(matches) > 0:
+                        for match in matches:
+                            res = 0
+                            for item in match:
+                                res += 1 << item
+                            frags.add(res)
+                
+                return frags
+
+            if self.accession == None:
+                raise ValueError("Accession not found, Iceburg call not implemented yet")
+            
+            iceburg_path = "/home/user/LabData/Reza/data/iceburg"
+            
+            try:
+                iceburg_data = pickle.load(open(os.path.join(iceburg_path, self.accession + ".pkl"), "rb"))
+            except:
+                raise ValueError("Iceburg file not found")
+                
+            for peak in self.peaks:
+                close_peaks = [p for p in iceburg_data if (abs(p['mz'] - peak[0]) < peak[0] * self.args["ppm"] / 1000000) and (abs(p['mz'] - peak[0]) < self.args["mz_tolerance"])]
+                elf.peak_fragments_map[i] = get_iceburg_structure(close_peaks, self.structure)
+
         else:
-            breaks = self.args["fragmentation_depth"]
-            # if string, convert to int
-            if type(breaks) != int:
-                breaks = int(breaks)
-            if (self.structure.GetNumAtoms() > 80):
-                breaks = min(breaks, 2)
-        self.fragments = fragmentation_py.FragmentEngine(Chem.MolToMolBlock(self.structure), breaks, 2, 0, 0, 0)
-        self.numFrag = self.fragments.generate_fragments()
-        self.generate_peak_to_fragment_map()
-        self.fragments.fragment_masses = []
-        self.fragments.fragment_info = []
+            raise ValueError("Fragmentation method not supported")
 
 
     def generate_peak_to_fragment_map(self):
