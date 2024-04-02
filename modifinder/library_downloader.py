@@ -5,7 +5,7 @@ from rdkit import Chem
 from tqdm import tqdm
 import pandas as pd
 import pickle
-from . import utils_n as utils
+from . import utils as utils
 import json
 import os
 import sys

@@ -1,6 +1,6 @@
 import xlsxwriter
 import os
-from . import utils_n as utils
+from . import utils as utils
 from rdkit import Chem
 from rdkit.Chem import Draw
 from PIL import Image

@@ -2,7 +2,7 @@ import os
 import json
 import requests
 import numpy as np
-from .utils_n import convert_to_SpectrumTuple
+from .utils import convert_to_SpectrumTuple
 
 tool_base = "https://modifinder.gnps2.org/"
 

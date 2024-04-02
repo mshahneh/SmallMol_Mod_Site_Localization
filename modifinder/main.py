@@ -1,8 +1,8 @@
 import argparse
 import ModificationSiteLocator as SiteLocator
-from Compound_n import Compound
+from modifinder.Compound import Compound
 import visualizer as visualizer
-import utils_n as utils
+import modifinder.utils as utils
 
 import os
 import json

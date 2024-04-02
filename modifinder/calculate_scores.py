@@ -2,7 +2,7 @@
 import numpy as np
 from typing import List, Tuple
 import copy
-from . import utils_n as utils
+from . import utils as utils
 
 def is_max(G, probabilities, true_index):
     if probabilities[true_index] == max(probabilities):
