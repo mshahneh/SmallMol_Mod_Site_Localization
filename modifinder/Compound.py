@@ -3,7 +3,7 @@ from msbuddy import assign_subformula
 from . import fragmentation_py as fragmentation_py
 import copy
 import json
-from . import utils_n as utils
+from . import utils as utils
 from . import handle_network as handle_network
 import re
 import math
