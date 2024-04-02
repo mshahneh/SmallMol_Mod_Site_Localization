@@ -5,6 +5,7 @@ import copy
 import json
 from . import utils as utils
 from . import handle_network as handle_network
+from . import rdkit_engine as rdkit_engine
 import re
 import math
 
@@ -101,6 +102,7 @@ class Compound:
         self.Charge = int(self.Charge)
         self.Precursor_MZ = float(self.Precursor_MZ)
         self.Adduct = utils.parse_adduct(self.Adduct)
+        self.Adduct_Mass = rdkit_engine.GetAdductMass(self.Adduct)
 
         self.peaks = utils.filter_peaks(
             self.peaks,
@@ -145,20 +147,19 @@ class Compound:
                 breaks = int(breaks)
             if (self.structure.GetNumAtoms() > 80):
                 breaks = min(breaks, 2)
-        self.fragments = fragmentation_py.FragmentEngine(
-            Chem.MolToMolBlock(self.structure), breaks, 2, 1, 0, 0
-        )
+        self.fragments = fragmentation_py.FragmentEngine(Chem.MolToMolBlock(self.structure), breaks, 2, 0, 0, 0)
         self.numFrag = self.fragments.generate_fragments()
         self.generate_peak_to_fragment_map()
+        self.fragments.fragment_masses = []
+        self.fragments.fragment_info = []
 
 
     def generate_peak_to_fragment_map(self):
         base_precision = 1 + self.args["ppm"] / 1000000
         self.peak_fragments_map = [set() for i in range(len(self.peaks))]
         for i in range(len(self.peaks)):
-            annotations = self.fragments.find_fragments(
-                self.peaks[i][0], 0.1, base_precision, self.args["mz_tolerance"]
-            )
+            search_weight = self.peaks[i][0] - self.Adduct_Mass
+            annotations = self.fragments.find_fragments(search_weight, 0.1, base_precision, self.args["mz_tolerance"])
             for annotation in annotations:
                 self.peak_fragments_map[i].add(annotation[0])
 
@@ -215,6 +216,8 @@ class Compound:
         """
         if peaks == None:
             peaks = [i for i in range(len(self.peaks))]
+        
+        updated = 0
         for i in peaks:
             updated_fragments = set()
             for fragment in self.peak_fragments_map[i]:
@@ -222,7 +225,13 @@ class Compound:
                     if 1 << atom & fragment:
                         updated_fragments.add(fragment)
                         break
+
+            if len(updated_fragments) != len(self.peak_fragments_map[i]):
+                updated += 1
+            
             self.peak_fragments_map[i] = updated_fragments
+
+        return updated
 
 
     def vote_for_fragments(self, peak_index, fragments, voter="none", extra_args={}):
@@ -338,6 +347,9 @@ class Compound:
             unshifted: array pf pairs of the unshifted peaks, each pair is (self_peak_index, helper_peak_index)
             unshifted_mode: the mode to update the unshifted peaks, can be "union", "intersection", None
         """
+
+        update_flag = 0
+
         if not (self.structure.HasSubstructMatch(helper_compound.structure) or helper_compound.structure.HasSubstructMatch(self.structure)):
             print("helper compound and main compound do not have common substructure, no change applied")
             return
@@ -351,20 +363,21 @@ class Compound:
         # update the shifted peaks
         ## get shifted indices of self
         shifted_indices = [_[0] for _ in shifted]
-        self.filter_fragments_by_atoms(modification_site, shifted_indices)
+        update_flag = self.filter_fragments_by_atoms(modification_site, shifted_indices)
 
         if unshifted_mode == None or unshifted_mode == "none":
-            return
+            return update_flag
+        
         # update the unshifted peaks
         ## get a mapping from the helper atoms index to the self aoms index
         if helper_compound.Precursor_MZ < self.Precursor_MZ:
             sub_match_indices = self.structure.GetSubstructMatch(helper_compound.structure)
-            mapping = {}
+            mapping = dict()
             for i, atom in enumerate(sub_match_indices):
                 mapping[i] = atom
         else:
             sub_match_indices = helper_compound.structure.GetSubstructMatch(self.structure)
-            mapping = {}
+            mapping = dict()
             for i, atom in enumerate(sub_match_indices):
                 mapping[atom] = i
 
@@ -381,13 +394,18 @@ class Compound:
                             new_fragment += 1 << mapping[i]
                 if new_fragment != -1:
                     helper_peak_fragment_map.add(new_fragment)
+            
+            temp = len(self.peak_fragments_map[peak[0]])
             if unshifted_mode == "union":
                 self.peak_fragments_map[peak[0]] = self.peak_fragments_map[peak[0]].union(helper_peak_fragment_map)
             elif unshifted_mode == "intersection":
                 self.peak_fragments_map[peak[0]] = self.peak_fragments_map[peak[0]].intersection(helper_peak_fragment_map)
             else:
                 raise ValueError("unshifted_mode not supported")
-        return
+            if len(self.peak_fragments_map[peak[0]]) != temp:
+                update_flag += 1
+        
+        return update_flag
 
 
     def apply_iceberg(self, iceberg):

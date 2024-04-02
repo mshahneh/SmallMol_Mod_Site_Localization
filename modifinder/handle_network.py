@@ -6,6 +6,15 @@ from .utils import convert_to_SpectrumTuple
 
 tool_base = "https://modifinder.gnps2.org/"
 
+def usi_to_accession(usi):
+    if "accession" in usi:
+        return usi.split(":")[-1]
+    else:
+        if type(usi) == str:
+            return usi
+        else:
+            return None
+
 def generate_usi(id, library_membership):
     return "mzspec:GNPS:" + library_membership + ":accession:" + id
 
@@ -22,6 +31,8 @@ def getMatchedPeaks(usi1, usi2):
     return json.loads(r.text)
 
 def getDataFromUsi(usi):
+    if ":" not in usi:
+        usi = generate_usi(usi, get_library_from_accession(usi))
     url = 'https://metabolomics-usi.gnps2.org/json/' + "?usi1=" + usi
     r = requests.get(url)
     data = json.loads(r.text)
@@ -54,6 +65,15 @@ def usi_to_SpectrumTuple(usi):
 
 def generate_link_accession(id):
     return "https://external.gnps2.org/gnpsspectrum?SpectrumID={}".format(id)
+
+def get_smiles_from_usi(usi):
+    try:
+        accession = usi_to_accession(usi)
+        parsed = getDataFromAccession(accession)
+        return parsed['annotations'][0]['Smiles']
+    except:
+        return None
+
 
 def get_library_from_accession(id, get_smiles=False):
     parsed = getDataFromAccession(id)
