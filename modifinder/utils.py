@@ -477,3 +477,39 @@ def entropy(probabilities):
     H = abs(np.sum(probabilities * np.log(probabilities)))
     # print(H, probabilities, H_max, H/H_max)
     return H/H_max
+
+
+def get_elements(formula):
+    elements = re.findall(r'([A-Z][a-z]*)(\d*)', formula)
+    elements = [(element, count if count else 1) for element, count in elements]
+    return elements
+
+def get_diff(formula1, formula2):
+    elements1 = get_elements(formula1)
+    elements2 = get_elements(formula2)
+    diff = {}
+    for element, count in elements1:
+        diff[element] = int(count)
+    for element, count in elements2:
+        if element in diff:
+            diff[element] -= int(count)
+        else:
+            diff[element] = -int(count)
+    
+    # remove 0s
+    diff = {key: value for key, value in diff.items() if value != 0}
+    # dict to string
+    diff = str(diff)
+    return diff
+
+def convert_to_formula(item):
+    item = item.replace("{", "")
+    item = item.replace("}", "")
+    item = item.split(",")
+    item = [re.sub(r'[\'\s]', '', i) for i in item]
+    item = [i.split(":") for i in item]
+    item = [[i[0], int(i[1])] for i in item]
+    # item = sorted(item, key=lambda x: x[1], reverse=True)
+    item = [i[0] + str(i[1]) for i in item]
+    item = "".join(item)
+    return item
