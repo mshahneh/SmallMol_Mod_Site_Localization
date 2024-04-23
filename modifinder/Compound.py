@@ -1,6 +1,7 @@
 from rdkit import Chem
 from msbuddy import assign_subformula
 from . import fragmentation_py as fragmentation_py
+import rdkit.Chem.rdMolDescriptors as rdMolDescriptors
 import copy
 import json
 from . import utils as utils
@@ -411,3 +412,23 @@ class Compound:
     def apply_iceberg(self, iceberg):
         # TODO: implement
         pass
+
+
+    def get_meta_data(self):
+        temp = {
+            "num_peaks": len(self.peaks),
+            "adduct": self.Adduct,
+            "precursor_mz": self.Precursor_MZ,
+            "charge": self.Charge,
+        }
+
+        if self.name != None:
+            temp["name"] = self.name
+        
+        if self.structure != None:
+            temp['num_aromatic_rings'] = rdMolDescriptors.CalcNumAromaticRings(self.structure)
+            temp['num_atoms'] = self.structure.GetNumAtoms()
+            temp['num_bonds'] = self.structure.GetNumBonds()
+            temp['num_rings'] = rdMolDescriptors.CalcNumRings(self.structure)
+        
+        return temp

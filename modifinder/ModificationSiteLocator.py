@@ -5,6 +5,8 @@ import numpy as np
 from . import calculate_scores as Calc_Scores
 from . import Compound as Compound
 from rdkit import Chem
+import pickle
+import os
 
 class ModificationSiteLocator():
     def __init__(self, main_compound, modified_compound, args = {}):
@@ -24,10 +26,10 @@ class ModificationSiteLocator():
                     self.args[arg] = args[arg]
         
         if type(main_compound) == str:
-            main_compound = Compound.Compound(main_compound, args=self.args)
+            main_compound = Compound(main_compound, args=self.args)
         
         if type(modified_compound) == str:
-            modified_compound = Compound.Compound(modified_compound, args=self.args)
+            modified_compound = Compound(modified_compound, args=self.args)
 
         self.main_compound = main_compound
         self.modified_compound = modified_compound
@@ -292,13 +294,70 @@ class ModificationSiteLocator():
     def apply_helpers(self, helpers, unshifted_mode = None):
         """Apply the helpers to the main compound."""
         for helper in helpers:
-            helper_compound = Compound.Compound(helper, args=self.args)
+            helper_compound = Compound(helper, args=self.args)
             cosine, matched_peaks = align(self.main_compound, helper_compound, self.args["mz_tolerance"], self.args["ppm"])
             shifted, unshifted = utils.separateShifted(matched_peaks, self.main_compound.peaks, helper_compound.peaks)
             self.main_compound.apply_helper(helper_compound, shifted, unshifted, unshifted_mode)
         
         self.helpers += helpers
     
-    def summerise_data():
-        pass
-        # implement has ring information
+
+    def prediction_confidence(self, predicted_probabilities, trained_model = None, meta_data = None):
+        if trained_model is None:
+            path_to_file = os.path.join(os.path.dirname(__file__), "models", "model_object.pkl")
+            with open(path_to_file, "rb") as f:
+                trained_model = pickle.load(f)
+
+        
+        if meta_data is None:
+            meta_data = self.get_meta_data(probabilities=predicted_probabilities)
+        
+        model_input = []
+        for item in trained_model["input"]:
+            if item in meta_data:
+                model_input.append(meta_data[item])
+            else:
+                raise Exception("The input item is not in the meta data.")
+        
+        return trained_model["model"].predict([model_input])[0]
+
+
+    def get_meta_data(self, probabilities = None, trained_model = None):
+        """Get the meta data of the main compound."""
+        main_meta = self.main_compound.get_meta_data()
+        modified_meta = self.modified_compound.get_meta_data()
+
+        res = {}
+        for key in main_meta:
+            res[key+"_main"] = main_meta[key]
+        
+        for key in modified_meta:
+            res[key+"_modified"] = modified_meta[key]
+        
+        res["cosine"] = self.cosine
+        res["num_matched"] = len(self.matched_peaks)
+        res["num_shifted"] = len(self.shifted)
+        res["num_unshifted"] = len(self.unshifted)
+        res["delta_mass"] = self.modified_compound.Precursor_MZ  - self.main_compound.Precursor_MZ
+
+        shifted = self.get_main_shifted_index()
+        ambiguity, ratio = self.main_compound.calculate_peak_annotation_ambiguity(shifted)
+        res["shifted_annotated_ratio"] = ratio
+        res["shifted_annotated_ambiguity"] = ambiguity
+
+        unshifted = self.get_main_unshifted_index()
+        ambiguity, ratio = self.main_compound.calculate_peak_annotation_ambiguity(unshifted)
+        res["unshifted_annotated_ratio"] = ratio
+        res["unshifted_annotated_ambiguity"] = ambiguity
+
+        res["num_helpers"] = len(self.helpers)
+
+        if probabilities is not None:
+            res["prediction_entropy"] = utils.entropy(probabilities)
+        
+        if trained_model is not None:
+            res["prediction_confidence"] = self.prediction_confidence(probabilities, trained_model, res)
+        
+        return res
+
+        
