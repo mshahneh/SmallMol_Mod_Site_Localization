@@ -5,12 +5,15 @@ from rdkit import Chem
 from rdkit.Chem import AllChem, Descriptors
 import collections
 import math
+from .pars import adduct_mapping as adduct_mapping
 
 SpectrumTuple = collections.namedtuple(
     "SpectrumTuple", ["precursor_mz", "precursor_charge", "mz", "intensity"]
 )
 
 def parse_adduct(adduct):
+    
+    adduct = adduct_mapping.get(adduct, adduct)
     if adduct == "M+H":
         return "[M+H]1+"
     elif adduct == "M-H":
