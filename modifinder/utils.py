@@ -2,7 +2,7 @@ import copy
 import re
 import numpy as np
 from rdkit import Chem
-from rdkit.Chem import AllChem, Descriptors
+from rdkit.Chem import AllChem, Descriptors, rdFMCS
 import collections
 import math
 from .pars import adduct_mapping as adduct_mapping
@@ -78,6 +78,7 @@ def filter_peaks(peaks, method, variable, precursor_mz = None, charge = None):
     else:
         return tempPeaks
 
+
 def normalize_peaks(peaks):
     """
     l2 normalizes the peaks.
@@ -104,6 +105,7 @@ def convert_to_SpectrumTuple(peaks, precursor_mz, precursor_charge):
     
     return SpectrumTuple(**res)
 
+
 def SpectrumTuple_to_dict(spectrum_tuple):
     """
     Converts the SpectrumTuple to a dictionary.
@@ -115,6 +117,7 @@ def SpectrumTuple_to_dict(spectrum_tuple):
     for i in range(len(spectrum_tuple.mz)):
         res['peaks'].append((spectrum_tuple.mz[i], spectrum_tuple.intensity[i]))
     return res
+
 
 def find_mz_in_sirius(fragments, search_mz, mz_threshold, ppm_threshold):
     # Binary search in sirius results to find matching mass
@@ -140,7 +143,7 @@ def find_mz_in_sirius(fragments, search_mz, mz_threshold, ppm_threshold):
 
 def calculateModificationSites(mol, substructure, inParent = True):
     """
-        Calculates the number of modification sites to get mol from substructure.
+        Calculates the number of modification sites to get mol from substructure (works when one moleculte is a substructure of the other molecule)
         Input:
             mol1: first molecule
             substructure: substructure molecule
@@ -179,7 +182,41 @@ def calculateModificationSites(mol, substructure, inParent = True):
                 idx = subMatches.index(atom) # based on rdkit library, the value in matches array are sorted by index
                 res.append(idx)
         return res
+
+
+def get_number_of_modification_edges(mol, substructure):
+    if not mol.HasSubstructMatch(substructure):
+        raise ValueError("The substructure is not a substructure of the molecule.")
     
+    matches = mol.GetSubstructMatch(substructure)
+    intersect = set(matches)
+    modification_edges = []
+    for bond in mol.GetBonds():
+        if bond.GetBeginAtomIdx() in intersect and bond.GetEndAtomIdx() in intersect:
+            continue
+        if bond.GetBeginAtomIdx() in intersect or bond.GetEndAtomIdx() in intersect:
+            modification_edges.append(bond.GetIdx())
+        
+    return modification_edges
+
+
+def get_edit_distance(mol1, mol2):
+    """
+        Calculates the edit distance between mol1 and mol2.
+        Input:
+            mol1: first molecule
+            mol2: second molecule
+        Output:
+            edit_distance: edit distance between mol1 and mol2
+    """
+
+    mcs1 = rdFMCS.FindMCS([mol1, mol2])
+    mcs_mol = Chem.MolFromSmarts(mcs1.smartsString)
+    dist1 = get_number_of_modification_edges(mol1, mcs_mol)
+    dist2 = get_number_of_modification_edges(mol2, mcs_mol)
+    return len(dist1) + len(dist2)
+            
+
 def get_modification_graph(main_struct, sub_struct):
     """
         Calculates the substructure difference between main_struct and sub_struct.
@@ -191,6 +228,7 @@ def get_modification_graph(main_struct, sub_struct):
             index_in_frag: index of the modification atom in the fragment
             bondType: bond type of the modification bond
     """
+
     atoms_of_substructure = main_struct.GetSubstructMatch(sub_struct)
     for bond in main_struct.GetBonds():
         count = 0
@@ -236,6 +274,7 @@ def attach_struct(main_struct, frag, main_location, frag_location, bond_type):
         Output:
             new_mol: the new molecule after attachment
     """
+
     new_mol = Chem.CombineMols(main_struct, frag)
     new_mol = Chem.EditableMol(new_mol)
     new_mol.AddBond(main_location, frag_location + main_struct.GetNumAtoms(), bond_type)
@@ -267,6 +306,7 @@ def generate_possible_stuctures(main_struct, sub_struct):
         Output:
             list of possible_structures: all possible structures after attachment with the index of the atom
     """
+
     frag, index_in_frag, bondType = get_modification_graph(main_struct, sub_struct)
 
     structs = []
@@ -326,6 +366,7 @@ def separateShifted(matchedPeaks, mol1peaks, mol2peaks, eps = 0.1):
     """
     Separates the shifted and unshifted peaks.
     """
+
     shifted = []
     unshifted = []
     for peak in matchedPeaks:
@@ -339,6 +380,7 @@ def peaks_string_to_list(peaks_string):
     """
     Converts the explained peaks string to a list of tuples.
     """
+
     peaks_list = []
     for peak in peaks_string.split(";"):
         peak = peak.split(":")
@@ -349,6 +391,7 @@ def is_substruct_substruct(mol1, mol2, indx1, indx2):
     """
     Checks if the substructure mol1[indx1] is a substructure of the substructure mol2[indx2].
     """
+
     emol = Chem.EditableMol(mol1)
     for atom in reversed(range(mol1.GetNumAtoms())):
         if atom not in indx1:

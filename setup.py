@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='ModiFinder',
-    version='1.04',
+    version='1.05',
     packages=find_packages(),
     install_requires=[
         'cairosvg',
