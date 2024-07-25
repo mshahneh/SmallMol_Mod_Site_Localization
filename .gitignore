@@ -7,3 +7,4 @@ Makefile
 source/*
 !source/conf.py
 !source/index.rst
+models/predict_modification_site.model

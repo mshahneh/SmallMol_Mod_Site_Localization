@@ -48,9 +48,7 @@ def _cosine_fast(
                 and abs(peak_mz - (spec_other.mz[other_peak_i] + mass_diff[cpi])) <= fragment_mz_tolerance
             ):
                 if abs(peak_mz - (spec_other.mz[other_peak_i] + mass_diff[cpi])) <= (fragment_ppm_tolerance * peak_mz / 1e6):
-                    peak_match_scores.append(
-                        peak_intensity * spec_other.intensity[other_peak_i]
-                    )
+                    peak_match_scores.append(peak_intensity * spec_other.intensity[other_peak_i])
                     peak_match_idx.append((peak_index, other_peak_i))
                 index += 1
                 other_peak_i = other_peak_index[cpi] + index
