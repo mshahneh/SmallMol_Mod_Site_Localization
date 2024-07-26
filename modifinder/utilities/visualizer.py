@@ -9,10 +9,10 @@ Author: Shahneh
 from rdkit import Chem
 from rdkit.Chem import AllChem, Descriptors, rdFMCS
 from rdkit.Chem import Draw
-from network import *
-from gnps_types import *
-from general_utils import *
-import mol_utils as mu
+from modifinder.utilities.network import *
+from modifinder.utilities.gnps_types import *
+from modifinder.utilities.general_utils import *
+import modifinder.utilities.mol_utils as mu
 import io
 import matplotlib.image as mpimg
 import matplotlib.pyplot as plt

@@ -8,7 +8,7 @@ Author: Shahneh
 
 import json
 import requests
-from gnps_types import *
+from modifinder.utilities.gnps_types import *
 
 def usi_to_accession(usi: str) -> str:
     """

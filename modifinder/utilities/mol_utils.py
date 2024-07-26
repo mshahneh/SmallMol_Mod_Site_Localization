@@ -6,10 +6,11 @@ This file contains utility functions around molecules
 Author: Shahneh
 """
 
+import copy
 from rdkit import Chem
 from rdkit.Chem import AllChem, Descriptors, rdFMCS
 from copy import deepcopy
-from network import *
+from modifinder.utilities.network import *
 
 def get_modification_nodes(mol1, mol2, in_mol1 = True):
     """
@@ -421,8 +422,8 @@ def _calculateModificationSites(mol, substructure, inParent = True):
 
 
 def _get_molecules(mol1, mol2):
-    copy_mol1 = mol1.__copy__()
-    copy_mol2 = mol2.__copy__()
+    copy_mol1 = copy.deepcopy(mol1)
+    copy_mol2 = copy.deepcopy(mol2)
     copy_mol1 = _get_molecule(copy_mol1)
     copy_mol2 = _get_molecule(copy_mol2)
     if copy_mol1 is None or copy_mol2 is None:
