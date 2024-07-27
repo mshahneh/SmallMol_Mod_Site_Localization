@@ -96,6 +96,7 @@ def get_transition(input1, input2):
                 'removed_edges_bridge': the removed edges between the common substructure and the removed
     """
     mol1, mol2 = _get_molecules(input1, input2)
+    copy_mol1, copy_mol2 = Chem.Mol(mol1), Chem.Mol(mol2)
     # finding the maximum common substructure
     mcs1 = rdFMCS.FindMCS([mol1, mol2])
     mcs_mol = Chem.MolFromSmarts(mcs1.smartsString)
@@ -112,26 +113,14 @@ def get_transition(input1, input2):
 
     # calculating the removed atoms from mol1
     removed_atoms = list(set(range(mol1.GetNumAtoms())) - set(mol1_indices))
-    removed_edges_inside = []
-    removed_edges_bridge = []
-    for bond in mol1.GetBonds():
-        if bond.GetBeginAtomIdx() in removed_atoms and bond.GetEndAtomIdx() in removed_atoms:
-            removed_edges_inside.append((bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()))
-        elif bond.GetBeginAtomIdx() in removed_atoms or bond.GetEndAtomIdx() in removed_atoms:
-            removed_edges_bridge.append((bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()))
+    removed_edges_bridge, removed_edges_inside = _get_edge_modifications(mol1, mcs_mol, mol1_indices)
 
     # calculating the added atoms from mol2
     added_atoms = set(range(mol2.GetNumAtoms())) - set(mol2_indices)
-    added_edges_inside = []
-    added_edges_bridge = []
-    for bond in mol2.GetBonds():
-        if bond.GetBeginAtomIdx() in added_atoms and bond.GetEndAtomIdx() in added_atoms:
-            added_edges_inside.append((bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()))
-        elif bond.GetBeginAtomIdx() in added_atoms or bond.GetEndAtomIdx() in added_atoms:
-            added_edges_bridge.append((bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()))
+    added_edges_bridge, added_edges_inside = _get_edge_modifications(mol2, mcs_mol, mol2_indices)
 
     # creating the merged molecule
-    editable_mol = Chem.EditableMol(mol1)
+    editable_mol = Chem.EditableMol(copy_mol1)
     ## adding the atoms from mol2
     n = mol1.GetNumAtoms()
     map_old_mol2_to_added = dict() # mapping from the old mol2 indices to the new indices in the merged molecule (for the added atoms)
@@ -139,10 +128,14 @@ def get_transition(input1, input2):
         editable_mol.AddAtom(mol2.GetAtomWithIdx(atom))
         map_old_mol2_to_added[atom] = n
         n += 1
+    for atom in mol2_indices:
+        map_old_mol2_to_added[atom] = map_mcs_from_mol2_to_mol1[atom]
+    print("map_old_mol2_to_added", map_old_mol2_to_added)
     ## adding the bonds from mol2
     updated_added_edges_inside = []
     for bond in added_edges_inside:
-        editable_mol.AddBond(map_old_mol2_to_added[bond[0]], map_old_mol2_to_added[bond[1]], order=mol2.GetBondBetweenAtoms(bond[0], bond[1]).GetBondType())
+        print(bond)
+        editable_mol.AddBond(map_old_mol2_to_added[bond[0]], map_old_mol2_to_added[bond[1]], order=copy_mol2.GetBondBetweenAtoms(bond[0], bond[1]).GetBondType())
         updated_added_edges_inside.append((map_old_mol2_to_added[bond[0]], map_old_mol2_to_added[bond[1]]))
     updated_added_edges_bridge = []
     for bond in added_edges_bridge:
@@ -153,14 +146,19 @@ def get_transition(input1, input2):
             index1 = map_mcs_from_mol2_to_mol1[bond[0]]
             index2 = map_old_mol2_to_added[bond[1]]
         updated_added_edges_bridge.append((index1, index2))
-        editable_mol.AddBond(index1, index2, order=mol2.GetBondBetweenAtoms(bond[0], bond[1]).GetBondType())
-    
+        editable_mol.AddBond(index1, index2, order=copy_mol2.GetBondBetweenAtoms(bond[0], bond[1]).GetBondType())
     ## adding the common bonds
     common_bonds = []
     for bond in mol1.GetBonds():
-        if bond.GetBeginAtomIdx() in mol1_indices and bond.GetEndAtomIdx() in mol1_indices:
-            common_bonds.append((bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()))
+        pair = (bond.GetBeginAtomIdx(), bond.GetEndAtomIdx())
+        if pair in removed_edges_inside or pair in removed_edges_bridge:
+            continue
+        pair2 = (bond.GetEndAtomIdx(), bond.GetBeginAtomIdx())
+        if pair2 in removed_edges_inside or pair2 in removed_edges_bridge:
+            continue
+        common_bonds.append(pair)
 
+    
     common_atoms = mol1_indices
     mol1_atoms = removed_atoms
     mol2_atoms = [map_old_mol2_to_added[i] for i in added_atoms]
@@ -333,6 +331,8 @@ def _find_minimal_modification_edges_match(mol, substructure):
         Output:
             match array
     """
+    if not mol.HasSubstructMatch(substructure):
+        raise ValueError("The substructure is not a substructure of the molecule")
     matches = mol.GetSubstructMatches(substructure)
     if len(matches) == 1:
         return matches[0]
@@ -368,9 +368,9 @@ def _get_edge_modifications(mol, substructure, match):
                 a1 = reverse_match[bond.GetBeginAtomIdx()]
                 a2 = reverse_match[bond.GetEndAtomIdx()]
                 if substructure.GetBondBetweenAtoms(a1, a2) is None:
-                    modificationEdgesInside.append((a1, a2))
+                    modificationEdgesInside.append((bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()))
             else:
-                modificationEdgesOutward.append(bond.GetIdx())
+                modificationEdgesOutward.append((bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()))
         else:
             continue
     

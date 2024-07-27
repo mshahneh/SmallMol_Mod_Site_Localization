@@ -103,7 +103,7 @@ def draw_molecule(molecule, output_type='png', font_size = None, label=None, lab
         return svg
 
 
-def draw_modifications(mol1, mol2, output_type='png', show_legend = True, legend_font = 15, legend_position = None, **kwargs):
+def draw_modifications(mol1, mol2, output_type='png', show_legend = True, legend_font = 15, legend_position = None, highlight_common = True, highlight_added = True, highlight_removed=True, **kwargs):
     """
     Draw the modifications from molecule 1 to molecule 2
     :param mol1: rdkit molecule
@@ -112,6 +112,9 @@ def draw_modifications(mol1, mol2, output_type='png', show_legend = True, legend
     :param show_legend: bool - show the legend or not
     :param legend_font: int - font size of the legend
     :param legend_position: tuple - position of the legend
+    :param highlight_common: bool - highlight the common atoms
+    :param highlight_added: bool - highlight the added atoms
+    :param highlight_removed: bool - highlight the removed atoms
     """
     mol1, mol2 = mu._get_molecules(mol1, mol2)
     result = mu.get_transition(mol1, mol2)
@@ -122,30 +125,48 @@ def draw_modifications(mol1, mol2, output_type='png', show_legend = True, legend
     highlight_color_added_dark = (0, 0.7, 0.2, 0.7)
     highlight_color_common = (0.1, 0.1, 0.8, 0.2)
 
-    highlight_atoms = list(range(result['merged_mol'].GetNumAtoms()))
-    highlight_bonds = list(range(result['merged_mol'].GetNumBonds()))
+    highlight_atoms = []
+    highlight_bonds = []
     highlight_atoms_colors = dict()
     highlight_bonds_colors = dict()
 
-    for atom in result['common_atoms']:
-        highlight_atoms_colors[atom] = highlight_color_common
-    for atom in result['removed_atoms']:
-        highlight_atoms_colors[atom] = highlight_color_removed
-    for atom in result['added_atoms']:
-        highlight_atoms_colors[atom] = highlight_color_added
+    if highlight_common:
+        for atom in result['common_atoms']:
+            highlight_atoms.append(atom)
+            highlight_atoms_colors[atom] = highlight_color_common
+    
+    if highlight_added:
+        for atom in result['added_atoms']:
+            highlight_atoms.append(atom)
+            highlight_atoms_colors[atom] = highlight_color_added
+
+    if highlight_removed:
+        for atom in result['removed_atoms']:
+            highlight_atoms.append(atom)
+            highlight_atoms_colors[atom] = highlight_color_removed
 
     for bondIdx in range(result['merged_mol'].GetNumBonds()):
         bond = result['merged_mol'].GetBondWithIdx(bondIdx)
-        if (bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()) in result['common_bonds']:
-            highlight_bonds_colors[bondIdx] = highlight_color_common
-        elif (bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()) in result['removed_edges_inside']:
-            highlight_bonds_colors[bondIdx] = highlight_color_removed
-        elif (bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()) in result['added_edges_inside']:
-            highlight_bonds_colors[bondIdx] = highlight_color_added
-        elif (bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()) in result['removed_edges_bridge']:
-            highlight_bonds_colors[bondIdx] = highlight_color_removed_dark
-        elif (bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()) in result['added_edges_bridge']:
-            highlight_bonds_colors[bondIdx] = highlight_color_added_dark
+        pair1 = (bond.GetBeginAtomIdx(), bond.GetEndAtomIdx())
+        pair2 = (bond.GetEndAtomIdx(), bond.GetBeginAtomIdx())
+        if highlight_common:
+            if pair1 in result['common_bonds'] or pair2 in result['common_bonds']:
+                highlight_bonds_colors[bondIdx] = highlight_color_common
+                highlight_bonds.append(bondIdx)
+        if highlight_added:
+            if pair1 in result['added_edges_bridge'] or pair2 in result['added_edges_bridge']:
+                highlight_bonds_colors[bondIdx] = highlight_color_added_dark
+                highlight_bonds.append(bondIdx)
+            elif pair1 in result['added_edges_inside'] or pair2 in result['added_edges_inside']:
+                highlight_bonds_colors[bondIdx] = highlight_color_added
+                highlight_bonds.append(bondIdx)
+        if highlight_removed:
+            if pair1 in result['removed_edges_bridge'] or pair2 in result['removed_edges_bridge']:
+                highlight_bonds_colors[bondIdx] = highlight_color_removed_dark
+                highlight_bonds.append(bondIdx)
+            elif pair1 in result['removed_edges_inside'] or pair2 in result['removed_edges_inside']:
+                highlight_bonds_colors[bondIdx] = highlight_color_removed
+                highlight_bonds.append(bondIdx)
 
     img = draw_molecule(result['merged_mol'], highlightAtoms=highlight_atoms, highlightAtomColors=highlight_atoms_colors, highlightBonds=highlight_bonds, highlightBondColors=highlight_bonds_colors, output_type=output_type, **kwargs)
     if show_legend:
