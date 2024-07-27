@@ -103,7 +103,7 @@ def draw_molecule(molecule, output_type='png', font_size = None, label=None, lab
         return svg
 
 
-def draw_modifications(mol1, mol2, output_type='png', show_legend = True, legend_font = 15, legend_position = None, highlight_common = True, highlight_added = True, highlight_removed=True, **kwargs):
+def draw_modifications(mol1, mol2, output_type='png', show_legend = True, legend_font = 15, legend_position = None, highlight_common = True, highlight_added = True, highlight_removed=True, modification_only = False, **kwargs):
     """
     Draw the modifications from molecule 1 to molecule 2
     :param mol1: rdkit molecule
@@ -115,6 +115,7 @@ def draw_modifications(mol1, mol2, output_type='png', show_legend = True, legend
     :param highlight_common: bool - highlight the common atoms
     :param highlight_added: bool - highlight the added atoms
     :param highlight_removed: bool - highlight the removed atoms
+    :param modification_only: bool - only highlight the modification edges, if highlight_removed or highlight_added is False, this will only show the enabled ones
     """
     mol1, mol2 = mu._get_molecules(mol1, mol2)
     result = mu.get_transition(mol1, mol2)
@@ -129,6 +130,9 @@ def draw_modifications(mol1, mol2, output_type='png', show_legend = True, legend
     highlight_bonds = []
     highlight_atoms_colors = dict()
     highlight_bonds_colors = dict()
+
+    if modification_only:
+        highlight_common = False
 
     if highlight_common:
         for atom in result['common_atoms']:
@@ -145,6 +149,9 @@ def draw_modifications(mol1, mol2, output_type='png', show_legend = True, legend
             highlight_atoms.append(atom)
             highlight_atoms_colors[atom] = highlight_color_removed
 
+    modification_added_edges = result['modified_added_edges_bridge'] + result['modified_added_edges_inside']
+    modification_removed_edges = result['modified_removed_edges_bridge'] + result['modified_removed_edges_inside']
+
     for bondIdx in range(result['merged_mol'].GetNumBonds()):
         bond = result['merged_mol'].GetBondWithIdx(bondIdx)
         pair1 = (bond.GetBeginAtomIdx(), bond.GetEndAtomIdx())
@@ -154,17 +161,17 @@ def draw_modifications(mol1, mol2, output_type='png', show_legend = True, legend
                 highlight_bonds_colors[bondIdx] = highlight_color_common
                 highlight_bonds.append(bondIdx)
         if highlight_added:
-            if pair1 in result['added_edges_bridge'] or pair2 in result['added_edges_bridge']:
+            if pair1 in modification_added_edges or pair2 in modification_added_edges:
                 highlight_bonds_colors[bondIdx] = highlight_color_added_dark
                 highlight_bonds.append(bondIdx)
-            elif pair1 in result['added_edges_inside'] or pair2 in result['added_edges_inside']:
+            elif (not modification_only) and (pair1 in result['added_edges'] or pair2 in result['added_edges']):
                 highlight_bonds_colors[bondIdx] = highlight_color_added
                 highlight_bonds.append(bondIdx)
         if highlight_removed:
-            if pair1 in result['removed_edges_bridge'] or pair2 in result['removed_edges_bridge']:
+            if pair1 in modification_removed_edges or pair2 in modification_removed_edges:
                 highlight_bonds_colors[bondIdx] = highlight_color_removed_dark
                 highlight_bonds.append(bondIdx)
-            elif pair1 in result['removed_edges_inside'] or pair2 in result['removed_edges_inside']:
+            elif (not modification_only) and (pair1 in result['removed_edges'] or pair2 in result['removed_edges']):
                 highlight_bonds_colors[bondIdx] = highlight_color_removed
                 highlight_bonds.append(bondIdx)
 
