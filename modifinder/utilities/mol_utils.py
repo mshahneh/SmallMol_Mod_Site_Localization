@@ -12,6 +12,12 @@ from rdkit.Chem import AllChem, Descriptors, rdFMCS
 from copy import deepcopy
 from modifinder.utilities.network import *
 
+import rdkit.rdBase as rkrb
+import rdkit.RDLogger as rkl
+logger = rkl.logger()
+logger.setLevel(rkl.ERROR)
+rkrb.DisableLog('rdApp.error')
+
 def get_modification_nodes(mol1, mol2, in_mol1 = True):
     """
         Calculates the modification sites between two molecules when one molecule is a substructure of the other molecule
@@ -132,11 +138,9 @@ def get_transition(input1, input2):
         n += 1
     for atom in mol2_indices:
         map_old_mol2_to_added[atom] = map_mcs_from_mol2_to_mol1[atom]
-    print("map_old_mol2_to_added", map_old_mol2_to_added)
     ## adding the bonds from mol2
     updated_modified_added_edges_inside = []
     for bond in modified_added_edges_inside:
-        print(bond)
         editable_mol.AddBond(map_old_mol2_to_added[bond[0]], map_old_mol2_to_added[bond[1]], order=copy_mol2.GetBondBetweenAtoms(bond[0], bond[1]).GetBondType())
         updated_modified_added_edges_inside.append((map_old_mol2_to_added[bond[0]], map_old_mol2_to_added[bond[1]]))
     updated_modified_added_edges_bridge = []
