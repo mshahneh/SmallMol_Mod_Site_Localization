@@ -19,7 +19,7 @@ setup(
         'pillow',
         'openpyxl',
         'openpyxl-image-loader',
-        'msbuddy',
+        'msbuddy==0.2.3',
         'lightgbm',
         'seaborn'
     ],
