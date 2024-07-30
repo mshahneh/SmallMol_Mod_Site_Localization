@@ -13,6 +13,7 @@ from modifinder.utilities.network import *
 from modifinder.utilities.gnps_types import *
 from modifinder.utilities.general_utils import *
 import modifinder.utilities.mol_utils as mu
+import modifinder.utilities.spectra_utils as su
 import io
 import matplotlib.image as mpimg
 import matplotlib.pyplot as plt
@@ -243,7 +244,7 @@ def draw_molecule_heatmap(molecule, scores, output_type='png', show_labels = Fal
     return img
 
 
-def draw_spectrum(spectrum, output_type='png', colors: dict = {}, fliped = False, size = None, show_x_label = False, show_y_label = False, font_size = None, bar_width = 3, x_lim = None,  **kwargs):
+def draw_spectrum(spectrum, output_type='png', normalized_peaks = False, colors: dict = {}, fliped = False, size = None, show_x_label = False, show_y_label = False, font_size = None, bar_width = 3, x_lim = None,  **kwargs):
     """
     Draw a spectrum
     :param spectrum: SpectrumTuple or list of tuples (mz, intensity)
@@ -251,6 +252,8 @@ def draw_spectrum(spectrum, output_type='png', colors: dict = {}, fliped = False
     :param colors: dictionary of colors for the peaks, keys are the indices of the peaks, if value is a list, the first value is the color of top half and the second value is the color of the bottom half
     """
     spectrum = get_spectrum(spectrum)
+    if normalized_peaks:
+        spectrum = su.normalize_peaks(spectrum)
     
     # if output type is ax, use the ax to draw the spectrum
     if isinstance(output_type, plt.Axes):
@@ -551,8 +554,6 @@ def _overlay_legend(img, legend, position, output_type):
         
         if type(position) != tuple:
             raise ValueError("Position should be a tuple")
-        
-        print(position, img2.size, legend.size)
         
         size = (max(img2.size[0], legend.size[0] + position[0]), max(img2.size[1], legend.size[1] + position[1] ))
         combined_image = Image.new("RGBA", size, img2.getpixel((0, 0)))
