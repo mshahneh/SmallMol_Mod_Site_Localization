@@ -244,7 +244,7 @@ def draw_molecule_heatmap(molecule, scores, output_type='png', show_labels = Fal
     return img
 
 
-def draw_spectrum(spectrum, output_type='png', normalized_peaks = False, colors: dict = {}, fliped = False, size = None, show_x_label = False, show_y_label = False, font_size = None, bar_width = 3, x_lim = None,  **kwargs):
+def draw_spectrum(spectrum, output_type='png', normalize_peaks = False, colors: dict = {}, flipped = False, size = None, show_x_label = False, show_y_label = False, font_size = None, bar_width = 3, x_lim = None,  **kwargs):
     """
     Draw a spectrum
     :param spectrum: SpectrumTuple or list of tuples (mz, intensity)
@@ -252,7 +252,7 @@ def draw_spectrum(spectrum, output_type='png', normalized_peaks = False, colors:
     :param colors: dictionary of colors for the peaks, keys are the indices of the peaks, if value is a list, the first value is the color of top half and the second value is the color of the bottom half
     """
     spectrum = get_spectrum(spectrum)
-    if normalized_peaks:
+    if normalize_peaks:
         spectrum = su.normalize_peaks(spectrum)
     
     # if output type is ax, use the ax to draw the spectrum
@@ -263,7 +263,10 @@ def draw_spectrum(spectrum, output_type='png', normalized_peaks = False, colors:
             fig, ax = plt.subplots()
         else:
             fig, ax = plt.subplots(figsize=size)
-    
+    if normalize_peaks:
+        ax.set_ylim(0, 1)
+        ax.set_yticks(list(np.arange(0, 1.001, 0.2)))
+
     if font_size is not None:
         plt.rcParams.update({'font.size': font_size})
 
@@ -290,7 +293,7 @@ def draw_spectrum(spectrum, output_type='png', normalized_peaks = False, colors:
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
 
-    if fliped:
+    if flipped:
         ax.invert_yaxis()
         ax.xaxis.tick_top()
         ax.xaxis.set_label_position('top')
@@ -299,7 +302,7 @@ def draw_spectrum(spectrum, output_type='png', normalized_peaks = False, colors:
     
     if x_lim is not None:
         ax.set_xlim(x_lim)
-    
+
     if output_type == "png":
         fig.patch.set_alpha(0)
         fig.canvas.draw()
@@ -317,7 +320,7 @@ def draw_spectrum(spectrum, output_type='png', normalized_peaks = False, colors:
         return ax
 
 
-def draw_alignment(spectrums, matches, output_type='png', size = None, dpi=300, draw_mapping_lines = True, ppm=40, x_lim=None, **kwargs):
+def draw_alignment(spectrums, matches, output_type='png', normalize_peaks = False, size = None, dpi=300, draw_mapping_lines = True, ppm=40, x_lim=None, **kwargs):
     """
     Draw the alignment of the spectrums
     :param spectrums: list of SpectrumTuple or list of list of tuples (mz, intensity)
@@ -332,6 +335,8 @@ def draw_alignment(spectrums, matches, output_type='png', size = None, dpi=300, 
     """
     
     spectrums = [get_spectrum(spectrum) for spectrum in spectrums]
+    if normalize_peaks:
+        spectrums = [su.normalize_peaks(spectrum) for spectrum in spectrums]
 
     if x_lim is None:
         x_lim = (min(spectrums[0].mz), max(spectrums[0].mz))
@@ -354,7 +359,12 @@ def draw_alignment(spectrums, matches, output_type='png', size = None, dpi=300, 
     if len(matches) == 1:
         if type(matches[0][0]) == int:
             matches = [matches]
-    
+
+    flipped = False
+    if "flipped" in kwargs:
+        flipped = kwargs["flipped"]
+        kwargs.pop("flipped")
+
     lines = []
     for match_index, match in enumerate(matches):
         for pair in match:
@@ -379,15 +389,23 @@ def draw_alignment(spectrums, matches, output_type='png', size = None, dpi=300, 
                 colors[match_index+1][pair[1]][0] = temp_color
             
             if draw_mapping_lines:
-                lines.append([(match_index, spectrums[match_index].mz[pair[0]], 0), (match_index+1, spectrums[match_index+1].mz[pair[1]], spectrums[match_index+1].intensity[pair[1]]), temp_color])
+                if flipped and match_index == 0:
+                    lines.append([(match_index, spectrums[match_index].mz[pair[0]], 0), (match_index+1, spectrums[match_index+1].mz[pair[1]], 0), temp_color])
+                else:
+                    lines.append([(match_index, spectrums[match_index].mz[pair[0]], 0), (match_index+1, spectrums[match_index+1].mz[pair[1]], spectrums[match_index+1].intensity[pair[1]]), temp_color])
     
                 
     if size is None:
         fig, axs = plt.subplots(len(spectrums), 1)
     else:
         fig, axs = plt.subplots(len(spectrums), 1, figsize=size)
+
     for index, spectrum in enumerate(spectrums):
-        draw_spectrum(spectrum, output_type=axs[index], colors=colors[index], x_lim=x_lim, **kwargs)
+        if len(spectrums) == 2 and index == 1:
+            draw_spectrum(spectrum, output_type=axs[index], colors=colors[index], x_lim=x_lim, normalize_peaks=normalize_peaks, flipped=flipped, **kwargs)
+        else:
+            draw_spectrum(spectrum, output_type=axs[index], colors=colors[index], x_lim=x_lim, normalize_peaks=normalize_peaks, flipped=False, **kwargs)
+
     
     for line in lines:
         if "bar_width" in kwargs:
@@ -398,7 +416,12 @@ def draw_alignment(spectrums, matches, output_type='png', size = None, dpi=300, 
         axs[line[1][0]].add_artist(con)
     
     # remove all extra paddings (but make sure the labels are not cut)
-    plt.subplots_adjust(hspace=0.1, wspace=0)
+    if flipped and len(spectrums) == 2:
+        # remove xtick labels
+        axs[1].set_xticklabels([])
+        plt.subplots_adjust(hspace=0.01, wspace=0)
+    else:
+        plt.subplots_adjust(hspace=0.1, wspace=0)
     plt.tight_layout()
     
     if output_type == "png":
