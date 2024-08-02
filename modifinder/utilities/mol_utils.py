@@ -90,8 +90,8 @@ def get_edit_distance_detailed(mol1, mol2):
             mol1: first molecule
             mol2: second molecule
         Output:
-            added edges: the added edges that are not modification edges
-            removed edges: the removed edges that are not modification edges
+            removed edges: the removed modification edges
+            added edges: the added modification edges
     """
     copy_mol1, copy_mol2 = _get_molecules(mol1, mol2)
     mcs1 = rdFMCS.FindMCS([copy_mol1, copy_mol2])
