@@ -83,6 +83,24 @@ def get_edit_distance(mol1, mol2):
     return len(dist1) + len(dist2)
 
 
+def get_edit_distance_detailed(mol1, mol2):
+    """
+        Calculates the edit distance between mol1 and mol2.
+        Input:
+            mol1: first molecule
+            mol2: second molecule
+        Output:
+            added edges: the added edges that are not modification edges
+            removed edges: the removed edges that are not modification edges
+    """
+    copy_mol1, copy_mol2 = _get_molecules(mol1, mol2)
+    mcs1 = rdFMCS.FindMCS([copy_mol1, copy_mol2])
+    mcs_mol = Chem.MolFromSmarts(mcs1.smartsString)
+    dist1 = get_modification_edges(copy_mol1, mcs_mol)
+    dist2 = get_modification_edges(copy_mol2, mcs_mol)
+    return len(dist1), len(dist2)
+
+
 def get_transition(input1, input2):
     """
         Calculates the transition between mol1 and mol2.
