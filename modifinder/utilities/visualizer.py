@@ -14,6 +14,7 @@ from modifinder.utilities.gnps_types import *
 from modifinder.utilities.general_utils import *
 import modifinder.utilities.mol_utils as mu
 import modifinder.utilities.spectra_utils as su
+from modifinder.alignment import _cosine_fast
 import io
 import matplotlib.image as mpimg
 import matplotlib.pyplot as plt
@@ -24,10 +25,10 @@ from matplotlib.patches import ConnectionPatch
 import os
 from io import BytesIO
 
-def draw_molecule(molecule, output_type='png', font_size = None, label=None, label_font_size = 20, label_color = (0,0,0), label_position = 'top', **kwargs):
+def draw_molecule(mol, output_type='png', font_size = None, label=None, label_font_size = 20, label_color = (0,0,0), label_position = 'top', **kwargs):
     """
     Draw a molecule using RDKit
-    :param molecule: rdkit molecule or str for SMILES or InChI or GNPS identifier (USI or Accession)
+    :param mol: rdkit molecule or str for SMILES or InChI or GNPS identifier (USI or Accession)
     :param output_type: str - type of output (png or svg)
     :param font_size: int - font size for the labels
     :param label: str - label for the molecule
@@ -38,7 +39,7 @@ def draw_molecule(molecule, output_type='png', font_size = None, label=None, lab
     """
     # TODO: test svg
 
-    molecule = mu._get_molecule(molecule)
+    molecule = mu._get_molecule(mol)
     if molecule is None:
         raise ValueError("Molecule not found")
     
@@ -183,10 +184,10 @@ def draw_modifications(mol1, mol2, output_type='png', show_legend = True, legend
     return img
 
 
-def draw_molecule_heatmap(molecule, scores, output_type='png', show_labels = False, shrink_labels = False, annotation_scale = 1, show_legend = True, legend_width = 50, legend_font = 40, **kwargs):
+def draw_molecule_heatmap(mol, scores, output_type='png', show_labels = False, shrink_labels = False, annotation_scale = 1, show_legend = True, legend_width = 50, legend_font = 40, **kwargs):
     """
     Draw a molecule and color the atoms based on the scores
-    :param molecule: rdkit molecule
+    :param mol: rdkit molecule
     :param scores: list of scores for each atom
     :param type: str - type of output (png or svg)
     :param add_labels: bool - add labels to the atoms
@@ -197,7 +198,7 @@ def draw_molecule_heatmap(molecule, scores, output_type='png', show_labels = Fal
     """
     #TODO: test svg
     
-    molecule = mu._get_molecule(molecule)
+    molecule = mu._get_molecule(mol)
     if type(molecule) == str or molecule is None:
         raise ValueError("Molecule not found")
     
@@ -313,14 +314,17 @@ def draw_spectrum(spectrum, output_type='png', normalize_peaks = False, colors: 
     elif output_type == "svg":
         fig.patch.set_alpha(0)
         fig.canvas.draw()
-        svg = fig.canvas.get_svg()
+        buffer = io.BytesIO()
+        fig.savefig(buffer, format='svg', bbox_inches='tight', pad_inches=0, transparent=True)
+        buffer.seek(0)
+        svg = buffer.read().decode('utf-8')
         plt.close(fig)
         return svg
     elif output_type == "ax":
         return ax
 
 
-def draw_alignment(spectrums, matches, output_type='png', normalize_peaks = False, size = None, dpi=300, draw_mapping_lines = True, ppm=40, x_lim=None, **kwargs):
+def draw_alignment(spectrums, matches = None, output_type='png', normalize_peaks = False, size = None, dpi=300, draw_mapping_lines = True, ppm=40, x_lim=None, **kwargs):
     """
     Draw the alignment of the spectrums
     :param spectrums: list of SpectrumTuple or list of list of tuples (mz, intensity)
@@ -351,6 +355,13 @@ def draw_alignment(spectrums, matches, output_type='png', normalize_peaks = Fals
     if matches is None:
         # perform the alignment
         matches = []
+    
+    if matches == 'default':
+        matches = []
+        for i in range(len(spectrums) - 1):
+            cosine, match = _cosine_fast(spectrums[i], spectrums[i+1], 0.1, ppm, True)
+            matches.append(match)
+            
     
     if len(matches) > 0 and len(matches) != len(spectrums) - 1:
         raise ValueError("Number of matches should be equal to the number of spectrums - 1")
@@ -436,7 +447,10 @@ def draw_alignment(spectrums, matches, output_type='png', normalize_peaks = Fals
     elif output_type == "svg":
         fig.patch.set_alpha(0)
         fig.canvas.draw()
-        svg = fig.canvas.get_svg()
+        buffer = io.BytesIO()
+        fig.savefig(buffer, format='svg', bbox_inches='tight', pad_inches=0, transparent=True)
+        buffer.seek(0)
+        svg = buffer.read().decode('utf-8')
         plt.close(fig)
         return svg
     else:
@@ -609,3 +623,14 @@ def _handle_color(color):
             return _hex2rgb(_cname2hex(color))
     else:
         return color
+    
+
+def return_public_functions():
+    return {
+        "draw_molecule": draw_molecule,
+        "draw_modifications": draw_modifications,
+        "draw_molecule_heatmap": draw_molecule_heatmap,
+        "draw_spectrum": draw_spectrum,
+        "draw_alignment": draw_alignment,
+        "draw_frag_of_molecule": draw_frag_of_molecule
+    }
