@@ -111,6 +111,8 @@ def GetFormulaMass(formula):
 
 def GetAdductMass(adduct):
     weight = 0
+    # remove spaces
+    adduct = adduct.replace(' ', '')
     acceptedAdductsFormat = re.compile(r'\[M(?:\+[A-Za-z0-9]+|\-[A-Za-z0-9]+)*\][0-9]*[+-]')
     if not acceptedAdductsFormat.match(adduct):
         raise ValueError('Adduct format not accepted')
