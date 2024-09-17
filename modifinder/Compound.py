@@ -116,10 +116,10 @@ class Compound:
 
         # set the smiles and structure-----------------------------------
         if "Smiles" in data or (structure != None and type(structure) == str and len(structure) > 0):
-            if "Smiles" in data:
-                self.Smiles = data["Smiles"]
-            else:
+            if structure != None and type(structure) == str and len(structure) > 0:
                 self.Smiles = structure
+            else:
+                self.Smiles = data["Smiles"]
 
         self.structure = None
         if structure != None and type(structure) != str:
