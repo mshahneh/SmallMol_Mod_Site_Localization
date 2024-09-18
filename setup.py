@@ -21,7 +21,8 @@ setup(
         'openpyxl-image-loader',
         'msbuddy==0.2.3',
         'lightgbm',
-        'seaborn'
+        'seaborn',
+        'pyteomics'
     ],
     author='Reza Shahneh',
     author_email='mzare008@ucr.edu',
