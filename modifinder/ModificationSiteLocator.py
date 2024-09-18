@@ -300,7 +300,7 @@ class ModificationSiteLocator():
                 shifted, unshifted = utils.separateShifted(matched_peaks, self.main_compound.peaks, helper_compound.peaks)
                 self.main_compound.apply_helper(helper_compound, shifted, unshifted, unshifted_mode)
             except:
-                print("Error in applying helper", helper)
+                print("error in applying helper", helper)
                 pass
         
         self.helpers += helpers

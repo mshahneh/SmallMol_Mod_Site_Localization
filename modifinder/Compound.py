@@ -116,10 +116,10 @@ class Compound:
 
         # set the smiles and structure-----------------------------------
         if "Smiles" in data or (structure != None and type(structure) == str and len(structure) > 0):
-            if "Smiles" in data:
-                self.Smiles = data["Smiles"]
-            else:
+            if structure != None and type(structure) == str and len(structure) > 0:
                 self.Smiles = structure
+            else:
+                self.Smiles = data["Smiles"]
 
         self.structure = None
         if structure != None and type(structure) != str:
@@ -128,7 +128,8 @@ class Compound:
             try:
                 self.structure = Chem.MolFromSmiles(self.Smiles)
             except:
-                self.structure = None
+                print("Error in generating structure from smiles")
+                pass
 
         # perform fragmentation------------------------------------------
         if self.structure != None:
@@ -357,7 +358,9 @@ class Compound:
             return
 
 
-        if helper_compound.Precursor_MZ < self.Precursor_MZ:
+        helper_exact_mass = rdMolDescriptors.CalcExactMolWt(helper_compound.structure)
+        main_exact_mass = rdMolDescriptors.CalcExactMolWt(self.structure)
+        if helper_exact_mass < main_exact_mass:
             modification_site = utils.calculateModificationSites(self.structure, helper_compound.structure, True)
         else:
             modification_site = utils.calculateModificationSites(helper_compound.structure, self.structure, False)
