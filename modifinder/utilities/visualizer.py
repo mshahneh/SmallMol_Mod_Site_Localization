@@ -241,7 +241,7 @@ def draw_molecule_heatmap(mol, scores, output_type='png', show_labels = False, s
     kwargs['extra_info']['scores'] = scores
 
     # draw the molecule
-    img = draw_molecule(mol, **kwargs)
+    img = draw_molecule(mol, output_type=output_type, **kwargs)
     return img
 
 
