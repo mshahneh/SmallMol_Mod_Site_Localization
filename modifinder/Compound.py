@@ -125,7 +125,10 @@ class Compound:
         if structure != None and type(structure) != str:
             self.structure = structure
         elif self.Smiles != None:
-            self.structure = Chem.MolFromSmiles(self.Smiles)
+            try:
+                self.structure = Chem.MolFromSmiles(self.Smiles)
+            except:
+                self.structure = None
 
         # perform fragmentation------------------------------------------
         if self.structure != None:

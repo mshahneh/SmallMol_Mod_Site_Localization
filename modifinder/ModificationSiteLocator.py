@@ -294,10 +294,14 @@ class ModificationSiteLocator():
     def apply_helpers(self, helpers, unshifted_mode = None):
         """Apply the helpers to the main compound."""
         for helper in helpers:
-            helper_compound = Compound(helper, args=self.args)
-            cosine, matched_peaks = align(self.main_compound, helper_compound, self.args["mz_tolerance"], self.args["ppm"])
-            shifted, unshifted = utils.separateShifted(matched_peaks, self.main_compound.peaks, helper_compound.peaks)
-            self.main_compound.apply_helper(helper_compound, shifted, unshifted, unshifted_mode)
+            try:
+                helper_compound = Compound(helper, args=self.args)
+                cosine, matched_peaks = align(self.main_compound, helper_compound, self.args["mz_tolerance"], self.args["ppm"])
+                shifted, unshifted = utils.separateShifted(matched_peaks, self.main_compound.peaks, helper_compound.peaks)
+                self.main_compound.apply_helper(helper_compound, shifted, unshifted, unshifted_mode)
+            except:
+                print("Error in applying helper", helper)
+                pass
         
         self.helpers += helpers
     
