@@ -7,7 +7,7 @@ import json
 from . import utils as utils
 from . import handle_network as handle_network
 from . import rdkit_engine as rdkit_engine
-from utilities import gnps_types as gnps_types
+from modifinder.utilities import gnps_types as gnps_types
 import re
 import math
 
