@@ -90,6 +90,7 @@ class Compound:
             self.peaks = gnps_types.Convert_SpectrumTuple_to_peaks(data["spectrumTuple"])
             self.Precursor_MZ = data["spectrumTuple"].precursor_mz
             self.Charge = data["spectrumTuple"].precursor_charge
+            self.Adduct = data["Adduct"]
         else:
             for arg in important_arguments:
                 if not arg in data and not arg.lower() in data:
