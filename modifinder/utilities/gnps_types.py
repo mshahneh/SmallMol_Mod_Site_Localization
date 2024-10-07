@@ -84,3 +84,13 @@ def parse_data_to_universal(data):
                 pass
             res[convert_to_universal_key(key)] = value
     return res
+
+def Convert_SpectrumTuple_to_peaks(spectrum: SpectrumTuple):
+    """
+    Convert SpectrumTuple to peaks
+    :param spectrum: SpectrumTuple
+    """
+    peaks = []
+    for mz, intensity in zip(spectrum.mz, spectrum.intensity):
+        peaks.append((mz, intensity))
+    return peaks

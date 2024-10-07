@@ -363,5 +363,16 @@ class ModificationSiteLocator():
             res["prediction_confidence"] = self.prediction_confidence(probabilities, trained_model, res)
         
         return res
+    
+    def adjust_alignment(self, matched_pairs, alignment_score):
+        """pass a custom alignment
+        input:
+            matched_pairs: list of tuples, the matched pairs
+            alignment_score: float, the alignment score
+        """
+        
+        self.matched_peaks = matched_pairs
+        self.cosine = alignment_score
+        self.shifted, self.unshifted = utils.separateShifted(self.matched_peaks, self.main_compound.peaks, self.modified_compound.peaks)
 
         

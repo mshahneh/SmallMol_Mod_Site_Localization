@@ -7,6 +7,7 @@ import json
 from . import utils as utils
 from . import handle_network as handle_network
 from . import rdkit_engine as rdkit_engine
+from utilities import gnps_types as gnps_types
 import re
 import math
 
@@ -84,34 +85,39 @@ class Compound:
             self.library_membership = data["library_membership"]
         if "spectrum_id" in data:
             self.accession = data["spectrum_id"]
-            
-        for arg in important_arguments:
-            if not arg in data and not arg.lower() in data:
-                if arg != "peaks":
-                    raise ValueError("Missing argument: " + arg)
-                elif "peaks_json" in data:
-                    self.peaks = json.loads(data["peaks_json"])
+        
+        if "spectrumTuple" in data:
+            self.peaks = gnps_types.Convert_SpectrumTuple_to_peaks(data["spectrumTuple"])
+            self.Precursor_MZ = data["spectrumTuple"].precursor_mz
+            self.Charge = data["spectrumTuple"].precursor_charge
+        else:
+            for arg in important_arguments:
+                if not arg in data and not arg.lower() in data:
+                    if arg != "peaks":
+                        raise ValueError("Missing argument: " + arg)
+                    elif "peaks_json" in data:
+                        self.peaks = json.loads(data["peaks_json"])
+                    else:
+                        raise ValueError("Missing argument: " + arg)
                 else:
-                    raise ValueError("Missing argument: " + arg)
-            else:
-                if arg.lower() in data:
-                    setattr(self, arg, data[arg.lower()])
-                else:
-                    setattr(self, arg, data[arg])
+                    if arg.lower() in data:
+                        setattr(self, arg, data[arg.lower()])
+                    else:
+                        setattr(self, arg, data[arg])
 
+            self.Charge = int(self.Charge)
+            self.Precursor_MZ = float(self.Precursor_MZ)
+            self.peaks = utils.filter_peaks(
+                self.peaks,
+                self.args["filter_peaks_method"],
+                self.args["filter_peaks_variable"],
+                self.Precursor_MZ,
+                self.Charge,
+            )
+        
         # adjusting the attributes ---------------------------------------
-        self.Charge = int(self.Charge)
-        self.Precursor_MZ = float(self.Precursor_MZ)
         self.Adduct = utils.parse_adduct(self.Adduct)
         self.Adduct_Mass = rdkit_engine.GetAdductMass(self.Adduct)
-
-        self.peaks = utils.filter_peaks(
-            self.peaks,
-            self.args["filter_peaks_method"],
-            self.args["filter_peaks_variable"],
-            self.Precursor_MZ,
-            self.Charge,
-        )
 
 
         # set the smiles and structure-----------------------------------
