@@ -46,12 +46,12 @@ def calculate_matches(data_dict, weight_threshold = 1500, difference_threshold_r
     Calculates the matches between the library.
     It is assumed that the library is passed as a dictionary with unique key identifiers.
     Input:
-        data_dict: dictionary with the library
-        weight_threshold: maximum weight to consider
-        difference_threshold_rate: maximum difference between two weights to consider, if 0 then no threshold is applied
+    data_dict: dictionary with the library
+    weight_threshold: maximum weight to consider
+    difference_threshold_rate: maximum difference between two weights to consider, if 0 then no threshold is applied
     Output:
-        matches: dictionary with the matches, [key] = [list of matches] where key is the number of modification sites
-        cachedStructures: dictionary with the cached structures (built from SMILES strings using RDKit)
+    matches: dictionary with the matches, [key] = [list of matches] where key is the number of modification sites
+    cachedStructures: dictionary with the cached structures (built from SMILES strings using RDKit)
     """
     matches = {}
     cachedStructures = dict()
@@ -105,15 +105,15 @@ def download(url, output, weight_threshold, difference_threshold_rate, library_n
     """
     download function.
     Input:
-        url: URL to download the JSON library from
-        output: output directory
-        weight_threshold (mz : double): maximum weight to consider
-        difference_threshold_rate (double): maximum difference between two weights to consider
-        library_name (string): name of the library
+    url: URL to download the JSON library from
+    output: output directory
+    weight_threshold (mz : double): maximum weight to consider
+    difference_threshold_rate (double): maximum difference between two weights to consider
+    library_name (string): name of the library
     Output:
-        data_dict_filtered: dictionary with the library, filtered to only include the compounds that are in matches
-        matches: dictionary with the matches, [key] = [list of matches] where key is the number of modification sites
-        cachedStructures: dictionary with the cached structures (built from SMILES strings using RDKit)
+    data_dict_filtered: dictionary with the library, filtered to only include the compounds that are in matches
+    matches: dictionary with the matches, [key] = [list of matches] where key is the number of modification sites
+    cachedStructures: dictionary with the cached structures (built from SMILES strings using RDKit)
     """
     disable_rdkit_logging()
 
@@ -162,10 +162,10 @@ def calculate_helpers(matches, data_dict_filtered, output, max_num_modifications
     """
     Calculates the helpers for each compound.
     Input:
-        matches: dataframe of matches
-        max_num_modifications_allowed: maximum number of modification sites allowed
+    matches: dataframe of matches
+    max_num_modifications_allowed: maximum number of modification sites allowed
     Output:
-        helpers: dictionary with the helpers, [key] = [list of helpers] where key is the compound id
+    helpers: dictionary with the helpers, [key] = [list of helpers] where key is the compound id
     """
     helpers = {}
     for i, row in matches.iterrows():
@@ -219,13 +219,13 @@ def store_cached_values(url, library_name, output, weight_threshold, difference_
     """
     Stores the cached values in the output directory.
     Input:
-        url: URL to download the JSON library from
-        library_name (string): name of the library
-        output: output directory
-        weight_threshold (mz : double): maximum weight to consider
-        difference_threshold_rate (double): maximum difference between two weights to consider
+    url: URL to download the JSON library from
+    library_name (string): name of the library
+    output: output directory
+    weight_threshold (mz : double): maximum weight to consider
+    difference_threshold_rate (double): maximum difference between two weights to consider
     Output:
-        True if successful, False otherwise
+    True if successful, False otherwise
     """
     try:
         # create data folder if it does not exist

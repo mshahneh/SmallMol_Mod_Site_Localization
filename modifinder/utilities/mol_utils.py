@@ -1,7 +1,7 @@
 """
 GNPS Utils - Molecule Utils
 ---------------------------
-This file contains utility functions around molecules
+This file contains utility functions around molecules and molecules modification based on RDKit library.
 
 Author: Shahneh
 """

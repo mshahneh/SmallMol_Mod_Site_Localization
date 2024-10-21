@@ -1,7 +1,7 @@
 import argparse
-import ModificationSiteLocator as SiteLocator
+import modifinder.ModificationSiteLocator as SiteLocator
 from modifinder.Compound import Compound
-import visualizer as visualizer
+import modifinder.visualizer as visualizer
 import modifinder.utils as utils
 
 import os

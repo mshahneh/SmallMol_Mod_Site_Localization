@@ -33,8 +33,8 @@ class ModificationSiteLocator():
 
         self.main_compound = main_compound
         self.modified_compound = modified_compound
-        self.main_compound.remove_large_peaks()
-        self.modified_compound.remove_large_peaks()
+        # self.main_compound.remove_large_peaks()
+        # self.modified_compound.remove_large_peaks()
         self.cosine, self.matched_peaks = align(self.main_compound, self.modified_compound, self.args["mz_tolerance"], self.args["ppm"])
         self.shifted, self.unshifted = utils.separateShifted(self.matched_peaks, 
                                                                  self.main_compound.peaks, self.modified_compound.peaks)
@@ -48,9 +48,9 @@ class ModificationSiteLocator():
         """
         For the given peaks, finds the fragments that each atom contributes to
         input:
-            peakids: list of peak ids
+        peakids: list of peak ids
         output:
-            existance: list of dicts for each atom, each dict contains the peak ids as keys and the fragments as values
+        existance: list of dicts for each atom, each dict contains the peak ids as keys and the fragments as values
         """
         existance = [dict() for i in range(len(self.main_compound.structure.GetAtoms()))]
         for peak in peakids:
@@ -88,11 +88,11 @@ class ModificationSiteLocator():
     def calculate_contributions(self, peakids, CI = False, CPA = True, CFA = True, CPE = True):
         """ 
         input:
-            peakids: list of peak ids
-            CI: (Consider_Intensity) bool, if True, the intensity of the peaks is considered (default: False)
-            CPA: (Consider_Peak_Ambiguity) bool, if True, the peak ambiguity (number of fragments assigned to a peak) is considered (default: True)
-            CFA: (Consider_Fragment_Ambiguity) bool, if True, the fragment ambiguity (number of atoms in fragment) is considered (default: True)
-            CPA: (Consider_Peak_Entropy) bool, if True, the peak entropy (how ambiguis the fragments are) is considered (default: True
+        peakids: list of peak ids
+        CI: (Consider_Intensity) bool, if True, the intensity of the peaks is considered (default: False)
+        CPA: (Consider_Peak_Ambiguity) bool, if True, the peak ambiguity (number of fragments assigned to a peak) is considered (default: True)
+        CFA: (Consider_Fragment_Ambiguity) bool, if True, the fragment ambiguity (number of atoms in fragment) is considered (default: True)
+        CPA: (Consider_Peak_Entropy) bool, if True, the peak entropy (how ambiguis the fragments are) is considered (default: True
         """
         num_atoms = len(self.main_compound.structure.GetAtoms())
         existance_data = self.find_existance(peakids)
@@ -125,14 +125,15 @@ class ModificationSiteLocator():
 
     
     def generate_probabilities(self, shifted_only = False, CI = False, CPA = True, CFA = True, CPE = True, method = "old"):
-        """"Generate the probabilities for each atom to be the modification site.
+        """"
+        Generate the probabilities for each atom to be the modification site.
         input:
-            shifted_only: bool, if True, only the shifted peaks are considered
-            CI: (Consider_Intensity) bool, if True, the intensity of the peaks is considered (default: False)
-            CPA: (Consider_Peak_Ambiguity) bool, if True, the peak ambiguity (number of fragments assigned to a peak) is considered when calculating the contribution (default: True)
-            CFA: (Consider_Fragment_Ambiguity) bool, if True, the fragment ambiguity (number of atoms in fragment) is considered (default: True)
-            CPE: (Consider_Peak_Entropy) bool, if True, the peak entropy (how ambiguis the fragments are) is considered (default: True)
-            method: str, the method to generate the probabilities (default: "old")
+        shifted_only: bool, if True, only the shifted peaks are considered
+        CI: (Consider_Intensity) bool, if True, the intensity of the peaks is considered (default: False)
+        CPA: (Consider_Peak_Ambiguity) bool, if True, the peak ambiguity (number of fragments assigned to a peak) is considered when calculating the contribution (default: True)
+        CFA: (Consider_Fragment_Ambiguity) bool, if True, the fragment ambiguity (number of atoms in fragment) is considered (default: True)
+        CPE: (Consider_Peak_Entropy) bool, if True, the peak entropy (how ambiguis the fragments are) is considered (default: True)
+        method: str, the method to generate the probabilities (default: "old")
         """
         
         if method == "random_choice":
@@ -218,12 +219,11 @@ class ModificationSiteLocator():
     def calculate_score(self, true_modification_site, method, probabilities = None, extensive_response = False, filter_ratio = 0.5):
         """Calculate the score for a probability.
         input:
-            true_modification_site: int, the true modification site
-            method: str, the method to calculate the score
-            probabilities: list, the probabilities for each atom to be the modification site
-            extensive_response: bool, if True, the function returns a dictionary with more information
-            filter_ratio: float, the ratio of the highest probability that is considered 
-                        (if 0, all probabilities are considered, if 1, only the highest probability is considered)
+        true_modification_site: int, the true modification site
+        method: str, the method to calculate the score
+        probabilities: list, the probabilities for each atom to be the modification site
+        extensive_response: bool, if True, the function returns a dictionary with more information
+        filter_ratio: float, the ratio of the highest probability that is considered (if 0, all probabilities are considered, if 1, only the highest probability is considered)
         """
         if probabilities is None:
             probabilities = self.generate_probabilities()
@@ -365,10 +365,11 @@ class ModificationSiteLocator():
         return res
     
     def adjust_alignment(self, matched_pairs, alignment_score):
-        """pass a custom alignment
+        """
+        pass a custom alignment
         input:
-            matched_pairs: list of tuples, the matched pairs
-            alignment_score: float, the alignment score
+        matched_pairs: list of tuples, the matched pairs
+        alignment_score: float, the alignment score
         """
         
         self.matched_peaks = matched_pairs

@@ -626,6 +626,9 @@ def _handle_color(color):
     
 
 def return_public_functions():
+    """
+    Return the public functions of the module
+    """
     return {
         "draw_molecule": draw_molecule,
         "draw_modifications": draw_modifications,

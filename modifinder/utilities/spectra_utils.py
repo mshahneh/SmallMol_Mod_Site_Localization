@@ -1,3 +1,11 @@
+"""
+GNPS Utils - Molecule Utils
+---------------------------
+This file contains utility functions around ms spectrums
+
+Author: Shahneh
+"""
+
 import numpy as np
 from modifinder.utilities.network import *
 from modifinder.utilities.gnps_types import *

@@ -143,13 +143,13 @@ def find_mz_in_sirius(fragments, search_mz, mz_threshold, ppm_threshold):
 
 def calculateModificationSites(mol, substructure, inParent = True):
     """
-        Calculates the number of modification sites to get mol from substructure (works when one moleculte is a substructure of the other molecule)
-        Input:
-            mol1: first molecule
-            substructure: substructure molecule
-            inParent: bool, if True, the modification sites are given in the parent molecule, if False, the modification sites are given in the substructure
-        Output:
-            count: modification sites
+    Calculates the number of modification sites to get mol from substructure (works when one moleculte is a substructure of the other molecule)
+    Input:
+    mol1: first molecule
+    substructure: substructure molecule
+    inParent: bool, if True, the modification sites are given in the parent molecule, if False, the modification sites are given in the substructure
+    Output:
+    count: modification sites
     """
 
     matches = mol.GetSubstructMatch(substructure)
@@ -202,12 +202,12 @@ def get_number_of_modification_edges(mol, substructure):
 
 def get_edit_distance(mol1, mol2):
     """
-        Calculates the edit distance between mol1 and mol2.
-        Input:
-            mol1: first molecule
-            mol2: second molecule
-        Output:
-            edit_distance: edit distance between mol1 and mol2
+    Calculates the edit distance between mol1 and mol2.
+    Input:
+    mol1: first molecule
+    mol2: second molecule
+    Output:
+    edit_distance: edit distance between mol1 and mol2
     """
 
     mcs1 = rdFMCS.FindMCS([mol1, mol2])
@@ -219,14 +219,14 @@ def get_edit_distance(mol1, mol2):
 
 def get_modification_graph(main_struct, sub_struct):
     """
-        Calculates the substructure difference between main_struct and sub_struct.
-        Input:
-            main_struct: main molecule
-            sub_struct: substructure molecule
-        Output:
-            frag: modified fragment mol
-            index_in_frag: index of the modification atom in the fragment
-            bondType: bond type of the modification bond
+    Calculates the substructure difference between main_struct and sub_struct.
+    Input:
+    main_struct: main molecule
+    sub_struct: substructure molecule
+    Output:
+    frag: modified fragment mol
+    index_in_frag: index of the modification atom in the fragment
+    bondType: bond type of the modification bond
     """
 
     atoms_of_substructure = main_struct.GetSubstructMatch(sub_struct)
@@ -264,15 +264,15 @@ def get_modification_graph(main_struct, sub_struct):
 
 def attach_struct(main_struct, frag, main_location, frag_location, bond_type):
     """
-        Attaches the frag to main_struct at the main_location and frag_location with bond_type.
-        Input:
-            main_struct: main molecule
-            frag: substructure molecule
-            main_location: the atom index of main_struct to attach frag
-            frag_location: the atom index of frag to attach main_struct
-            bond_type: the bond type to attach
-        Output:
-            new_mol: the new molecule after attachment
+    Attaches the frag to main_struct at the main_location and frag_location with bond_type.
+    Input:
+    main_struct: main molecule
+    frag: substructure molecule
+    main_location: the atom index of main_struct to attach frag
+    frag_location: the atom index of frag to attach main_struct
+    bond_type: the bond type to attach
+    Output:
+    new_mol: the new molecule after attachment
     """
 
     new_mol = Chem.CombineMols(main_struct, frag)
@@ -299,12 +299,12 @@ def attach_struct_try(main_struct, frag, main_location, frag_location, bond_type
 
 def generate_possible_stuctures(main_struct, sub_struct):
     """
-        Generates all possible structures after attaching sub_struct to main_struct.
-        Input:
-            main_struct: main molecule
-            sub_struct: substructure molecule
-        Output:
-            list of possible_structures: all possible structures after attachment with the index of the atom
+    Generates all possible structures after attaching sub_struct to main_struct.
+    Input:
+    main_struct: main molecule
+    sub_struct: substructure molecule
+    Output:
+    list of possible_structures: all possible structures after attachment with the index of the atom
     """
 
     frag, index_in_frag, bondType = get_modification_graph(main_struct, sub_struct)
@@ -321,13 +321,13 @@ def generate_possible_stuctures(main_struct, sub_struct):
 
 def getHitAtomsAndBonds(mol, substructure):
     """
-        Returns the atoms and bonds that are hit by the substructure.
-        Input:
-            mol: molecule
-            substructure: substructure molecule
-        Output:
-            hitAtoms: list of hit atoms
-            hitBonds: list of hit bonds
+    Returns the atoms and bonds that are hit by the substructure.
+    Input:
+    mol: molecule
+    substructure: substructure molecule
+    Output:
+    hitAtoms: list of hit atoms
+    hitBonds: list of hit bonds
     """
     
     matches = mol.GetSubstructMatches(substructure)
