@@ -233,10 +233,11 @@ def get_modification_graph(main_struct, sub_struct):
     atoms_of_substructure = _find_minimal_modification_edges_match(main_struct, sub_struct)
     modificationEdgesOutward, modificationEdgesInside, _ = _get_edge_modifications(main_struct, sub_struct, atoms_of_substructure)
     for bond in modificationEdgesOutward:
-        frag_modif_atom = bond.GetBeginAtomIdx()
-        bondType = bond.GetBondType()
-        if bond.GetBeginAtomIdx() in atoms_of_substructure:
-            frag_modif_atom = bond.GetEndAtomIdx()
+        new_bond = main_struct.GetBondBetweenAtoms(bond[0], bond[1])
+        frag_modif_atom = new_bond.GetBeginAtomIdx()
+        bondType = new_bond.GetBondType()
+        if new_bond.GetBeginAtomIdx() in atoms_of_substructure:
+            frag_modif_atom = new_bond.GetEndAtomIdx()
         break
 
     # create a copy of the main structure
