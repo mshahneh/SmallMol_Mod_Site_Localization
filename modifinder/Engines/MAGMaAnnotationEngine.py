@@ -1,4 +1,4 @@
-from modifinder.Engines.engine_abstracts import AnnotationEngine
+from modifinder.Engines.Abtracts import AnnotationEngine
 from modifinder.Compound import Compound
 from typing import List, Tuple
 from modifinder.Engines.magma import fragmentation_py
@@ -80,17 +80,18 @@ class MAGMaAnnotationEngine(AnnotationEngine):
         return peak_fragments_map
     
 
-    def get_fragment_info(self, fragment, deltaH):
+    def get_fragment_info(self, Compound: Compound, fragment):
         atomstring = ''
         atomlist = []
         edgeList = []
         elements = dict([(e,0) for e in mims.keys()])
-        for atom in range(self.natoms):
+        natoms = Compound.structure.GetNumAtoms()
+        for atom in range(natoms):
             if 1 << atom & fragment:
                 atomstring += ',' + str(atom)
                 atomlist.append(atom)
-                elements[Chem.GetAtomSymbol(self.mol, atom)] += 1
-                elements['H'] += Chem.GetAtomHs(self.mol, atom)
+                elements[Chem.GetAtomSymbol(Compound.structure, atom)] += 1
+                elements['H'] += Chem.GetAtomHs(Compound.structure, atom)
         
         for bond in self.bonds:
             if bond[0] in atomlist and bond[1] in atomlist:
@@ -108,5 +109,5 @@ class MAGMaAnnotationEngine(AnnotationEngine):
             atomlist,
             edgeList,
             formula,
-            fragment_to_smiles(self.mol, atomlist))
+            fragment_to_smiles(Compound.structure, atomlist))
     

@@ -72,5 +72,5 @@ class PredictionEngine(ABC):
         pass
 
     @abstractmethod
-    def calculate_confidence(self, network, annotation, alignment, prediction):
+    def confidence(self, network, annotation, alignment, prediction):
         pass

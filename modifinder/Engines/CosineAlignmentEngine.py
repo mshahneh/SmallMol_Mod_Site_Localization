@@ -1,7 +1,7 @@
 import numpy as np
 from typing import List, Tuple
 import json
-from modifinder.Engines.engine_abstracts import AlignmentEngine
+from modifinder.Engines.Abtracts import AlignmentEngine
 from modifinder.utilities.gnps_types import SpectrumTuple
 
 
