@@ -81,7 +81,7 @@ class CosineAlignmentEngine(AlignmentEngine):
     def __init__(self):
         pass
 
-    def align(self, network):
+    def align(self, network, **kwargs):
         pass
 
     def single_align(self, SpectrumTuple1: SpectrumTuple,
