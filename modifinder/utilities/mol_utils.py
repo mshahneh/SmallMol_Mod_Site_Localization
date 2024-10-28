@@ -2,13 +2,10 @@
 GNPS Utils - Molecule Utils
 ---------------------------
 This file contains utility functions around molecules and molecules modification based on RDKit library.
-
-Author: Shahneh
 """
 
-import copy
 from rdkit import Chem
-from rdkit.Chem import AllChem, Descriptors, rdFMCS
+from rdkit.Chem import rdFMCS
 from copy import deepcopy
 from modifinder.utilities.network import *
 
@@ -21,10 +18,12 @@ rkrb.DisableLog('rdApp.error')
 def get_modification_nodes(mol1, mol2, in_mol1 = True):
     """
         Calculates the modification sites between two molecules when one molecule is a substructure of the other molecule
+
         Input:
-            mol1: first molecule
-            mol2: second molecule
-            in_mol1: bool, if True, the modification sites are given in the mol1, if False, the modification sites are given in the mol2
+            :mol1: first molecule 
+            :mol2: second molecule
+            :in_mol1: bool, if True, the modification sites are given in the mol1, if False, the modification sites are given in the mol2
+
         Output:
             list of modification sites
     """
@@ -42,10 +41,12 @@ def get_modification_nodes(mol1, mol2, in_mol1 = True):
 def get_modification_edges(mol1, mol2, only_outward_edges = False):
     """
         Calculates the modification edges between two molecules when one molecule is a substructure of the other molecule
+
         Input:
-            mol1: first molecule
-            mol2: second molecule
-            only_outward_edges: bool, if True, only the modification edges that go from atoms in the substructure to atoms outside the substructure are returned
+            :mol1: first molecule
+            :mol2: second molecule
+            :only_outward_edges: bool, if True, only the modification edges that go from atoms in the substructure to atoms outside the substructure are returned
+
         Output:
             list of the the modification edges in the parent molecule as tuples of atom indices
     """
@@ -69,11 +70,13 @@ def get_modification_edges(mol1, mol2, only_outward_edges = False):
 def get_edit_distance(mol1, mol2):
     """
         Calculates the edit distance between mol1 and mol2.
+
         Input:
-            mol1: first molecule
-            mol2: second molecule
+            :mol1: first molecule
+            :mol2: second molecule
+
         Output:
-            edit_distance: edit distance between mol1 and mol2
+            :edit_distance: edit distance between mol1 and mol2
     """
     copy_mol1, copy_mol2 = _get_molecules(mol1, mol2)
     mcs1 = rdFMCS.FindMCS([copy_mol1, copy_mol2])
@@ -86,12 +89,14 @@ def get_edit_distance(mol1, mol2):
 def get_edit_distance_detailed(mol1, mol2):
     """
         Calculates the edit distance between mol1 and mol2.
+
         Input:
-            mol1: first molecule
-            mol2: second molecule
+            :mol1: first molecule
+            :mol2: second molecule
+
         Output:
-            removed edges: the removed modification edges
-            added edges: the added modification edges
+            :removed edges: the removed modification edges
+            :added edges: the added modification edges
     """
     copy_mol1, copy_mol2 = _get_molecules(mol1, mol2)
     mcs1 = rdFMCS.FindMCS([copy_mol1, copy_mol2])
@@ -104,11 +109,13 @@ def get_edit_distance_detailed(mol1, mol2):
 def get_transition(input1, input2):
     """
         Calculates the transition between mol1 and mol2.
+
         Input:
-            input1: first molecule
-            input2: second molecule
+            :input1: first molecule
+            :input2: second molecule
+
         Output:
-            result: a dictionary with the following keys:
+            :result: a dictionary with the following keys:
                 'merged_mol': the merged molecule
                 'common_bonds': the common bonds between mol1 and mol2
                 'common_atoms': the common atoms between mol1 and mol2
@@ -215,13 +222,14 @@ def get_modification_graph(main_struct, sub_struct):
     """
         Calculates the substructure difference between main_struct and sub_struct when there is exactly one modification edge,
           if there are multiple modification edges, one of the modifications is returned randomly.
+
         Input:
-            main_struct: main molecule
-            sub_struct: substructure molecule
+            :main_struct: main molecule
+            :sub_struct: substructure molecule
         Output:
-            frag: modified fragment mol
-            index_in_frag: index of the modification atom in the fragment
-            bondType: bond type of the modification bond
+            :frag: modified fragment mol
+            :index_in_frag: index of the modification atom in the fragment
+            :bondType: bond type of the modification bond
     """
     main_struct, sub_struct = _get_molecules(main_struct, sub_struct)
     if not main_struct.HasSubstructMatch(sub_struct):
@@ -263,14 +271,16 @@ def get_modification_graph(main_struct, sub_struct):
 def attach_mols(main_mol, attachment_mol, attach_location_main, attach_location_attachment, bond_type):
     """
         Attaches the attachment structure to main molecule at the attach_location_main and attach_location_attachment with bond_type.
+
         Input:
-            main_mol: rdkit molecule of the main molecule
-            attachment_mol: rdkit molecule of the attachment molecule
-            attach_location_main: the index of the atom in the main molecule where the attachment should be done
-            attach_location_attachment: the index of the atom in the attachment molecule where the attachment should be done
-            bond_type: the type of the bond between the main molecule and the attachment molecule
+            :main_mol: rdkit molecule of the main molecule
+            :attachment_mol: rdkit molecule of the attachment molecule
+            :attach_location_main: the index of the atom in the main molecule where the attachment should be done
+            :attach_location_attachment: the index of the atom in the attachment molecule where the attachment should be done
+            :bond_type: the type of the bond between the main molecule and the attachment molecule
+
         Output:
-            new_mol: the new molecule after attachment
+            :new_mol: the new molecule after attachment
     """
 
     new_mol = Chem.CombineMols(main_mol, attachment_mol)
@@ -283,11 +293,12 @@ def attach_mols(main_mol, attachment_mol, attach_location_main, attach_location_
 def generate_possible_stuctures(main_struct, sub_struct):
     """
         Generates all possible structures after attaching sub_struct to main_struct.
+
         Input:
-            main_struct: main molecule
-            sub_struct: substructure molecule
+            :main_struct: main molecule
+            :sub_struct: substructure molecule
         Output:
-            list of possible_structures: all possible structures after attachment with the index of the atom
+            :list of possible_structures: all possible structures after attachment with the index of the atom
     """
     main_struct, sub_struct = _get_molecules(main_struct, sub_struct)
     if not main_struct.HasSubstructMatch(sub_struct):
@@ -458,8 +469,8 @@ def _calculateModificationSites(mol, substructure, inParent = True):
 
 
 def _get_molecules(mol1, mol2):
-    copy_mol1 = copy.deepcopy(mol1)
-    copy_mol2 = copy.deepcopy(mol2)
+    copy_mol1 = deepcopy(mol1)
+    copy_mol2 = deepcopy(mol2)
     copy_mol1 = _get_molecule(copy_mol1)
     copy_mol2 = _get_molecule(copy_mol2)
     if copy_mol1 is None or copy_mol2 is None:

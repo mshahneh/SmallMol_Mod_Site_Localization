@@ -1,3 +1,22 @@
+"""
+This module provides utilities for handling GNPS (Global Natural Products Social) data types, 
+including functions to convert data to and from SpectrumTuple objects, and to parse data into 
+a universal format.
+Classes:
+    SpectrumTuple: A named tuple representing a spectrum with precursor m/z, precursor charge, 
+                   m/z values, and intensity values.
+Functions:
+    convert_to_SpectrumTuple(peaks: list, precursor_mz: float, precursor_charge: int) -> SpectrumTuple:
+    convert_to_SpectrumTuple_seprated(mz: list, intensity: list, precursor_mz: float, precursor_charge: int) -> SpectrumTuple:
+        Converts separate lists of m/z and intensity values to a SpectrumTuple.
+    convert_to_universal_key(key: str) -> str:
+        Converts different types of keys to universal keys.
+    parse_data_to_universal(data: dict) -> dict:
+        Parses the data to a universal format.
+    Convert_SpectrumTuple_to_peaks(spectrum: SpectrumTuple) -> list:
+        Converts a SpectrumTuple to a list of peaks.
+"""
+
 import collections
 import json
 
@@ -8,10 +27,16 @@ SpectrumTuple = collections.namedtuple(
 
 def convert_to_SpectrumTuple(peaks: list, precursor_mz: float, precursor_charge: int) -> SpectrumTuple:
     """
-    Converts the peaks to SpectrumTuple.
-    :param peaks: List of tuples (mz, intensity) or List of List [mz, intensity]
-    :param precursor_mz: Precursor m/z
-    :param precursor_charge: Precursor charge
+    Converts a list of peaks to a SpectrumTuple.
+
+    Args:
+        :peaks (list): A list of tuples (mz, intensity) or a list of lists [mz, intensity].
+        :precursor_mz (float): The precursor m/z value.
+        :precursor_charge (int): The precursor charge value.
+    Returns:
+        :SpectrumTuple: An instance of SpectrumTuple containing the provided peaks and precursor information.
+    Raises:
+        :ValueError: If peaks is not a list of tuples or lists.
     """
     if not peaks:
         return None
@@ -31,11 +56,17 @@ def convert_to_SpectrumTuple(peaks: list, precursor_mz: float, precursor_charge:
 
 def convert_to_SpectrumTuple_seprated(mz: list, intensity: list, precursor_mz: float, precursor_charge: int) -> SpectrumTuple:
     """
-    Converts the peaks to SpectrumTuple.
-    :param mz: List of mz values
-    :param intensity: List of intensity values
-    :param precursor_mz: Precursor m/z
-    :param precursor_charge: Precursor charge
+    Converts separate lists of m/z and intensity values to a SpectrumTuple.
+
+    Args:
+        :mz (list): List of mz values.
+        :intensity (list): List of intensity values.
+        :precursor_mz (float): Precursor m/z.
+        :precursor_charge (int): Precursor charge.
+    Returns:
+        :SpectrumTuple: A SpectrumTuple object containing the provided mz, intensity, precursor_mz, and precursor_charge.
+    Raises:
+        :ValueError: If the length of mz and intensity lists are not the same.
     """
     if not mz:
         return None
@@ -52,9 +83,21 @@ def convert_to_SpectrumTuple_seprated(mz: list, intensity: list, precursor_mz: f
 
 def convert_to_universal_key(key: str) -> str:
     """
-    Convert different types of keys to universal keys
-    :param key: str
+    Convert different types of keys to universal keys.
+    This function standardizes various key names to a universal format. 
+    It currently supports conversion for the following keys:
+    - "precursor_mz" to "Precursor_MZ"
+    - "smiles" or "SMILES" to "Smiles"
+    - "charge" to "Charge"
+    - "adduct" to "Adduct"
+
+    Args:
+        :key (str): The key to be converted.
+    
+    Returns:
+        :str: The converted key.
     """
+
     if key == "precursor_mz":
         return "Precursor_MZ"
     if key == "smiles" or key == "SMILES":
@@ -68,9 +111,21 @@ def convert_to_universal_key(key: str) -> str:
     
 def parse_data_to_universal(data):
     """
-    Parse the data to universal format
-    :param data: dict
+    Parse the data to a universal format.
+
+    This function takes a dictionary of data and converts it into a universal format.
+    It processes specific keys like "peaks_json" and "Charge" differently, and attempts
+    to convert other values to floats. If the conversion to float is successful and the
+    key is "Charge", it further converts the value to an integer.
+
+    Args:
+        :data (dict): The input data dictionary to be parsed.
+
+    Returns:
+        :dict: A dictionary with keys converted to a universal format and values processed
+              accordingly.
     """
+
     res = {}
     for key, value in data.items():
         if key == "peaks_json":
@@ -87,8 +142,16 @@ def parse_data_to_universal(data):
 
 def Convert_SpectrumTuple_to_peaks(spectrum: SpectrumTuple):
     """
-    Convert SpectrumTuple to peaks
-    :param spectrum: SpectrumTuple
+    Convert a SpectrumTuple to a list of peaks.
+
+    This function takes a SpectrumTuple object, which contains m/z (mass-to-charge ratio) and intensity values,
+    and converts it into a list of tuples where each tuple represents a peak with its corresponding m/z and intensity.
+
+    Args:
+        :spectrum (SpectrumTuple): The SpectrumTuple object containing m/z and intensity values.
+
+    Returns:
+        :list of tuple: A list of tuples where each tuple contains an m/z value and its corresponding intensity.
     """
     peaks = []
     for mz, intensity in zip(spectrum.mz, spectrum.intensity):
