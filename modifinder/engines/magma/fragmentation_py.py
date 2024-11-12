@@ -1,17 +1,31 @@
 # 2014.10.20 12:28:02 CEST
 import numpy
 import os
-from modifinder.Engines.magma import rdkit_engine as Chem
-from modifinder.utilities.general_utils import mims
+from modifinder.engines.magma import rdkit_engine as Chem
+from modifinder.utilities.general_utils import mims, Hmass
+
+typew = {'AROMATIC': 3.0,
+ 'DOUBLE': 2.0,
+ 'TRIPLE': 3.0,
+ 'SINGLE': 1.0}
+heterow = {False: 2,
+ True: 1}
+
 
 class FragmentEngine(object):
 
-    def __init__(self, mol, max_broken_bonds, max_water_losses, ionisation_mode, skip_fragmentation, molcharge):
+    def __init__(self, mol, max_broken_bonds, max_water_losses, ionisation_mode, skip_fragmentation, molcharge, missingfragmentpenalty = 10.0, min_fragment_size = 2):
         try:
-            self.mol = Chem.MolFromMolBlock(str(mol))
+            if type(mol) == str:
+                self.mol = Chem.MolFromMolBlock(str(mol))
+            else:
+                self.mol = Chem.Mol(mol)
+                if self.mol is None:
+                    raise ValueError('Mol object is None')
             self.accept = True
             self.natoms = Chem.natoms(self.mol)
         except:
+            print('Error: mol is not a string or a rdkit mol object', mol)
             self.accept = False
             return 
         self.max_broken_bonds = max_broken_bonds
@@ -29,6 +43,9 @@ class FragmentEngine(object):
         self.fragment_masses = ((max_broken_bonds + max_water_losses) * 2 + 1) * [0]
         self.fragment_info = [[0, 0, 0]]
         self.avg_score = None
+        self.missingfragmentpenalty = missingfragmentpenalty
+        self.min_fragment_size = min_fragment_size
+
         for x in range(self.natoms):
             self.bonded_atoms.append([])
             self.atom_masses.append(Chem.GetExtendedAtomMass(self.mol, x))
@@ -42,7 +59,7 @@ class FragmentEngine(object):
             self.bonded_atoms[a1].append(a2)
             self.bonded_atoms[a2].append(a1)
             bond = 1 << a1 | 1 << a2
-            bondscore = pars.typew[Chem.GetBondType(self.mol, x)] * pars.heterow[(Chem.GetAtomSymbol(self.mol, a1) != 'C' or Chem.GetAtomSymbol(self.mol, a2) != 'C')]
+            bondscore = typew[Chem.GetBondType(self.mol, x)] * heterow[(Chem.GetAtomSymbol(self.mol, a1) != 'C' or Chem.GetAtomSymbol(self.mol, a2) != 'C')]
             self.bonds.add(bond)
             self.bondscore[bond] = bondscore
 
@@ -98,13 +115,11 @@ class FragmentEngine(object):
                         for frag in extended_fragments:
                             if frag not in all_fragments:
                                 all_fragments.add(frag)
-                                (bondbreaks, score,) = self.score_fragment(frag)
-                                if bondbreaks <= self.max_broken_bonds and score < pars.missingfragmentpenalty + 5:
+                                (bondbreaks, score, num_atoms, ) = self.score_fragment(frag)
+                                if bondbreaks <= self.max_broken_bonds and score < self.missingfragmentpenalty + 5 and num_atoms >= self.min_fragment_size:
                                     new_fragments.add(frag)
                                     total_fragments.add(frag)
                                     self.add_fragment(frag, self.calc_fragment_mass(frag), score, bondbreaks)
-
-
 
             current_fragments = new_fragments
             new_fragments = set([])
@@ -118,8 +133,8 @@ class FragmentEngine(object):
                             frag = fragment ^ 1 << atom
                             if frag not in total_fragments:
                                 total_fragments.add(frag)
-                                (bondbreaks, score,) = self.score_fragment(frag)
-                                if score < pars.missingfragmentpenalty + 5:
+                                (bondbreaks, score, num_atoms, ) = self.score_fragment(frag)
+                                if score < self.missingfragmentpenalty + 5 and num_atoms >= self.min_fragment_size:
                                     self.add_fragment(frag, self.calc_fragment_mass(frag), score, bondbreaks)
 
 
@@ -136,7 +151,12 @@ class FragmentEngine(object):
             if 0 < fragment & bond < bond:
                 score += self.bondscore[bond]
                 bondbreaks += 1
-        return (bondbreaks, score)
+        
+        num_atoms = 0
+        for atom in range(self.natoms):
+            if fragment & 1 << atom:
+                num_atoms += 1
+        return (bondbreaks, score, num_atoms)
 
 
 
@@ -163,7 +183,7 @@ class FragmentEngine(object):
     def add_fragment(self, fragment, fragmentmass, score, bondbreaks):
         mass_range = (self.max_broken_bonds + self.max_water_losses - bondbreaks) * [0] + \
             list(numpy.arange(-bondbreaks + self.ionisation_mode * (1 - self.molcharge), bondbreaks + self.ionisation_mode * (1 - self.molcharge) + 1)\
-                 * pars.Hmass + fragmentmass) + \
+                 * Hmass + fragmentmass) + \
                 (self.max_broken_bonds + self.max_water_losses - bondbreaks) * [0]
         if bondbreaks == 0:
             mass_range[self.max_broken_bonds + self.max_water_losses - self.ionisation_mode] = fragmentmass
@@ -220,7 +240,7 @@ class FragmentEngine(object):
         return (atomstring,
          atomlist,
          formula,
-         Chem.FragmentToInchiKey(self.mol, atomlist))
+         Chem.FragmentToSmiles(self.mol, atomlist))
 
 
 

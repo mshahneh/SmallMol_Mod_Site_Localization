@@ -1,7 +1,7 @@
 from rdkit.Chem import *
 from rdkit import Chem, Geometry
 from rdkit.Chem import AllChem, Descriptors
-from . import pars
+import modifinder.utilities.general_utils as pars
 import re
 bondtype2string = {v:k for (k, v,) in Chem.rdchem.BondType.names.items()}
 
@@ -66,13 +66,16 @@ def MolToInchiKey(mol):
 
 
 
-def FragmentToInchiKey(mol, atomlist):
+def FragmentToSmiles(mol, atomlist):
     emol = Chem.EditableMol(mol)
     for atom in reversed(range(mol.GetNumAtoms())):
         if atom not in atomlist:
             emol.RemoveAtom(atom)
 
     frag = emol.GetMol()
+    for bond in frag.GetBonds():
+        # if bond.GetBondType() == Chem.rdchem.BondType.AROMATIC:
+        bond.SetBondType(Chem.rdchem.BondType.UNSPECIFIED)
     return Chem.MolToSmiles(frag)
 
 

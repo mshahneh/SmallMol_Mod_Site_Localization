@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
-from modifinder.utilities.gnps_types import SpectrumTuple
+from modifinder.utilities.gnps_types import SpectrumTuple, Alignment
 from modifinder.Compound import Compound
+from modifinder.ModiFinder import ModificationSiteLocator
 from typing import List, Tuple
 
 
@@ -13,7 +14,7 @@ class AlignmentEngine(ABC):
     def single_align(self, SpectrumTuple1: SpectrumTuple,
                       SpectrumTuple2: SpectrumTuple, 
                       fragment_mz_tolerance: float = 0.02, 
-                      fragment_ppm_tolerance: float = 100.0) -> Tuple[float, List[Tuple[int, int]]]:
+                      fragment_ppm_tolerance: float = 100.0) -> Alignment:
         """
         Aligns two spectra using cosine similarity and returns the cosine score and the matched peaks
 
@@ -24,7 +25,7 @@ class AlignmentEngine(ABC):
             :fragment_ppm_tolerance (float): Fragment ppm tolerance
         
         Returns:
-            :Tuple[float, List[Tuple[int, int]]]: alignment score and the list of matched peaks, each value in the list is a tuple of the indices of the matched peaks in the two spectra
+            :Alignment: Alignment object 
         """
         pass
 
@@ -68,9 +69,9 @@ class AnnotationEngine(ABC):
 # Base class for prediction engines
 class PredictionEngine(ABC):
     @abstractmethod
-    def predict(self, network, annotation, alignment):
+    def predict(self, network: ModificationSiteLocator, **kwargs):
         pass
 
     @abstractmethod
-    def confidence(self, network, annotation, alignment, prediction):
+    def confidence(self, network:ModificationSiteLocator, prediction, **kwargs):
         pass

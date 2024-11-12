@@ -9,6 +9,8 @@ Author: Shahneh
 import json
 import requests
 from modifinder.utilities.gnps_types import *
+from modifinder.convert import parse_data_to_universal
+from modifinder.exceptions import ModiFinderNetworkError
 
 def usi_to_accession(usi: str) -> str:
     """
@@ -43,19 +45,23 @@ def get_data(identifier: str) -> dict:
     return: dict - dictionary of data
     """
 
+    data = dict()
     if _is_usi(identifier):
         if _is_known(identifier):
             identifier = usi_to_accession(identifier)
         else:
             data = _get_partial_data(identifier)
+            data['usi'] = identifier
             data = parse_data_to_universal(data)
             return data
 
     link = "https://external.gnps2.org/gnpsspectrum?SpectrumID={}".format(identifier)
-    res = requests.get(link)
-    parsed = res.json()
+    try:
+        res = requests.get(link)
+        parsed = res.json()
+    except:
+        raise ModiFinderNetworkError("Error in retrieving data from GNPS for identifier: {}, link: {}".format(identifier, link))
 
-    data = dict()
     try:
         data.update(parsed['annotations'][0])
     except KeyError:
@@ -70,6 +76,7 @@ def get_data(identifier: str) -> dict:
         pass
 
     data = parse_data_to_universal(data)
+    data['usi'] = accession_to_usi(identifier)
 
     return data
 
@@ -105,12 +112,13 @@ def _get_partial_data(identifier: str) -> dict:
     return: dict - dictionary of data with keys: precursor_mz, precursor_charge, mz: list, intensity: list
     """
     url = 'https://metabolomics-usi.gnps2.org/json/' + "?usi1=" + identifier
-    r = requests.get(url)
-    data = json.loads(r.text)
-    # change key names from precaursor_mz to Precursor_MZ
-    data['Precursor_MZ'] = data.pop('precursor_mz')
-    data['Charge'] = data.pop('precursor_charge')
+    try:
+        r = requests.get(url)
+        data = json.loads(r.text)
+    except:
+        raise Exception("Error in retrieving data from GNPS for identifier: {}, link: {}".format(identifier, url))
 
+    data = parse_data_to_universal(data)
     return data
 
 
@@ -130,22 +138,3 @@ def _is_known(identifier: str) -> bool:
     return: bool
     """
     return "accession" in identifier
-
-def get_spectrum(identifier) -> SpectrumTuple:
-    """
-    Get the spectrum from USI or Accession
-    :param identifier: str - USI or Accession
-    :return: SpectrumTuple
-    """
-    if isinstance(identifier, SpectrumTuple):
-        return identifier
-    
-    if isinstance(identifier, list):
-        return convert_to_SpectrumTuple(identifier, 0, 0)
-    
-    if isinstance(identifier, dict):
-        return convert_to_SpectrumTuple(identifier['peaks'], identifier['Precursor_MZ'], identifier['Charge'])
-    
-    data = get_data(identifier)
-    return convert_to_SpectrumTuple(data['peaks'], data['Precursor_MZ'], data['Charge'])
-    

@@ -4,6 +4,7 @@ General utility functions
 from pyteomics import mgf
 import pandas as pd
 import numpy as np
+import re
 
 def is_shifted(val1:float, val2:float, ppm:float=None, mz_tol:float=None) -> bool:
     """
@@ -184,3 +185,54 @@ ionmasses = {1: {'+H': mims['H'],
      '+K': mims['K']},
  -1: {'-H': -mims['H'],
       '+Cl': mims['Cl']}}
+
+
+def GetFormulaMass(formula):
+    weight = 0
+    pattern = r'([A-Z][a-z]*)(\d*)'
+    matches = re.findall(pattern, formula)  # Find all matches in the formula
+
+    # Create a dictionary to store element symbol and count pairs
+    for match in matches:
+        element = match[0]
+        count = match[1]
+        if count:
+            weight += int(count) * mims[element]
+        else:
+            weight += mims[element]
+    return weight
+
+def GetAdductMass(adduct):
+    weight = 0
+    # remove spaces
+    adduct = adduct.replace(' ', '')
+    acceptedAdductsFormat = re.compile(r'\[M(?:\+[A-Za-z0-9]+|\-[A-Za-z0-9]+)*\][0-9]*[+-]')
+    if not acceptedAdductsFormat.match(adduct):
+        raise ValueError('Adduct format not accepted')
+
+    charge = adduct.split(']')[1]
+    remaining = adduct.split(']')[0]
+    remaining = remaining.replace('[','')
+    
+    regexPattern = re.compile(r'\+[A-Za-z0-9]+|\-[A-Za-z0-9]+')
+    subformulas = regexPattern.findall(remaining)
+    for subformula in subformulas:
+        if subformula[0] == '+':
+            weight += GetFormulaMass(subformula[1:])
+        else:
+            weight -= GetFormulaMass(subformula[1:])
+    
+    if charge[-1] == '+':
+        if len(charge) == 1:
+            chargeCount = 1
+        else:
+            chargeCount = int(charge[:-1])
+        weight -= elmass * chargeCount
+    else:
+        if len(charge) == 1:
+            chargeCount = 1
+        else:
+            chargeCount = int(charge[:-1])
+        weight += elmass * chargeCount
+
+    return weight

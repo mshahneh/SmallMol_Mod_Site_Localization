@@ -478,48 +478,94 @@ def _get_molecules(mol1, mol2):
     return copy_mol1, copy_mol2
 
 
-def _get_molecule(identifier) -> Chem.Mol:
+def _get_molecule(identifier = None, smiles=None, inchi=None, molblock=None, smarts=None, **kwargs):
     """
     Get the rdkit molecule from smiles, inchi or GNPS identifier
-    :param identifier: rdkit Mol or str - GNPS identifier (USI or Accession) or SMILES or InChI or MolBlock or SMARTS
+    
+    Parameters:
+    ----------
+    identifier: str
+        GNPS identifier, smiles, inchi, molblock or smart
+    smiles: str
+        smiles string
+    inchi: str
+        inchi string
+    molblock: str
+        molblock string
+    smart: str
+
     :return: rdkit molecule or None
     """
-    if isinstance(identifier, Chem.Mol):
-        return identifier
-    try:
-        molecule = Chem.MolFromSmiles(identifier)
+    if identifier is not None:
+        if isinstance(identifier, str):
+            try:
+                molecule = Chem.MolFromSmiles(identifier)
+                if molecule:
+                    return molecule
+            except:
+                pass
+
+            try:
+                molecule = Chem.MolFromInchi(identifier)
+                if molecule:
+                    return molecule
+            except:
+                pass
+
+            try:
+                molecule = Chem.MolFromMolBlock(identifier)
+                if molecule:
+                    return molecule
+            except:
+                pass
+
+            try:
+                molecule = Chem.MolFromSmarts(identifier)
+                if molecule:
+                    return molecule
+            except:
+                pass
+
+            try:
+                data = get_data(identifier)
+                smiles = data.get("Smiles", None)
+                if smiles:
+                    molecule = Chem.MolFromSmiles(smiles)
+                    if molecule:
+                        return molecule
+            except:
+                raise ValueError("The identifier is not valid or it is not supported")
+            
+        if isinstance(identifier, Chem.Mol):
+            return identifier
+        
+    
+    if smiles is not None:
+        molecule = Chem.MolFromSmiles(smiles)
         if molecule:
             return molecule
-    except:
-        pass
-
-    try:
-        molecule = Chem.MolFromInchi(identifier)
+        else:
+            raise ValueError("The smiles string is not valid")
+    
+    if inchi is not None:
+        molecule = Chem.MolFromInchi(inchi)
         if molecule:
             return molecule
-    except:
-        pass
-
-    try:
-        molecule = Chem.MolFromMolBlock(identifier)
+        else:
+            raise ValueError("The inchi string is not valid")
+    
+    if molblock is not None:
+        molecule = Chem.MolFromMolBlock(molblock)
         if molecule:
             return molecule
-    except:
-        pass
-
-    try:
-        molecule = Chem.MolFromSmarts(identifier)
+        else:
+            raise ValueError("The molblock string is not valid")
+    
+    if smarts is not None:
+        molecule = Chem.MolFromSmarts(smarts)
         if molecule:
             return molecule
-    except:
-        pass
-
-    try:
-        data = get_data(identifier)
-        smiles = data.get("Smiles", None)
-        if smiles:
-            molecule = Chem.MolFromSmiles(smiles)
-            if molecule:
-                return molecule
-    except:
-        raise ValueError("The identifier is not valid or it is not supported")
+        else:
+            raise ValueError("The smart string is not valid")
+    
+    raise ValueError("No valid input is provided")

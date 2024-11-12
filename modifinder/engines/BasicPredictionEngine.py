@@ -1,5 +1,5 @@
-from modifinder.Engines.Abtracts import PredictionEngine
-from modifinder.Compound import Compound
+from modifinder.engines.Abtracts import PredictionEngine
+from depricated.Compound import Compound
 import numpy as np
 
 class BasicPredictionEngine(PredictionEngine):

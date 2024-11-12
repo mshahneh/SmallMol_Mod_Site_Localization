@@ -1,7 +1,7 @@
-from modifinder.Engines.Abtracts import AnnotationEngine
-from modifinder.Compound import Compound
+from modifinder.engines.Abtracts import AnnotationEngine
+from depricated.Compound import Compound
 from typing import List, Tuple
-from modifinder.Engines.magma import fragmentation_py
+from modifinder.engines.magma import fragmentation_py
 from modifinder.utilities.general_utils import mims
 from rdkit import Chem
 

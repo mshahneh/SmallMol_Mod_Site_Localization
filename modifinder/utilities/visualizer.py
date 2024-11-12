@@ -14,7 +14,7 @@ from modifinder.utilities.gnps_types import *
 from modifinder.utilities.general_utils import *
 import modifinder.utilities.mol_utils as mu
 import modifinder.utilities.spectra_utils as su
-from modifinder.alignment import _cosine_fast
+# from modifinder.alignment import _cosine_fast
 import io
 import matplotlib.image as mpimg
 import matplotlib.pyplot as plt
