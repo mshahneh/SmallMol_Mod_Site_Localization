@@ -26,7 +26,7 @@ class Spectrum:
         The dissociation method used.
     spectrum_id: str, optional
     """
-    def __init__(self, incoming_data:Dict=None, **kwargs):
+    def __init__(self, incoming_data:Dict=None, normalize_peaks = False, **kwargs):
         """Constructor for the Spectrum class.
 
         the spectrum class can be initialized with a dictionary of data or with the individual values.
@@ -49,6 +49,7 @@ class Spectrum:
             self.update(**incoming_data)
 
         self.update(**kwargs)
+
 
     def update(self, peaks = None, peaks_json = None, mz=None, intensity=None, precursor_mz=None, precursor_charge=None, 
                adduct=None, ms_level=None, instrument=None, ms_mass_analyzer=None, 
@@ -82,4 +83,14 @@ class Spectrum:
         self.ms_mass_analyzer = ms_mass_analyzer if ms_mass_analyzer is not None else self.ms_mass_analyzer
         self.ms_dissociation_method = ms_dissociation_method if ms_dissociation_method is not None else self.ms_dissociation_method
         self.spectrum_id = spectrum_id if spectrum_id is not None else self.spectrum_id
+
+
+    def __str__(self):
+        return str(self.__dict__)
+    
+
+    def normalize_peaks(self):
+        """Normalize the intensity values of the peaks."""
+        max_intensity = max(self.intensity)
+        self.intensity = [intensity / max_intensity for intensity in self.intensity]
 

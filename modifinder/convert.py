@@ -40,11 +40,16 @@ def to_compound(data, use_object=None):
     # USI
     if isinstance(data, str):
         try:
+            # print("here in is instance str")
             data = network.get_data(data)
             if use_object:
+                # print("in use object")
                 compound = use_object
                 compound.clear()
+                # print("before update", data)
                 compound.update(**data)
+                # print("after update", compound)
+                # print("========================")
             else:
                 compound = mf.Compound()
                 compound.update(**data)
@@ -55,6 +60,7 @@ def to_compound(data, use_object=None):
     
     # Dictionary
     if isinstance(data, dict):
+        data = parse_data_to_universal(data)
         try:
             if use_object:
                 compound = use_object

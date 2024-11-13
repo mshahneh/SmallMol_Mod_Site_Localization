@@ -46,10 +46,10 @@ class Compound:
     >>> data = {
     ...     "id": "CCMSLIB00005435812",
     ...     "peaks": [[110.066925,38499.089844],[138.060638,412152.093750],[195.079575,6894530.000000],[195.200180,480874.812500],[196.082092,43027.628906]],
-    ...     "Precursor_MZ": 195.087,
-    ...     "Charge": 1,
-    ...     "Adduct": "[M+H]+",
-    ...     "Smiles": "CN1C=NC2=C1C(=O)N(C(=O)N2C)C"
+    ...     "precursor_mz": 195.087,
+    ...     "charge": 1,
+    ...     "adduct": "[M+H]+",
+    ...     "smiles": "CN1C=NC2=C1C(=O)N(C(=O)N2C)C"
     ... }
     >>> compound = Compound(data)
 
@@ -124,9 +124,27 @@ class Compound:
         # update the attributes with the provided keyword arguments
         self.update(**kwargs)
 
-
-
         # TODO: write setters for spectrum, structure to warn the user to update the dependent attributes
+
+    
+    def clear(self):
+        """Clear the compound data and reset all the attributes to None"""
+        self.id = None
+        self.spectrum = None
+        self.structure = None
+        self.is_known = None
+        self.name = None
+        self.peak_fragments_map = None
+        self.distances = None
+        self.usi = None
+        self.adduct_mass = None
+
+        # remove any additional attributes
+        all_keys = list(self.__dict__.keys())
+        for key in all_keys:
+            if key not in ['id', 'spectrum', 'structure', 'is_known', 'name', 'peak_fragments_map', 'distances', 'usi', 'adduct_mass']:
+                delattr(self, key)
+        
     
 
     def update(self, structure = None, id: str = None, spectrum: Spectrum = None, usi: str = None, 
@@ -160,7 +178,9 @@ class Compound:
             spectrum = get_spectrum(spectrum, **lower_kwargs)
         except:
             spectrum = None
-        self.spectrum = spectrum if spectrum is not None else self.spectrum
+        
+        if spectrum is not None and spectrum.mz is not None:
+            self.spectrum = spectrum
         self.usi = usi if usi is not None else self.usi
         self.adduct_mass = adduct_mass if adduct_mass is not None else self.adduct_mass
         self.is_known = is_known if is_known is not None else self.is_known
