@@ -7,4 +7,3 @@ ModiFinder is a Python package for the identification of modifications in mass s
 
 from modifinder.exceptions import *
 from modifinder.classes import *
-from modifinder.utilities.gnps_types import Alignment, EdgeDetails

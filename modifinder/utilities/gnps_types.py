@@ -26,20 +26,6 @@ SpectrumTuple = collections.namedtuple(
     "SpectrumTuple", ["precursor_mz", "precursor_charge", "mz", "intensity"]
 )
 
-@dataclass
-class Alignment:
-    matches: List[Tuple[int, int]] = field(default_factory=list) # List of matched peaks
-    score: float = 0.0                               # Float for score
-    shifts: List[int] = field(default_factory=list)   # index in matches that are shifted
-    unshifted: List[int] = field(default_factory=list) # index in matches that are not shifted
-
-@dataclass
-class EdgeDetails:
-    number_of_modifications: int = None
-    # make a default alignment object for the edge
-    alingment: Alignment = None
-    is_smaller: bool = False
-
 
 adduct_mapping = {'M+H': '[M+H]+',
 '[M+H]': '[M+H]+',

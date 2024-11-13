@@ -27,7 +27,7 @@ def to_compound(data, use_object=None):
             if use_object:
                 compound = use_object
                 compound.clear()
-                compound.update(compound_to_dict(data))
+                compound.update(**compound_to_dict(data))
             else:
                 compound = mf.Compound()
                 copied_data = deepcopy(compound_to_dict(data))
@@ -77,7 +77,6 @@ def to_compound(data, use_object=None):
 def compound_to_dict(compound):
     """Convert a Compound object to a dictionary"""
     return compound.__dict__
-
 
 
 def convert_to_universal_key(key: str) -> str:
