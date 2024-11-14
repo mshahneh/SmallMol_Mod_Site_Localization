@@ -1,20 +1,23 @@
 from abc import ABC, abstractmethod
-from modifinder.utilities.gnps_types import SpectrumTuple, Alignment
-from modifinder.Compound import Compound
-from modifinder.ModiFinder import ModificationSiteLocator
+from modifinder.classes.Spectrum import Spectrum
+from modifinder.classes.Compound import Compound
+from modifinder.classes.ModiFinder import ModiFinder
+from modifinder.classes.EdgeDetail import EdgeDetail
 from typing import List, Tuple
 
 
 # Base class for alignment engines
 class AlignmentEngine(ABC):
     @abstractmethod
-    def align(self, network):
+    def align(self, network: ModiFinder, **kwargs):
         pass
-
-    def single_align(self, SpectrumTuple1: SpectrumTuple,
-                      SpectrumTuple2: SpectrumTuple, 
+    
+    @abstractmethod
+    def single_align(self, SpectrumTuple1: Spectrum,
+                      SpectrumTuple2: Spectrum, 
                       fragment_mz_tolerance: float = 0.02, 
-                      fragment_ppm_tolerance: float = 100.0) -> Alignment:
+                      fragment_ppm_tolerance: float = 100.0, 
+                      **kwargs) -> EdgeDetail:
         """
         Aligns two spectra using cosine similarity and returns the cosine score and the matched peaks
 
@@ -23,9 +26,10 @@ class AlignmentEngine(ABC):
             :SpectrumTuple2 (SpectrumTuple): Second spectrum
             :fragment_mz_tolerance (float): Fragment mz tolerance
             :fragment_ppm_tolerance (float): Fragment ppm tolerance
+            :kwargs: additional arguments
         
         Returns:
-            :Alignment: Alignment object 
+            :EdgeDetail: the edge detail object
         """
         pass
 
@@ -69,9 +73,9 @@ class AnnotationEngine(ABC):
 # Base class for prediction engines
 class PredictionEngine(ABC):
     @abstractmethod
-    def predict(self, network: ModificationSiteLocator, **kwargs):
+    def predict(self, network: ModiFinder, **kwargs):
         pass
 
     @abstractmethod
-    def confidence(self, network:ModificationSiteLocator, prediction, **kwargs):
+    def confidence(self, network:ModiFinder, prediction, **kwargs):
         pass

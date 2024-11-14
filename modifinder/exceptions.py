@@ -23,3 +23,16 @@ class ModiFinderNetworkError(ModiFinderError):
     def __init__(self, message):
         self.message = message
         super().__init__(self.message)
+
+class ModiFinderNotImplementedError(ModiFinderError):
+    """Exception for a serious error in NetworkX"""
+    def __init__(self, message):
+        self.message = message
+        super().__init__(self.message)
+
+
+class ModiFinderNotSolvableError(ModiFinderError):
+    """Exception for a serious error in NetworkX"""
+    def __init__(self, message):
+        self.message = message
+        super().__init__(self.message)

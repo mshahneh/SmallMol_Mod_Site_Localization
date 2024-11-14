@@ -37,8 +37,9 @@ data = {
     "peaks_json": "[[110.066925,38499.089844],[138.060638,412152.093750],[195.079575,6894530.000000],[195.200180,480874.812500],[196.082092,43027.628906]]",
     "splash": "null-null-null-null",
     "canAdmin": 0,
-    "usi": "mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005435812",
-    "accession": "CCMSLIB00005435812",
+    "usi": usi,
+    "accession": accession,
+    "id": accession,
     "spectrum_tags": [
         {
         "tag_database_url": "N/A",
@@ -65,4 +66,4 @@ spectrum = Spectrum(
     spectrum_id= data["SpectrumID"]
 )
 
-compound = mf.Compound(structure=data["Smiles"], spectrum=spectrum, name=data["Compound_Name"], usi=data["usi"])
+compound = mf.Compound(structure=data["Smiles"], spectrum=spectrum, name=data["Compound_Name"], id=accession)

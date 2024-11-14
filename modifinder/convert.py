@@ -1,11 +1,11 @@
 import warnings
 import modifinder as mf
 import modifinder.utilities.network as network
+from modifinder.utilities.general_utils import parse_data_to_universal
 import json
-import modifinder.utilities.gnps_types as gt
 from copy import deepcopy
 
-def to_compound(data, use_object=None):
+def to_compound(data = None, use_object=None, **kwargs):
     """Make a Compound object from the data
     
     Parameters
@@ -13,13 +13,29 @@ def to_compound(data, use_object=None):
     data: object to be converted
 
         Current supported types are:
-         Compound object
+         Compound object (return the same object, for copying you can pass use_object or use .copy() method)
          USI string
          dictionary-of-data
     
     use_object: object, optional
         If a Compound object is passed, this object will be used to create the new object.
+    
+    kwargs: keyword arguments
+        If no data is passed, the keyword arguments will be used to create the object.
     """
+    if data is None:
+        data = parse_data_to_universal(kwargs)
+        try:
+            if use_object:
+                compound = use_object
+                compound.clear()
+                compound.update(**data)
+            else:
+                compound = mf.Compound()
+                compound.update(**data)
+            return compound
+        except Exception as err:
+            raise mf.ModiFinderError("Input data is not a valid dictionary.") from err
 
     # Compound Object
     if hasattr(data, "spectrum"):
@@ -27,51 +43,48 @@ def to_compound(data, use_object=None):
             if use_object:
                 compound = use_object
                 compound.clear()
-                compound.update(**compound_to_dict(data))
+                data_dict = compound_to_dict(data)
+                data_dict.update(kwargs)
+                compound.update(data_dict)
             else:
-                compound = mf.Compound()
-                copied_data = deepcopy(compound_to_dict(data))
-                compound.update(**copied_data)
+                compound = data
             return compound
 
         except Exception as err:
-            raise mf.ModiFinderError(f"Input data is not a valid Compound object.") from err
+            raise mf.ModiFinderError("Input data is not a valid Compound object.") from err
     
     # USI
     if isinstance(data, str):
         try:
-            # print("here in is instance str")
+            
             data = network.get_data(data)
+            data.update(kwargs)
             if use_object:
-                # print("in use object")
                 compound = use_object
                 compound.clear()
-                # print("before update", data)
                 compound.update(**data)
-                # print("after update", compound)
-                # print("========================")
             else:
                 compound = mf.Compound()
                 compound.update(**data)
             return compound
 
         except Exception as err:
-            raise mf.ModiFinderError(f"Input data is not a valid USI string.") from err
+            raise mf.ModiFinderError("Input data is not a valid USI string.") from err
     
     # Dictionary
     if isinstance(data, dict):
         data = parse_data_to_universal(data)
+        data.update(kwargs)
         try:
             if use_object:
                 compound = use_object
                 compound.clear()
                 compound.update(**data)
             else:
-                compound = mf.Compound()
-                compound.update(**data)
+                compound = mf.Compound(**data)
             return compound
         except Exception as err:
-            raise mf.ModiFinderError(f"Input data is not a valid dictionary.") from err
+            raise mf.ModiFinderError("Input data is not a valid dictionary.") from err
         
 
 def compound_to_dict(compound):
@@ -79,52 +92,94 @@ def compound_to_dict(compound):
     return compound.__dict__
 
 
-def convert_to_universal_key(key: str) -> str:
-    """
-    Convert different types of keys to universal keys.
-    This function standardizes various key names to a universal format. 
-
-    Args:
-        :key (str): The key to be converted.
+def to_spectrum(data = None, use_object=None, needs_parse = True, **kwargs):
+    """Make a Spectrum object from the data
     
-    Returns:
-        :str: The converted key.
-    """
-    key = key.lower()
-    key = key.replace(" ", "_")
-    return gt.gnps_keys_mapping.get(key, key)
+    Parameters
+    ----------
+    data: object to be converted
+
+        Current supported types are:
+         Spectrum object (return the same object, for copying you can pass use_object or use .copy() method)
+         USI string
+         dictionary-of-data
     
-# TODO: use machine learning prepared data instead of hardcoding
-def parse_data_to_universal(data):
+    use_object: object, optional
+        If a Spectrum object is passed, this object will be used to create the new object.
+    
+    needs_parse: bool, default is True
+        If True, the dict data will be parsed to a universal format
     """
-    Parse the data to a universal format.
+    if data is None:
+        if needs_parse:
+            data = parse_data_to_universal(kwargs)
+        try:
+            # add kwargs to data
+            data.update(kwargs)
+            if use_object:
+                spectrum = use_object
+                spectrum.clear()
+                spectrum.update(**data)
+            else:
+                spectrum = mf.Spectrum(incoming_data=data)
+            return spectrum
+        except Exception as err:
+            raise mf.ModiFinderError("Input data is not a valid dictionary.") from err
 
-    This function takes a dictionary of data and converts it into a universal format.
-    It processes specific keys like "peaks_json" and "Charge" differently, and attempts
-    to convert other values to floats. If the conversion to float is successful and the
-    key is "Charge", it further converts the value to an integer.
+    # Spectrum Object
+    if hasattr(data, "mz"):
+        try:
+            if use_object:
+                spectrum = use_object
+                spectrum.clear()
+                spectrun_dict = spectrum_to_dict(data)
+                spectrun_dict.update(kwargs)
+                spectrum.update(**spectrun_dict)
+            else:
+                spectrum = data
+            return spectrum
 
-    Args:
-        :data (dict): The input data dictionary to be parsed.
+        except Exception as err:
+            raise mf.ModiFinderError("Input data is not a valid Spectrum object.") from err
+    
+    # USI
+    if isinstance(data, str):
+        try:
+            data = network.get_data(data)
+            parse_data_to_universal(data)
+            # add kwargs to data
+            data.update(kwargs)
+            if use_object:
+                spectrum = use_object
+                spectrum.clear()
+                spectrum.update(**data)
+            else:
+                spectrum = mf.Spectrum(**data)
+            return spectrum
 
-    Returns:
-        :dict: A dictionary with keys converted to a universal format and values processed
-              accordingly.
-    """
+        except Exception as err:
+            raise mf.ModiFinderError("Input data is not a valid USI string.") from err
+    
+    # Dictionary
+    if isinstance(data, dict):
+        if needs_parse:
+            data = parse_data_to_universal(data)
+        try:
+            # add kwargs to data
+            data.update(kwargs)
+            if use_object:
+                spectrum = use_object
+                spectrum.clear()
+                spectrum.update(**data)
+            else:
+                spectrum = mf.Spectrum(**data)
+            return spectrum
+        except Exception as err:
+            raise mf.ModiFinderError("Input data is not a valid dictionary.") from err
+    
+    raise mf.ModiFinderError("Input data is not a valid object.")
+    
 
-    res = {}
-    for key, value in data.items():
-        converted_key = convert_to_universal_key(key)
-        if key == "peaks_json":
-            res['peaks'] = json.loads(value)
-        elif converted_key == "adduct":
-            res[converted_key] = gt.adduct_mapping.get(value, value)
-        else:
-            try:
-                value = float(value)
-                if key in ["charge", "ms_level"]:
-                    value = int(value)
-            except:
-                pass
-            res[converted_key] = value
-    return res
+def spectrum_to_dict(spectrum):
+    """Convert a Spectrum object to a dictionary"""
+    return spectrum.__dict__

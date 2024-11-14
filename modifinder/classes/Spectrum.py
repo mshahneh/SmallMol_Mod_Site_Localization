@@ -1,9 +1,11 @@
-from typing import Dict
 import json
 from modifinder.utilities.gnps_types import adduct_mapping
+from modifinder import convert
+import numpy as np
 
 class Spectrum:
     """A class to represent a spectrum.
+    
     Parameters:
     ----------
     mz: list
@@ -26,13 +28,17 @@ class Spectrum:
         The dissociation method used.
     spectrum_id: str, optional
     """
-    def __init__(self, incoming_data:Dict=None, **kwargs):
+    def __init__(self, incoming_data=None, normalize_peaks = True, **kwargs):
         """Constructor for the Spectrum class.
 
         the spectrum class can be initialized with a dictionary of data or with the individual values.
 
-        Args:
-            incoming_data (dict): A dictionary of data to initialize the Spectrum object.
+        Parameters
+        ----------
+            incoming_data : Input data (optional, default is None).
+                The data to initialize the Spectrum object. The data can be a dictionary, a usi, or a Spectrum object.
+            normalize_peaks : bool, default is True.
+                If True, the intensity of the peaks will be normalized at initialization.
         """
         self.mz = None
         self.intensity = None
@@ -44,16 +50,19 @@ class Spectrum:
         self.ms_mass_analyzer = None
         self.ms_dissociation_method = None
         self.spectrum_id = None
+        
+        if incoming_data is None and len(kwargs) == 0:
+            return
 
         if incoming_data is not None:
-            self.update(**incoming_data)
+            convert.to_spectrum(incoming_data, self)
 
-        self.update(**kwargs)
+        self.update(normalize_peaks = normalize_peaks, **kwargs)
 
 
     def update(self, peaks = None, peaks_json = None, mz=None, intensity=None, precursor_mz=None, precursor_charge=None, 
                adduct=None, ms_level=None, instrument=None, ms_mass_analyzer=None, 
-               ms_dissociation_method=None, spectrum_id=None, **kwargs):
+               ms_dissociation_method=None, spectrum_id=None, normalize_peaks = False, **kwargs):
         """Update the Spectrum object with the given values.
 
         Args:
@@ -75,14 +84,17 @@ class Spectrum:
             self.intensity = [peak[1] for peak in peaks]
         self.mz = mz if mz is not None else self.mz
         self.intensity = intensity if intensity is not None else self.intensity
-        self.precursor_mz = precursor_mz if precursor_mz is not None else self.precursor_mz
-        self.precursor_charge = precursor_charge if precursor_charge is not None else self.precursor_charge
+        self.precursor_mz = float(precursor_mz) if precursor_mz is not None else self.precursor_mz
+        self.precursor_charge = int(float(precursor_charge)) if precursor_charge is not None else self.precursor_charge
         self.adduct = adduct_mapping[adduct] if adduct is not None else self.adduct
-        self.ms_level = ms_level if ms_level is not None else self.ms_level
+        self.ms_level = int(ms_level) if ms_level is not None else self.ms_level
         self.instrument = instrument if instrument is not None else self.instrument
         self.ms_mass_analyzer = ms_mass_analyzer if ms_mass_analyzer is not None else self.ms_mass_analyzer
         self.ms_dissociation_method = ms_dissociation_method if ms_dissociation_method is not None else self.ms_dissociation_method
         self.spectrum_id = spectrum_id if spectrum_id is not None else self.spectrum_id
+        
+        if normalize_peaks:
+            self.normalize_peaks()
 
 
     def __str__(self):
@@ -91,4 +103,53 @@ class Spectrum:
         for key in to_delete:
             del object_dict[key]
         return json.dumps(object_dict, indent=4)
+    
+    def clear(self):
+        """Clear the Spectrum object."""
+        self.mz = None
+        self.intensity = None
+        self.precursor_mz = None
+        self.precursor_charge = None
+        self.adduct = None
+        self.ms_level = None
+        self.instrument = None
+        self.ms_mass_analyzer = None
+        self.ms_dissociation_method = None
+        self.spectrum_id = None
+    
+    def copy(self):
+        """Return a copy of the Spectrum object."""
+        copied_spectrum = Spectrum()
+        convert.to_spectrum(self, use_object=copied_spectrum, needs_parse=False)
+        return copied_spectrum
+    
+    def normalize_peaks(self, change_self = True):
+        """l2 Normalize the intensity of the Spectrum object.
+        
+        Parameters
+        ----------
+        change_self : bool, default is True
+            If True, the intensity of the Spectrum object will be normalized in place.
+            If False, a new Spectrum object with the normalized intensity will be returned.
+        
+        Returns
+        -------
+        None
+            If change_self is True, the intensity of the Spectrum object will be normalized in place.
+        Spectrum
+            A new Spectrum object with the normalized intensity.
+        """
+        
+        l2_norm = np.linalg.norm(self.intensity)
+        new_intensity = [intensity / l2_norm for intensity in self.intensity]
+        
+        if change_self:
+            self.intensity = new_intensity
+        else:
+            new_spectrum = self.copy()
+            new_spectrum.intensity = new_intensity
+            return new_spectrum
+        
+    
+    
 

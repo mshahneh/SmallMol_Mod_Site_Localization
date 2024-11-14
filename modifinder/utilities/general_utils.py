@@ -4,7 +4,9 @@ General utility functions
 from pyteomics import mgf
 import pandas as pd
 import numpy as np
+import json
 import re
+import modifinder.utilities.gnps_types as gt
 
 def is_shifted(val1:float, val2:float, ppm:float=None, mz_tol:float=None) -> bool:
     """
@@ -236,3 +238,54 @@ def GetAdductMass(adduct):
         weight += elmass * chargeCount
 
     return weight
+
+def convert_to_universal_key(key: str) -> str:
+    """
+    Convert different types of keys to universal keys.
+    This function standardizes various key names to a universal format. 
+
+    Args:
+        :key (str): The key to be converted.
+    
+    Returns:
+        :str: The converted key.
+    """
+    key = key.lower()
+    key = key.replace(" ", "_")
+    return gt.gnps_keys_mapping.get(key, key)
+    
+# TODO: use machine learning prepared data instead of hardcoding
+def parse_data_to_universal(data):
+    """
+    Parse the data to a universal format.
+
+    This function takes a dictionary of data and converts it into a universal format.
+    It processes specific keys like "peaks_json" and "Charge" differently, and attempts
+    to convert other values to floats. If the conversion to float is successful and the
+    key is "Charge", it further converts the value to an integer.
+
+    Args:
+        :data (dict): The input data dictionary to be parsed.
+
+    Returns:
+        :dict: A dictionary with keys converted to a universal format and values processed
+              accordingly.
+    """
+
+    res = {}
+    for key, value in data.items():
+        converted_key = convert_to_universal_key(key)
+        if key == "peaks_json":
+            res['peaks'] = json.loads(value)
+        elif converted_key == "adduct":
+            res[converted_key] = gt.adduct_mapping.get(value, value)
+        else:
+            try:
+                if key in ["precursor_charge", "precursor_charge", "ms_level", "scan", "exact_mass"]:
+                    value = float(value)
+                if key in ["precursor_charge", "charge", "ms_level"]:
+                        value = int(value)
+            except Exception:
+                raise ValueError(f"Could not convert {key} to number")
+            res[converted_key] = value
+    return res

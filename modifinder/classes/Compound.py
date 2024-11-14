@@ -1,14 +1,12 @@
 import modifinder.utilities.general_utils as general_utils
 from modifinder.utilities.mol_utils import _get_molecule
-from modifinder.utilities.spectra_utils import get_spectrum
 import rdkit.Chem.rdMolDescriptors as rdMolDescriptors
-from typing import Dict
 from rdkit import Chem
 
 
 # import modifinder as mf
 from modifinder.classes.Spectrum import Spectrum
-from modifinder import convert
+from modifinder import convert as convert
 
 class Compound:
     """ A class to represent a compound 
@@ -37,31 +35,7 @@ class Compound:
     
     Examples
     --------
-    Create a compound by providing the necessary information:
 
-    >>> compound = Compound(id="CCMSLIB00005435812", peaks=[[110.066925,38499.089844],[138.060638,412152.093750],[195.079575,6894530.000000],[195.200180,480874.812500],[196.082092,43027.628906]], precursor_mz=195.087, precursor_charge=1, adduct="[M+H]+", smiles="CN1C=NC2=C1C(=O)N(C(=O)N2C)C")
-
-    Alternatively, you can create a compound by providing a dictionary of data:
-
-    >>> data = {
-    ...     "id": "CCMSLIB00005435812",
-    ...     "peaks": [[110.066925,38499.089844],[138.060638,412152.093750],[195.079575,6894530.000000],[195.200180,480874.812500],[196.082092,43027.628906]],
-    ...     "precursor_mz": 195.087,
-    ...     "charge": 1,
-    ...     "adduct": "[M+H]+",
-    ...     "smiles": "CN1C=NC2=C1C(=O)N(C(=O)N2C)C"
-    ... }
-    >>> compound = Compound(data)
-
-    You can also create a compound by providing a usi:
-
-    >>> usi = "mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005435812"
-    >>> compound = Compound(usi)
-
-    or with an accession:
-
-    >>> accession = "CCMSLIB00005435812"
-    >>> compound = Compound(accession)
     
     """
 
@@ -74,11 +48,17 @@ class Compound:
         1. By providing a dictionary of data to the *data* parameter that contains all the necessary information
         2. By providing a usi to the *data* parameter to retrieve the necessary information from GNPS
         3. By providing the necessary information as parameter
+        
+        If both the *data* and the parameters are provided, the parameters will override the data.
+        
+        If of the incoming data and kwargs are provided, an empty instance of the class will be created.
 
         Parameters:
         ----------
         incoming_data : input data (optional, default: None)
-            The data to initialize the class with, can be a dictionary of data, a usi, or a compound object, if None, an empty compound object will be created
+            The data to initialize the class with, can be a dictionary of data, a usi, or a compound object. If not provided,
+            the class will be initialized with the provided keyword arguments. If provided, the keyword arguments will still
+            override the data.
 
         kwargs : keyword arguments (optional, default: No attributes)
             Attributes to initialize the class with, if provided, they will override the attributes from the data
@@ -86,22 +66,37 @@ class Compound:
         See Also:
         ---------
         convert
+        Spectrum
 
-        Examples:
-        ---------
+        Examples
+        --------
+        Create a compound by providing the necessary information:
+
+        >>> compound = Compound(id="CCMSLIB00005435812", peaks=[[110.066925,38499.089844],[138.060638,412152.093750],[195.079575,6894530.000000],[195.200180,480874.812500],[196.082092,43027.628906]], precursor_mz=195.087, precursor_charge=1, adduct="[M+H]+", smiles="CN1C=NC2=C1C(=O)N(C(=O)N2C)C")
+
+        Alternatively, you can create a compound by providing a dictionary of data:
+
+        >>> data = {
+        ...     "id": "CCMSLIB00005435812",
+        ...     "peaks": [[110.066925,38499.089844],[138.060638,412152.093750],[195.079575,6894530.000000],[195.200180,480874.812500],[196.082092,43027.628906]],
+        ...     "precursor_mz": 195.087,
+        ...     "charge": 1,
+        ...     "adduct": "[M+H]+",
+        ...     "smiles": "CN1C=NC2=C1C(=O)N(C(=O)N2C)C"
+        ... }
+        >>> compound = Compound(data)
+
+        You can also create a compound by providing a usi:
+
+        >>> usi = "mzspec:GNPS:GNPS-LIBRARY:accession:CCMSLIB00005435812"
+        >>> compound = Compound(usi)
+
+        or with an accession:
+
+        >>> accession = "CCMSLIB00005435812"
+        >>> compound = Compound(accession)
 
         """
-        #     data (dict, str): A dictionary of data or a usi to retrieve data from GNPS
-        #     structure (Chem.Mol, Smiles, InChi): The structure of the compound
-        #     id (str): The id of the compound
-        #     spectrum (Spectrum): an instance of Spectrum containing peak information [(mz, intensity)], precursor mass, charge, and adduct for mass spectrumetry data
-        #     is_known (bool): A boolean indicating whether the compound is known, if set to False, annotators or other parts of the code will treat this compound as unknown, if not provided but the structure is provided, it will be set to True
-        #     name (str): The name of the compound
-        #     peak_fragments_map (dict): A dictionary mapping peaks to fragments
-        #     distances (dict): A dictionary of distances between every pair of atoms in the compound, if not provided, it will be calculated from the structure
-        #     **kwargs: Additional data
-        #         - A use case is for the scenarios where the *data* parameter is provided, these arguments will be used to parse and clean the data
-        # """
         
         # define the attributes of the class
         self.id = None
@@ -113,6 +108,7 @@ class Compound:
         self.distances = None
         self.usi = None
         self.adduct_mass = None
+        self.additional_attributes = {}
 
         if incoming_data is None and len(kwargs) == 0:
             return
@@ -138,12 +134,13 @@ class Compound:
         self.distances = None
         self.usi = None
         self.adduct_mass = None
-
-        # remove any additional attributes
-        all_keys = list(self.__dict__.keys())
-        for key in all_keys:
-            if key not in ['id', 'spectrum', 'structure', 'is_known', 'name', 'peak_fragments_map', 'distances', 'usi', 'adduct_mass']:
-                delattr(self, key)
+        self.additional_attributes = {}
+        
+        # # remove any additional attributes
+        # all_keys = list(self.__dict__.keys())
+        # for key in all_keys:
+        #     if key not in ['id', 'spectrum', 'structure', 'is_known', 'name', 'peak_fragments_map', 'distances', 'usi', 'adduct_mass']:
+        #         delattr(self, key)
         
     
 
@@ -171,13 +168,14 @@ class Compound:
         try:
             temp_structure = _get_molecule(structure, **lower_kwargs)
             self.structure = temp_structure if temp_structure is not None else self.structure
-        except:
+        except Exception:
             pass
         self.id = id if id is not None else self.id
-        try:
-            spectrum = get_spectrum(spectrum, **lower_kwargs)
-        except:
-            spectrum = None
+        if spectrum is not None or "precursor_mz" in lower_kwargs:
+            try:
+                spectrum = convert.to_spectrum(spectrum, **lower_kwargs)
+            except Exception:
+                spectrum = None
         
         if spectrum is not None and spectrum.mz is not None:
             self.spectrum = spectrum
@@ -191,10 +189,7 @@ class Compound:
         self.distances = distances if distances is not None else self.distances
 
         # update the rest of the attributes
-        for key, value in lower_kwargs.items():
-            if key not in ['structure', 'id', 'spectrum', 'usi', 'adduct_mass', 'is_known', 'name', 'peak_fragments_map', 'distances']:
-                if key not in self.spectrum.__dict__.keys():
-                    setattr(self, key, value)
+        self.additional_attributes.update(kwargs)
         
         self._parse_data()
     
@@ -230,6 +225,13 @@ class Compound:
         return result
     
 
+    def copy(self):
+        """Return a copy of the compound"""
+        copied_compound = Compound()
+        convert.to_compound(self, use_object = copied_compound)
+        return copied_compound
+    
+
     def get_meta_data(self):
         """ Get the meta data of the compound
 
@@ -243,7 +245,7 @@ class Compound:
             "charge": self.spectrum.charge,
         }
 
-        if self.name != None:
+        if self.name is not None:
             description["name"] = self.name
         
         if self.is_known:

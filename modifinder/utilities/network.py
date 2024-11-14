@@ -9,7 +9,7 @@ Author: Shahneh
 import json
 import requests
 from modifinder.utilities.gnps_types import *
-from modifinder.convert import parse_data_to_universal
+from modifinder.utilities.general_utils import parse_data_to_universal
 from modifinder.exceptions import ModiFinderNetworkError
 
 def usi_to_accession(usi: str) -> str:
@@ -22,7 +22,7 @@ def usi_to_accession(usi: str) -> str:
     if "accession" in usi:
         return usi.split(":")[-1]
     else:
-        if type(usi) == str:
+        if isinstance(usi, str):
             return usi
         else:
             return None
@@ -45,6 +45,11 @@ def get_data(identifier: str) -> dict:
     return: dict - dictionary of data
     """
 
+    if not identifier:
+        raise ModiFinderNetworkError("No identifier provided")
+    if not isinstance(identifier, str):
+        raise ModiFinderNetworkError("Identifier must be a string")
+
     data = dict()
     if _is_usi(identifier):
         if _is_known(identifier):
@@ -52,6 +57,7 @@ def get_data(identifier: str) -> dict:
         else:
             data = _get_partial_data(identifier)
             data['usi'] = identifier
+            data['id'] = identifier
             data = parse_data_to_universal(data)
             return data
 
@@ -77,6 +83,7 @@ def get_data(identifier: str) -> dict:
 
     data = parse_data_to_universal(data)
     data['usi'] = accession_to_usi(identifier)
+    data['id'] = identifier
 
     return data
 

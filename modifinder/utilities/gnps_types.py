@@ -1,20 +1,5 @@
 """
-This module provides utilities for handling GNPS (Global Natural Products Social) data types, 
-including functions to convert data to and from SpectrumTuple objects, and to parse data into 
-a universal format.
-Classes:
-    SpectrumTuple: A named tuple representing a spectrum with precursor m/z, precursor charge, 
-                   m/z values, and intensity values.
-Functions:
-    convert_to_SpectrumTuple(peaks: list, precursor_mz: float, precursor_charge: int) -> SpectrumTuple:
-    convert_to_SpectrumTuple_seprated(mz: list, intensity: list, precursor_mz: float, precursor_charge: int) -> SpectrumTuple:
-        Converts separate lists of m/z and intensity values to a SpectrumTuple.
-    convert_to_universal_key(key: str) -> str:
-        Converts different types of keys to universal keys.
-    parse_data_to_universal(data: dict) -> dict:
-        Parses the data to a universal format.
-    Convert_SpectrumTuple_to_peaks(spectrum: SpectrumTuple) -> list:
-        Converts a SpectrumTuple to a list of peaks.
+
 """
 
 import collections
@@ -187,4 +172,7 @@ gnps_keys_mapping = {
     ## spectrun_id
     "spectrum_id": "spectrum_id",
     "spectrumid": "spectrum_id",
+    ## exact mass
+    "exact_mass": "exact_mass",
+    "exactmass": "exact_mass",
 }
