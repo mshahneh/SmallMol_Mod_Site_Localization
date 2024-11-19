@@ -1,7 +1,7 @@
 # 2014.10.20 12:28:02 CEST
 import numpy
 import os
-from modifinder.engines.magma import rdkit_engine as Chem
+from modifinder.engines.annotation.magma import rdkit_engine as Chem
 from modifinder.utilities.general_utils import mims, Hmass
 
 typew = {'AROMATIC': 3.0,

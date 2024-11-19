@@ -66,6 +66,8 @@ class Spectrum:
         """Update the Spectrum object with the given values.
 
         Args:
+            peaks (list): A list of peaks in the form of [[mz1, intensity1], [mz2, intensity2], ...].
+            peaks_json (str): A json string of peaks.
             mz (list): A list of m/z values.
             intensity (list): A list of intensity values.
             precursor_mz (float): The precursor m/z value.
@@ -82,8 +84,8 @@ class Spectrum:
         if peaks is not None:
             self.mz = [peak[0] for peak in peaks]
             self.intensity = [peak[1] for peak in peaks]
-        self.mz = mz if mz is not None else self.mz
-        self.intensity = intensity if intensity is not None else self.intensity
+        self.mz = np.array(mz) if mz is not None else self.mz
+        self.intensity = np.array(intensity) if intensity is not None else self.intensity
         self.precursor_mz = float(precursor_mz) if precursor_mz is not None else self.precursor_mz
         self.precursor_charge = int(float(precursor_charge)) if precursor_charge is not None else self.precursor_charge
         self.adduct = adduct_mapping[adduct] if adduct is not None else self.adduct
@@ -149,6 +151,81 @@ class Spectrum:
             new_spectrum = self.copy()
             new_spectrum.intensity = new_intensity
             return new_spectrum
+    
+    
+    def remove_small_peaks(self, ratio_to_base_peak:float = 0.01, change_self = True):
+        """Remove peaks with intensity lower than a given ratio to the base peak.
+        
+        Parameters
+        ----------
+        ratio_to_base_peak : float (0, 1), default is 0.01
+            The ratio to the base peak.
+        change_self : bool, default is True
+            If True, the peaks with intensity lower than the given ratio will be removed in place.
+            If False, a new Spectrum object with the peaks removed will be returned.
+        
+        Returns
+        -------
+        map from old index to new index
+            If change_self is True, the peaks with intensity lower than the given ratio will be removed in place and a map from the old index to the new index will be returned.
+        (Spectrum, map from old index to new index)
+            A new Spectrum object with the peaks removed and a map from the old index to the new index.
+        """
+        
+        base_peak = max(self.intensity)
+        new_mz = []
+        new_intensity = []
+        index_mapping = {}
+        for index, intensity in enumerate(self.intensity):
+            if intensity >= ratio_to_base_peak * base_peak:
+                new_mz.append(self.mz[index])
+                new_intensity.append(intensity)
+                index_mapping[index] = len(new_mz) - 1
+        
+        if change_self:
+            self.mz = new_mz
+            self.intensity = new_intensity
+            return index_mapping
+        else:
+            new_spectrum = self.copy()
+            new_spectrum.mz = new_mz
+            new_spectrum.intensity = new_intensity
+            return new_spectrum, index_mapping
+    
+    
+    def keep_top_k(self, k:int = 100, change_self: bool = True):
+        """Keep only the top k peaks in the Spectrum object.
+        
+        Parameters
+        ----------
+        k : int, default is 100
+            The number of peaks to keep.
+        change_self : bool, default is True
+            If True, only the top k peaks will be kept in place.
+            If False, a new Spectrum object with only the top k peaks will be returned.
+        
+        Returns
+        -------
+        map from old index to new index
+            If change_self is True, only the top k peaks will be kept in place and a map from the old index to the new index will be returned.
+        (Spectrum, map from old index to new index)
+            A new Spectrum object with only the top k peaks and a map from the old index to the new index.
+        """
+        
+        top_k_indices = np.argsort(self.intensity)[::-1][:k]
+        new_mz = np.array([self.mz[index] for index in top_k_indices])
+        new_intensity = np.array([self.intensity[index] for index in top_k_indices])
+        index_mapping = {index: new_index for new_index, index in enumerate(top_k_indices)}
+        
+        if change_self:
+            self.mz = new_mz
+            self.intensity = new_intensity
+            return index_mapping
+        else:
+            new_spectrum = self.copy()
+            new_spectrum.mz = new_mz
+            new_spectrum.intensity = new_intensity
+            return new_spectrum, index_mapping
         
     
     

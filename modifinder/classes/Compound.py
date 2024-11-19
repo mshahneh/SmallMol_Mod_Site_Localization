@@ -2,7 +2,8 @@ import modifinder.utilities.general_utils as general_utils
 from modifinder.utilities.mol_utils import _get_molecule
 import rdkit.Chem.rdMolDescriptors as rdMolDescriptors
 from rdkit import Chem
-
+from typing import Dict
+import numpy as np
 
 # import modifinder as mf
 from modifinder.classes.Spectrum import Spectrum
@@ -257,6 +258,128 @@ class Compound:
             # TODO: add peak annotation information
         
         return description
+    
+    
+    def print_peaks_to_fragments_map(self, peaks: list = None):
+        """Print the peaks to fragments map
+        
+        Parameters
+        ----------
+        peaks : list, optional (default: None)
+            The list of peaks to print the fragments for, if None, print all peaks
+        """
+        if peaks is None:
+            peaks = range(len(self.spectrum.mz))
+        
+        for peak in peaks:
+            print(f"Peak {peak}: {self.spectrum.mz[peak]}, Fragments: {self.peak_fragments_map[peak]}")
+        print()
+        
+    
+    def find_existance(self, peakids: list):
+        """
+        For each atom, and for each peak in the list, find the fragments that the atom is part of
+        
+        Parameters
+        ----------
+            peakids : list of peak ids
+        
+        Returns
+        -------
+            existance : list of dicts for each atom, each dict contains the peak ids as keys and the fragments as values
+            
+        """
+        
+        existance = [dict() for i in range(len(self.structure.GetAtoms()))]
+        for peak in peakids:
+            for fragment in self.peak_fragments_map[peak]:
+                # get all the bits that are 1 in the fragment
+                bin_fragment = bin(fragment)
+                len_fragment = len(bin_fragment)
+                hitAtoms = [len_fragment-i-1 for i in range(len(bin_fragment)) if bin_fragment[i] == '1']
+                for atom in hitAtoms:
+                    if peak not in existance[atom]:
+                        existance[atom][peak] = []
+                    existance[atom][peak].append(fragment)
+        return existance
+    
+    
+    def calculate_contribution_atom_in_peak(self, atom: int, peakindx:int, existance_data:list[Dict], CI:bool = False, CPA:bool = True, CFA:bool = True):
+        """Calculates the contribution of an atom to a peak
+
+        Parameters
+        ----------
+        atom : int
+            The index of the atom
+        peakindx : int
+            The index of the peak
+        existance_data : list of dicts
+            The existance data for the atoms
+        CI : bool, optional (default: False)
+            Calculate the intensity factor
+        CPA : bool, optional (default: True)
+            Calculate the atom peak ambiguity factor
+        CFA : bool, optional (default: True)
+            Calculate the fragment ambiguity factor
+        """
+        contribution = 0
+        if peakindx not in existance_data[atom]:
+            return contribution
+        
+        intensity_factor = 1
+        atom_peak_ambiguity_factor = 1
+        fragment_ambiguity_factor = 1
+
+        if CI:
+            intensity_factor = self.spectrum.intensity[peakindx]
+        if CPA:
+            atom_peak_ambiguity_factor = 1/len(self.peak_fragments_map[peakindx])
+
+        for frag in existance_data[atom][peakindx]:
+            if CFA:
+                fragment_ambiguity_factor = 1/(bin(frag).count("1"))
+            
+            contribution += intensity_factor * atom_peak_ambiguity_factor * fragment_ambiguity_factor
+        
+        return contribution
+    
+    def calculate_contributions(self, peakids, CI = False, CPA = True, CFA = True, CPE = True):
+        """ 
+        input:
+        peakids: list of peak ids
+        CI: (Consider_Intensity) bool, if True, the intensity of the peaks is considered (default: False)
+        CPA: (Consider_Peak_Ambiguity) bool, if True, the peak ambiguity (number of fragments assigned to a peak) is considered (default: True)
+        CFA: (Consider_Fragment_Ambiguity) bool, if True, the fragment ambiguity (number of atoms in fragment) is considered (default: True)
+        CPA: (Consider_Peak_Entropy) bool, if True, the peak entropy (how ambiguis the fragments are) is considered (default: True
+        """
+        num_atoms = len(self.structure.GetAtoms())
+        existance_data = self.find_existance(peakids)
+        contributions = [0 for i in range(num_atoms)]
+        peak_atom_contributions = np.zeros((len(peakids), num_atoms))
+        for i, peak in enumerate(peakids):
+            for atom in range(num_atoms):
+                peak_atom_contributions[i][atom] = self.calculate_contribution_atom_in_peak(atom, peak, existance_data, CI=CI, CPA=CPA, CFA=CFA)
+        
+        if CPE:
+            peak_entropies = np.zeros(len(peakids))
+            for i in range(len(peakids)):
+                peak_entropies[i] = 1 - general_utils.entropy(peak_atom_contributions[i])
+            
+            # peak_entropies = peak_entropies / np.max(peak_entropies)
+        else:
+            peak_entropies = np.ones(len(peakids))
+            
+        
+        for i in range(num_atoms):
+            for j in range(len(peakids)):
+                contributions[i] += peak_atom_contributions[j][i] * peak_entropies[j]
+        
+        
+        # for atom in range(len(existance_data)):
+        #     for peak in existance_data[atom]:
+        #         contributions[atom] += self.calculate_contribution_atom_in_peak(atom, peak, existance_data, CI=CI, CPA=CPA, CFA=CFA)
+        
+        return contributions
 
 
     # TODO: Implement the following methods

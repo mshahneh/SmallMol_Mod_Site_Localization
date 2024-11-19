@@ -26,7 +26,7 @@ class TestCosineAlignment(unittest.TestCase):
     def test_align(self):
         modifinder = mf.ModiFinder(caffeine_data.compound, theophylline_data.compound)
         cosine_engine = CosineAlignmentEngine()
-        cosine_engine.align(modifinder)
+        cosine_engine.align(modifinder.network)
         
         if caffeine_data.compound.spectrum.precursor_mz < theophylline_data.compound.spectrum.precursor_mz:
             edge_data =  modifinder.network.get_edge_data(caffeine_data.compound.id, theophylline_data.compound.id)

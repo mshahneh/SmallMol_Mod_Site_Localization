@@ -7,6 +7,7 @@ import numpy as np
 import json
 import re
 import modifinder.utilities.gnps_types as gt
+import copy
 
 def is_shifted(val1:float, val2:float, ppm:float=None, mz_tol:float=None) -> bool:
     """
@@ -289,3 +290,39 @@ def parse_data_to_universal(data):
                 raise ValueError(f"Could not convert {key} to number")
             res[converted_key] = value
     return res
+
+
+def entropy(probabilities):
+    # if probabilities is not numpy array, convert it to numpy array
+    probabilities = np.array(probabilities)
+    # if probabilities is not float, convert it to float
+    probabilities = probabilities.astype(float)
+    
+    if len(probabilities) == 0:
+        return 1
+    if min(probabilities) < 0:
+        probabilities = probabilities - min(probabilities)
+    regulator = 1e-8
+    probabilities = probabilities + regulator
+    probabilities = probabilities / np.sum(probabilities)
+    H_max = np.log(len(probabilities))
+    H = abs(np.sum(probabilities * np.log(probabilities)))
+    # print(H, probabilities, H_max, H/H_max)
+    return H/H_max
+
+
+def power_prob(probabilities):
+    # copy the probabilities to avoid changing the original
+    probabilities2 = copy.deepcopy(probabilities)
+    if min(probabilities2) < 0:
+        probabilities2 = probabilities2 - min(probabilities2)
+    if max(probabilities2) == 0:
+        return probabilities2
+    # make anythin less than half of the max value zero
+    probabilities2[probabilities2 < max(probabilities2) / 2] = 0
+
+    probabilities2 = np.power(probabilities2, 4)
+    if sum(probabilities2) == 0:
+        return probabilities2
+    probabilities2 = probabilities2 / probabilities2.sum()
+    return probabilities2

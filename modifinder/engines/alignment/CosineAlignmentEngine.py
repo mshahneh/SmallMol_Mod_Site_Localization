@@ -5,9 +5,9 @@ from typing import List, Tuple
 from modifinder.engines.Abtracts import AlignmentEngine
 from modifinder.classes.Spectrum import Spectrum
 from modifinder.classes.EdgeDetail import EdgeDetail, Match, MatchType
-from modifinder.classes.ModiFinder import ModiFinder
 from modifinder.utilities.general_utils import is_shifted
 from modifinder.exceptions import ModiFinderError
+import networkx as nx
 
 
 def _cosine_fast(
@@ -108,7 +108,7 @@ def _cosine_fast(
 class CosineAlignmentEngine(AlignmentEngine):
     def align(
         self,
-        modifinder: ModiFinder,
+        network: nx.DiGraph,
         fragment_mz_tolerance: float = 0.02,
         fragment_ppm_tolerance: float = 100.0,
         align_all: bool = False,
@@ -119,8 +119,8 @@ class CosineAlignmentEngine(AlignmentEngine):
         
         Parameters
         ----------
-        modifinder : ModiFinder
-            The ModiFinder object to align the spectra in.
+        network : nx.DiGraph
+            The Compound Graph object to align the spectra in.
         fragment_mz_tolerance : float, optional
             Fragment mz tolerance, by default 0.02
         fragment_ppm_tolerance : float, optional
@@ -130,10 +130,10 @@ class CosineAlignmentEngine(AlignmentEngine):
         kwargs : dict
             additional arguments
         """
-        edges = modifinder.network.edges(data=True)
+        edges = network.edges(data=True)
         for edge in edges:
-            start_compound = modifinder.network.nodes[edge[0]]["compound"]
-            end_compound = modifinder.network.nodes[edge[1]]["compound"]
+            start_compound = network.nodes[edge[0]]["compound"]
+            end_compound = network.nodes[edge[1]]["compound"]
             if "edgedetail" not in edge[2] or edge[2]["edgedetail"] is None or align_all:
                 edge[2]["edgedetail"] = self.single_align(
                     start_compound.spectrum,
