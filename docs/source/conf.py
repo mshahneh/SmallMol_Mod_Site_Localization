@@ -16,7 +16,16 @@ release = '1.1'
 extensions = [
     "sphinx_rtd_theme",
     'sphinx.ext.autodoc',
-    'sphinx.ext.autosummary'
+    'sphinx.ext.napoleon',
+    'sphinx.ext.autosummary',
+    'sphinx.ext.imgconverter',
+    'sphinx.ext.intersphinx',
+    'sphinx.ext.mathjax',
+    'sphinx.ext.viewcode',
+    'matplotlib.sphinxext.plot_directive',
+    'myst_parser',
+    
+    
 ]
 
 templates_path = ['_templates']

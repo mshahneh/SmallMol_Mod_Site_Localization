@@ -1,7 +1,7 @@
-Spectra Utilities
+utilities.general\_utils module
 ===============================
 
-.. automodule:: utilities.spectra_utils
+.. automodule:: utilities.general_utils
    :members:
    :undoc-members:
    :show-inheritance:

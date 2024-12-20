@@ -1,4 +1,4 @@
-Visualizer
+utilities.visualizer module
 ===========================
 
 .. automodule:: utilities.visualizer

@@ -1,4 +1,4 @@
-GNPS Types
+utilities.gnps\_types module
 ============================
 
 .. automodule:: utilities.gnps_types

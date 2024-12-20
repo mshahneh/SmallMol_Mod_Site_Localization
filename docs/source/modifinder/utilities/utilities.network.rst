@@ -1,4 +1,4 @@
-Network Utilities
+utilities.network module
 ========================
 
 .. automodule:: utilities.network
