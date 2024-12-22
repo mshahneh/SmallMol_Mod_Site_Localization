@@ -45,10 +45,15 @@ def read_mgf(mgf_path: str) -> pd.DataFrame:
     """
     Read an MGF file into a pandas DataFrame
     
-    input:
-        :mgf_path: path to the MGF file
-    return: 
-        :pd.DataFrame: pandas DataFrame with columns as metadata and 'spectrum' as the m/z and intensity values
+    Parameters
+    ----------
+        mgf_path : str
+            The path to the MGF file to be read
+    
+    Returns
+    -------
+        pd.DataFrame
+                pandas DataFrame with columns as metadata and 'spectrum' as the m/z and intensity values
     """
 
     msms_df = []
@@ -77,11 +82,12 @@ def write_mgf(msms_df: pd.DataFrame, mgf_path: str):
     """
     Writes a pandas DataFrame to an MGF file
 
-    input:
-        :msms_df: pandas DataFrame with column 'spectrum' and other columns as metadata
-        :mgf_path: path to write the MGF file
-    Returns:
-      None
+    Parameters
+    ----------
+        msms_df : pd.DataFrame
+            pandas DataFrame with column 'spectrum' and other columns as metadata
+        mgf_path : str
+            Path to write the MGF file
     """
 
     specs = []
@@ -190,7 +196,20 @@ ionmasses = {1: {'+H': mims['H'],
       '+Cl': mims['Cl']}}
 
 
-def GetFormulaMass(formula):
+def get_formula_mass(formula):
+    """
+    Return the mass of a chemical formula.
+
+    Parameters
+    ----------
+    formula : str
+        The chemical formula.
+        
+    Returns
+    -------
+    float
+        The mass of the chemical formula.
+    """
     weight = 0
     pattern = r'([A-Z][a-z]*)(\d*)'
     matches = re.findall(pattern, formula)  # Find all matches in the formula
@@ -205,7 +224,27 @@ def GetFormulaMass(formula):
             weight += mims[element]
     return weight
 
-def GetAdductMass(adduct):
+def get_adduct_mass(adduct):
+    """
+    Get the mass of an adduct.
+
+    Parameters
+    ----------
+    adduct : str
+        The adduct to get the mass of. 
+        
+        The supported format is [aM±bA]c± where a and b and c are numbers, M is the molecule, A is the adduct, and c is the charge.
+    
+    Returns
+    -------
+    float
+        The mass of the adduct.
+        
+    Raises
+    ------
+    ValueError
+        If the adduct format is not accepted
+    """
     weight = 0
     # remove spaces
     adduct = adduct.replace(' ', '')
@@ -221,9 +260,9 @@ def GetAdductMass(adduct):
     subformulas = regexPattern.findall(remaining)
     for subformula in subformulas:
         if subformula[0] == '+':
-            weight += GetFormulaMass(subformula[1:])
+            weight += get_formula_mass(subformula[1:])
         else:
-            weight -= GetFormulaMass(subformula[1:])
+            weight -= get_formula_mass(subformula[1:])
     
     if charge[-1] == '+':
         if len(charge) == 1:

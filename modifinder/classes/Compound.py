@@ -214,7 +214,7 @@ class Compound:
             Chem.rdmolops.GetDistanceMatrix(self.structure)
         
         if self.adduct_mass is None and self.spectrum is not None:
-            self.adduct_mass = general_utils.GetAdductMass(self.spectrum.adduct)
+            self.adduct_mass = general_utils.get_adduct_mass(self.spectrum.adduct)
         
         if self.is_known is None and self.structure is not None:
             self.is_known = True

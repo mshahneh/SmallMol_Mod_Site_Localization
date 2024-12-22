@@ -109,7 +109,7 @@ def GetFormulaMass(formula):
             weight += pars.mims[element]
     return weight
 
-def GetAdductMass(adduct):
+def get_adduct_mass(adduct):
     weight = 0
     # remove spaces
     adduct = adduct.replace(' ', '')

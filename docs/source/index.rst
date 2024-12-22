@@ -33,7 +33,7 @@ License
 
 .. toctree::
    :maxdepth: 4
-   :caption: Contents:
+   :hidden:
 
    install
    tutorial

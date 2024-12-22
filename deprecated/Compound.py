@@ -118,7 +118,7 @@ class Compound:
         
         # adjusting the attributes ---------------------------------------
         self.Adduct = utils.parse_adduct(self.Adduct)
-        self.Adduct_Mass = rdkit_engine.GetAdductMass(self.Adduct)
+        self.Adduct_Mass = rdkit_engine.get_adduct_mass(self.Adduct)
 
 
         # set the smiles and structure-----------------------------------

@@ -2,6 +2,9 @@ Utilities
 =========
 
 .. toctree::
-   :maxdepth: 4
+   :maxdepth: 2
 
-   utilities
+   utilities.general_utils
+   utilities.gnps_types
+   utilities.mol_utils
+   utilities.network
