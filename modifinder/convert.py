@@ -177,6 +177,21 @@ def to_spectrum(data = None, use_object=None, needs_parse = True, **kwargs):
         except Exception as err:
             raise mf.ModiFinderError("Input data is not a valid dictionary.") from err
     
+    if isinstance(data, list):
+        new_data = dict()
+        new_data["mz"] = [x[0] for x in data]
+        new_data["intensity"] = [x[1] for x in data]
+        try:
+            if use_object:
+                spectrum = use_object
+                spectrum.clear()
+                spectrum.update(**new_data)
+            else:
+                spectrum = mf.Spectrum(**new_data)
+            return spectrum
+        except Exception as err:
+            raise mf.ModiFinderError("Input data is not a valid list.") from err
+    
     raise mf.ModiFinderError("Input data is not a valid object.")
     
 

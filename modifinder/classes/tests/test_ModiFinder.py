@@ -44,13 +44,9 @@ class TestConvert(unittest.TestCase):
     
     
     def test_generate_probabilities(self):
-        modifinder = ModiFinder(knownCompond=caffeine_data.compound, unknownCompound=theophylline_data.compound)
-        alignment = CosineAlignmentEngine()
-        alignment.align(modifinder.network)
+        modifinder = ModiFinder(knownCompond=caffeine_data.compound, unknownCompound=theophylline_data.compound, ppm = 50)
         print(modifinder.network.edges[(theophylline_data.accession, caffeine_data.accession)]["edgedetail"])
-        annotation = MAGMaAnnotationEngine(ppm = 50)
-        annotation.annotate(modifinder.network)
         print(modifinder.network.nodes[caffeine_data.accession]["compound"].peak_fragments_map)
-        print(modifinder.generate_probabilities(caffeine_data.accession, theophylline_data.accession))
+        print(modifinder.generate_probabilities())
 
 

@@ -37,7 +37,7 @@ License
 
    install
    tutorial
-   documentation
+   modifinder/index
    
 
 Indices and tables

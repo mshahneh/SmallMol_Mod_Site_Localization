@@ -7,7 +7,7 @@ This file contains utility functions around molecules and molecules modification
 from rdkit import Chem
 from rdkit.Chem import rdFMCS
 from copy import deepcopy
-from modifinder.utilities.network import *
+from modifinder.utilities.network import get_data
 
 import rdkit.rdBase as rkrb
 import rdkit.RDLogger as rkl
@@ -86,21 +86,25 @@ def get_edit_distance(mol1, mol2):
     return len(dist1) + len(dist2)
 
 
-def get_edit_distance_detailed(mol1, mol2):
+def get_edit_distance_detailed(mol1, mol2, mcs = None):
     """
         Calculates the edit distance between mol1 and mol2.
 
         Input:
             :mol1: first molecule
             :mol2: second molecule
+            :mcs: the maximum common substructure between mol1 and mol2
 
         Output:
             :removed edges: the removed modification edges
             :added edges: the added modification edges
     """
     copy_mol1, copy_mol2 = _get_molecules(mol1, mol2)
-    mcs1 = rdFMCS.FindMCS([copy_mol1, copy_mol2])
-    mcs_mol = Chem.MolFromSmarts(mcs1.smartsString)
+    if mcs is None:
+        mcs1 = rdFMCS.FindMCS([copy_mol1, copy_mol2])
+        mcs_mol = Chem.MolFromSmarts(mcs1.smartsString)
+    else:
+        mcs_mol = Chem.Mol(mcs)
     dist1 = get_modification_edges(copy_mol1, mcs_mol)
     dist2 = get_modification_edges(copy_mol2, mcs_mol)
     return len(dist1), len(dist2)
@@ -227,9 +231,10 @@ def get_modification_graph(main_struct, sub_struct):
             :main_struct: main molecule
             :sub_struct: substructure molecule
         Output:
-            :frag: modified fragment mol
-            :index_in_frag: index of the modification atom in the fragment
-            :bondType: bond type of the modification bond
+            :all_modifications: a list of the modifications structures, each modification is a tuple of:
+                1. the modified subgraph molecule (as an rdkit editable molecule)
+                2. a dictionary that maps the wildcard atom indices in subgraph to its true index in the main molecule
+                3. the SMARTS representation of the modification
     """
     main_struct, sub_struct = _get_molecules(main_struct, sub_struct)
     if not main_struct.HasSubstructMatch(sub_struct):
@@ -239,33 +244,64 @@ def get_modification_graph(main_struct, sub_struct):
             raise ValueError("One molecule should be a substructure of the other molecule")
 
     atoms_of_substructure = _find_minimal_modification_edges_match(main_struct, sub_struct)
-    modificationEdgesOutward, modificationEdgesInside, _ = _get_edge_modifications(main_struct, sub_struct, atoms_of_substructure)
-    for bond in modificationEdgesOutward:
-        new_bond = main_struct.GetBondBetweenAtoms(bond[0], bond[1])
-        frag_modif_atom = new_bond.GetBeginAtomIdx()
-        bondType = new_bond.GetBondType()
-        if new_bond.GetBeginAtomIdx() in atoms_of_substructure:
-            frag_modif_atom = new_bond.GetEndAtomIdx()
-        break
+    modificationEdgesOutward, modificationEdgesInside, noneModificationDifferentEdges = _get_edge_modifications(main_struct, sub_struct, atoms_of_substructure)
+    all_modification_edges = modificationEdgesOutward + modificationEdgesInside + noneModificationDifferentEdges
 
-    # create a copy of the main structure
-    main_struct_copy = Chem.Mol(main_struct)
-    main_struct_copy.GetAtomWithIdx(frag_modif_atom).SetProp("atomNote", "modification")
-    emol = Chem.EditableMol(main_struct_copy)
+    def dfs(mol, index, visited, color, all_modification_edges):
+        if index in visited:
+            return
+        visited[index] = color
+        
+        for bond in all_modification_edges:
+            if bond[0] == index:
+                target = bond[1]
+            elif bond[1] == index:
+                target = bond[0]
+            else:
+                continue
+            
+            if target not in visited:
+                dfs(mol, target, visited, color, all_modification_edges)
+        return
 
-    for atom in reversed(range(main_struct_copy.GetNumAtoms())):
-        if atom in atoms_of_substructure:
-            emol.RemoveAtom(atom)
-    
-    frag = emol.GetMol()
-    # get the atom index of the modification atom in the fragment
-    for i in frag.GetAtoms():
-        if i.HasProp("atomNote"):
-            index_in_frag = i.GetIdx()
-            i.ClearProp("atomNote")
-            break
-    
-    return frag, index_in_frag, bondType
+    visited = {}
+    color = 0
+    for atom in range(main_struct.GetNumAtoms()):
+        if atom not in visited and atom not in atoms_of_substructure:
+            dfs(main_struct, atom, visited, color, all_modification_edges)
+            color += 1
+
+
+    all_modifications = []
+    for modification in range(color):
+        true_map = dict()
+        edit_mol = Chem.RWMol(main_struct)
+        # delete any atom that is not in the modification
+        for atom in range(main_struct.GetNumAtoms()-1, -1, -1):
+            if atom not in visited or visited[atom] != modification:
+                edit_mol.RemoveAtom(atom)
+            elif atom in atoms_of_substructure:
+                edit_mol.GetAtomWithIdx(atom).SetProp('atomNote', f'substructure_{atom}')
+        
+        new_edit_mol = Chem.RWMol()
+        for atom in edit_mol.GetAtoms():
+            try:
+                note = atom.GetProp('atomNote')
+            except:
+                note = None
+            if note is not None and note.startswith('substructure'):
+                new_edit_mol.AddAtom(Chem.Atom(0))
+                true_map[atom.GetIdx()] = note.split('_')[1]
+            else:
+                new_edit_mol.AddAtom(atom)
+        
+        for bond in edit_mol.GetBonds():
+            new_edit_mol.AddBond(bond.GetBeginAtomIdx(), bond.GetEndAtomIdx(), bond.GetBondType())
+            
+        # new_edit_mol = new_edit_mol.GetMol()
+        all_modifications.append((new_edit_mol, true_map, Chem.MolToSmarts(new_edit_mol)))
+        
+    return all_modifications
 
 
 def attach_mols(main_mol, attachment_mol, attach_location_main, attach_location_attachment, bond_type):
@@ -307,7 +343,23 @@ def generate_possible_stuctures(main_struct, sub_struct):
         else:
             raise ValueError("One molecule should be a substructure of the other molecule")
 
-    frag, index_in_frag, bondType = get_modification_graph(main_struct, sub_struct)
+    all_modifications = get_modification_graph(main_struct, sub_struct)
+    if len(all_modifications) == 0:
+        raise ValueError("No modification is found")
+    if len(all_modifications) > 1:
+        raise ValueError("Multiple modifications are found")
+    if len(all_modifications[0][1]) > 1:
+        raise ValueError("Multiple modifications are found")
+    if len(all_modifications[0][1]) == 0:
+        raise ValueError("ISSUE WITH CODE, PLEASE REPORT")
+    
+    wild_atom = list(all_modifications[0][1].keys())[0]
+    neighbor = all_modifications[0][0].GetAtomWithIdx(wild_atom).GetNeighbors()[0]
+    bondType = all_modifications[0][0].GetBondBetweenAtoms(wild_atom, neighbor.GetIdx()).GetBondType()
+    all_modifications[0][0].RemoveAtom(wild_atom)
+
+    frag = all_modifications[1][0]
+    index_in_frag = neighbor.GetIdx()
 
     structs = []
     for atom in sub_struct.GetAtoms():
@@ -324,14 +376,14 @@ def _attach_struct_try(main_struct, frag, main_location, frag_location, bond_typ
     try:
         Chem.SanitizeMol(mol)
         return mol
-    except:
+    except Exception:
         for bond in [Chem.BondType.SINGLE, Chem.BondType.DOUBLE, Chem.BondType.TRIPLE]:
             if bond != bond_type:
                 try:
                     mol = attach_mols(main_struct, frag, main_location, frag_location, bond)
                     Chem.SanitizeMol(mol)
                     return mol
-                except:
+                except Exception:
                     continue
     return None
 
@@ -368,7 +420,7 @@ def _find_minimal_modification_sites_match(mol, substructure):
 def _find_minimal_modification_edges_match(mol, substructure):
     """
         Finds the matching that results in the minimum number of modification edges, if multiple matches are found.
-        If multiple results are found, one random result is returned.
+        If multiple matches have the minimum number, one random result is returned.
         Input:
             mol: first molecule
             substructure: substructure molecule
@@ -402,7 +454,7 @@ def _get_edge_modifications(mol, substructure, match):
         Output:
             modificationEdgesOutward: the modification edges that go from atoms in the substructure to atoms outside the substructure
             modificationEdgesInside: the modification edges that happen within the atoms in the substructure
-            noneModificationDifferentEdges: the edges that are not modification edges but are different between the two molecules (edges outside the substructure)
+            noneModificationDifferentEdges: the edges that are not modification edges but are different between the two molecules (edges that are completely outside the substructure)
     """
     reverse_match = {v: k for k, v in enumerate(match)}
     intersect = set(match)
@@ -502,28 +554,28 @@ def _get_molecule(identifier = None, smiles=None, inchi=None, molblock=None, sma
                 molecule = Chem.MolFromSmiles(identifier)
                 if molecule:
                     return molecule
-            except:
+            except Exception:
                 pass
 
             try:
                 molecule = Chem.MolFromInchi(identifier)
                 if molecule:
                     return molecule
-            except:
+            except Exception:
                 pass
 
             try:
                 molecule = Chem.MolFromMolBlock(identifier)
                 if molecule:
                     return molecule
-            except:
+            except Exception:
                 pass
 
             try:
                 molecule = Chem.MolFromSmarts(identifier)
                 if molecule:
                     return molecule
-            except:
+            except Exception:
                 pass
 
             try:
@@ -533,7 +585,7 @@ def _get_molecule(identifier = None, smiles=None, inchi=None, molblock=None, sma
                     molecule = Chem.MolFromSmiles(smiles)
                     if molecule:
                         return molecule
-            except:
+            except Exception:
                 raise ValueError("The identifier is not valid or it is not supported")
             
         if isinstance(identifier, Chem.Mol):

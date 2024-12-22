@@ -39,7 +39,7 @@ class EdgeDetail:
     """
     Class for Edge Details
     """
-    def __init__(self, number_of_modifications: int = -1, match_score: float = 0, matches: List[Match] = None):
+    def __init__(self, number_of_modifications: int = -1, match_score: float = 0, matches: List[Match] = None, start_spectrum_id: str = None, end_spectrum_id: str = None):
         """
         Initialize the EdgeDetail object.
 
@@ -54,6 +54,8 @@ class EdgeDetail:
             important to note that match has directionality. The first peak index is from the first 
             node of the edge and the second peak index is from the second node of the edge.
         """
+        self.start_spectrum_id = start_spectrum_id
+        self.end_spectrum_id = end_spectrum_id
         self.number_of_modifications = number_of_modifications
         self.match_score = match_score
         self.matches = matches if matches else []

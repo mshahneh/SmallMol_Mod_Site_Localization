@@ -6,7 +6,7 @@ import numpy as np
 class Spectrum:
     """A class to represent a spectrum.
     
-    Parameters:
+    Parameters
     ----------
     mz: list
         A list of m/z values.
@@ -27,7 +27,13 @@ class Spectrum:
     ms_dissociation_method: str, optional
         The dissociation method used.
     spectrum_id: str, optional
+        The spectrum id.
+    
+    Examples
+    --------
+    
     """
+    
     def __init__(self, incoming_data=None, normalize_peaks = True, **kwargs):
         """Constructor for the Spectrum class.
 

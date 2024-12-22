@@ -9,11 +9,12 @@ Author: Shahneh
 from rdkit import Chem
 from rdkit.Chem import AllChem, Descriptors, rdFMCS
 from rdkit.Chem import Draw
+from modifinder.convert import to_spectrum
 from modifinder.utilities.network import *
 from modifinder.utilities.gnps_types import *
 from modifinder.utilities.general_utils import *
 import modifinder.utilities.mol_utils as mu
-import modifinder.utilities.spectra_utils as su
+# import modifinder.utilities.spectra_utils as su
 # from modifinder.alignment import _cosine_fast
 import io
 import matplotlib.image as mpimg
@@ -28,14 +29,67 @@ from io import BytesIO
 def draw_molecule(mol, output_type='png', font_size = None, label=None, label_font_size = 20, label_color = (0,0,0), label_position = 'top', **kwargs):
     """
     Draw a molecule using RDKit
-    :param mol: rdkit molecule or str for SMILES or InChI or GNPS identifier (USI or Accession)
-    :param output_type: str - type of output (png or svg)
-    :param font_size: int - font size for the labels
-    :param label: str - label for the molecule
-    :param label_font_size: int - font size for the label
-    :param label_color: tuple - color of the label
-    :param label_position: str - position of the label (top or bottom)
-    :param kwargs: additional arguments
+    
+    Parameters
+    ----------
+    mol : rdkit molecule or str
+        rdkit molecule or str for SMILES or InChI or GNPS identifier (USI or Accession)
+    output_type : str
+        type of output (png or svg)
+    font_size : int, optional (default=None)
+        font size for the labels
+    label : str, optional (default=None)
+        label for the molecule
+    label_font_size : int, optional (default=20)
+        font size for the label
+    label_color : tuple, optional (default=(0,0,0))
+        color of the label
+    label_position : str, optional (default='top')
+        position of the label (top or bottom)
+    kwargs : dict
+        additional arguments for drawing the molecule in rdkit
+        like highlightAtoms, highlightAtomColors, highlightBonds, highlightBondColors, highlightAtomRadii, etc.
+    
+    Returns
+    -------
+    img : numpy array or str
+        image of the molecule
+    
+    Examples
+    -------
+    .. code-block:: python
+    
+        import modifinder.utilities.visualizer as mf_vis
+        from matplotlib import pyplot as plt
+
+        img = mf_vis.draw_molecule('CN1C=NC2=C1C(=O)N(C(=O)N2C)C', output_type='png', label="Caffeine")
+        plt.imshow(img)
+        plt.axis('off')
+        plt.show()
+    
+    .. image:: ../_static/draw_molecule1.png
+        :width: 300px
+    
+    .. code-block:: python
+    
+        import modifinder.utilities.visualizer as mf_vis
+        from matplotlib import pyplot as plt
+        from rdkit import Chem
+
+        def mol_with_atom_index(mol):
+            for atom in mol.GetAtoms():
+                atom.SetAtomMapNum(atom.GetIdx())
+            return mol
+        mol = Chem.MolFromSmiles('CN1C=NC2=C1C(=O)N(C(=O)N2C)C')
+        mol = mol_with_atom_index(mol)
+        highlightAtoms = {1, 3, 11, 8}
+        img = mf_vis.draw_molecule(mol, output_type='png', label="Caffeine", highlightAtoms=highlightAtoms)
+        plt.imshow(img)
+        plt.axis('off')
+        plt.show()
+    
+    .. image:: ../_static/draw_molecule2.png
+        :width: 300px
     """
     # TODO: test svg
 
@@ -108,16 +162,56 @@ def draw_molecule(mol, output_type='png', font_size = None, label=None, label_fo
 def draw_modifications(mol1, mol2, output_type='png', show_legend = True, legend_font = 15, legend_position = None, highlight_common = True, highlight_added = True, highlight_removed=True, modification_only = False, **kwargs):
     """
     Draw the modifications from molecule 1 to molecule 2
-    :param mol1: rdkit molecule
-    :param mol2: rdkit molecule
-    :param output_type: str - type of output (png or svg)
-    :param show_legend: bool - show the legend or not
-    :param legend_font: int - font size of the legend
-    :param legend_position: tuple - position of the legend
-    :param highlight_common: bool - highlight the common atoms
-    :param highlight_added: bool - highlight the added atoms
-    :param highlight_removed: bool - highlight the removed atoms
-    :param modification_only: bool - only highlight the modification edges, if highlight_removed or highlight_added is False, this will only show the enabled ones
+    
+    Parameters
+    ----------
+    mol1 : rdkit molecule, str
+        rdkit molecule or str for SMILES or InChI or GNPS identifier (USI or Accession)
+    mol2 : rdkit molecule
+        rdkit molecule or str for SMILES or InChI or GNPS identifier (USI or Accession)
+    output_type : str, optional (default='png')
+        type of output (png or svg)
+    show_legend : bool, optional (default=True)
+        show the legend or not
+    legend_font : int, optional (default=15)
+        font size of the legend
+    legend_position : tuple, optional (default=None)
+        position of the legend
+    highlight_common : bool, optional (default=True)
+        highlight the common atoms
+    highlight_added : bool, optional (default=True)
+        highlight the added atoms
+    highlight_removed : bool, optional (default=True)
+        highlight the removed atoms
+    modification_only : bool, optional (default=False)
+        only highlight the modification edges, if highlight_removed or highlight_added is False, this will only show the enabled ones
+    
+    Returns
+    -------
+    img : numpy array or str
+        image of the modification
+    
+    Examples
+    -------
+    .. code-block:: python
+    
+        import modifinder.utilities.visualizer as mf_vis
+        from matplotlib import pyplot as plt
+        from rdkit import Chem
+
+        smiles1, smiles2 = 'N[C@@H](CCC(=O)N[C@@H](CS)C(=O)NCC(O)=O)C(O)=O', 'CCCCCCSCC(CNCC(=O)O)NC(=O)CCC(C(=O)O)N'
+        mol1 = mf_vis.draw_molecule(smiles1, label="mol1")
+        mol2 = mf_vis.draw_molecule(smiles2, label="mol2")
+        modification = mf_vis.draw_modifications(smiles1, smiles2, label="modifications")
+        fig, ax = plt.subplots(1, 3, figsize=(15, 5))
+        ax[0].imshow(mol1)
+        ax[1].imshow(mol2)
+        ax[2].imshow(modification)
+        for a in ax:
+            a.axis('off')
+        plt.show()
+    
+    .. image:: ../_static/draw_modifications.png
     """
     mol1, mol2 = mu._get_molecules(mol1, mol2)
     result = mu.get_transition(mol1, mol2)
@@ -187,14 +281,48 @@ def draw_modifications(mol1, mol2, output_type='png', show_legend = True, legend
 def draw_molecule_heatmap(mol, scores, output_type='png', show_labels = False, shrink_labels = False, annotation_scale = 1, show_legend = True, legend_width = 50, legend_font = 40, **kwargs):
     """
     Draw a molecule and color the atoms based on the scores
-    :param mol: rdkit molecule
-    :param scores: list of scores for each atom
-    :param type: str - type of output (png or svg)
-    :param add_labels: bool - add labels to the atoms
-    :param shrink_labels: bool - shrink the labels
-    :param annotation_scale: float - size of the labels
-    :param show_legend: bool - show the legend or not
-    :param legend_width: int - width of the legend in pixels
+    
+    Parameters
+    ----------
+    mol : rdkit molecule
+        Molecule to Draw the heatmap for
+    scores : list
+        list of scores for each atom (the order should be the same as the order of atoms in the molecule)
+    output_type : str, optional (default='png')
+        type of output (png or svg)
+    show_labels : bool, optional (default=False)
+        add labels to the atoms
+    shrink_labels : bool, optional (default=False)
+        shrink the labels to more compact form
+    annotation_scale : float, optional (default=1)
+        size of the labels (font size)
+    show_legend : bool, optional (default=True)
+        show the legend or not
+    legend_width : int, optional (default=50)
+        width of the legend in pixels
+    legend_font : int, optional (default=40)
+        font size of the legend
+        
+    Returns
+    -------
+    img : numpy array or str
+    
+    Examples
+    -------
+    .. code-block:: python
+    
+        import modifinder.utilities.visualizer as mf_vis
+        from matplotlib import pyplot as plt
+        import numpy as np
+        mol = Chem.MolFromSmiles('CN1C=NC2=C1C(=O)N(C(=O)N2C)C')
+        scores = np.random.rand(mol.GetNumAtoms())
+        img = mf_vis.draw_molecule_heatmap(mol, scores, label="Caffeine", show_labels=True, legend_font=20)
+        plt.imshow(img)
+        plt.axis('off')
+        plt.show()
+        
+    .. image:: ../_static/draw_molecule_heatmap.png
+        :width: 300px
     """
     #TODO: test svg
     
@@ -245,16 +373,71 @@ def draw_molecule_heatmap(mol, scores, output_type='png', show_labels = False, s
     return img
 
 
-def draw_spectrum(spectrum, output_type='png', normalize_peaks = False, colors: dict = {}, flipped = False, size = None, show_x_label = False, show_y_label = False, font_size = None, bar_width = 3, x_lim = None,  **kwargs):
+def draw_spectrum(spectrum, output_type='png', normalize_peaks = False, colors: dict = {}, flipped = False, size = None, show_x_label = False, show_y_label = False, font_size = None, bar_width = 3, x_lim = None,  dpi = 300, **kwargs):
     """
-    Draw a spectrum
-    :param spectrum: SpectrumTuple or list of tuples (mz, intensity)
-    :param type: ax or str - type of output (png or svg or ax)
-    :param colors: dictionary of colors for the peaks, keys are the indices of the peaks, if value is a list, the first value is the color of top half and the second value is the color of the bottom half
+    Draw a spectrum 
+    
+    Parameters
+    ----------
+    spectrum : Spectrum or list of tuples or USI or Accession
+        Spectrum to draw
+    output_type : str, optional (default='png')
+        type of output (png or svg)
+    normalize_peaks : bool, optional (default=False)
+        normalize the peaks or not
+    colors : dict, optional (default={})
+        dictionary of colors for the peaks, keys are the indices of the peaks,
+        if value is a list, the first value is the color of top half and the 
+        second value is the color of the bottom half.
+    flipped : bool, optional (default=False)
+        flip the spectrum or not
+    size : tuple, optional (default=None)
+        size of the figure
+    show_x_label : bool, optional (default=False)
+        show x label or not
+    show_y_label : bool, optional (default=False)
+        show y label or not
+    font_size : int, optional (default=None)
+        font size of the labels
+    bar_width : int, optional (default=3)
+        width of the spectrum bars
+    x_lim : tuple, optional (default=None)
+        x limit of the figure
+    dpi : int, optional (default=300)
+        dpi of the stored image
+    kwargs : dict
+        additional arguments for drawing the spectrum in matplotlib
+    
+    Returns
+    -------
+    img : numpy array or str
+    
+    Examples
+    -------
+    .. code-block:: python
+    
+        import modifinder.utilities.visualizer as mf_vis
+        from matplotlib import pyplot as plt
+        import numpy as np
+        mz = [100, 200, 270, 400, 450]
+        intensity = [0.1, 0.2, 0.5, 0.4, 0.3]
+        colors = {
+            0: 'red',
+            1: ['blue', 'green'],
+            3: '#FFA500',
+            4: (0.9,0.9,0.2)
+        }
+        img = mf_vis.draw_spectrum(list(zip(mz, intensity)), output_type='png', show_x_label=True, show_y_label=True, colors=colors)
+        plt.imshow(img)
+        plt.axis('off')
+        plt.show()
+        
+    .. image:: ../_static/draw_spectrum.png
+        :width: 300px
     """
-    spectrum = get_spectrum(spectrum)
+    spectrum = to_spectrum(spectrum)
     if normalize_peaks:
-        spectrum = su.normalize_peaks(spectrum)
+        spectrum.normalize_peaks()
     
     # if output type is ax, use the ax to draw the spectrum
     if isinstance(output_type, plt.Axes):
@@ -304,13 +487,16 @@ def draw_spectrum(spectrum, output_type='png', normalize_peaks = False, colors: 
     if x_lim is not None:
         ax.set_xlim(x_lim)
 
-    if output_type == "png":
-        fig.patch.set_alpha(0)
-        fig.canvas.draw()
-        img = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
-        img = img.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+    if output_type == "png":    
+        alignment_bytes = BytesIO()
+        fig.patch.set_alpha(0)  # Set the figure patch alpha to 0 (fully transparent)
+        fig.savefig(alignment_bytes, format='png', bbox_inches='tight', pad_inches=0, transparent=True, dpi=dpi)
+        alignment_bytes.seek(0)
         plt.close(fig)
+        # convert the image to numpy array
+        img = mpimg.imread(alignment_bytes)
         return img
+    
     elif output_type == "svg":
         fig.patch.set_alpha(0)
         fig.canvas.draw()
@@ -326,21 +512,62 @@ def draw_spectrum(spectrum, output_type='png', normalize_peaks = False, colors: 
 
 def draw_alignment(spectrums, matches = None, output_type='png', normalize_peaks = False, size = None, dpi=300, draw_mapping_lines = True, ppm=40, x_lim=None, **kwargs):
     """
-    Draw the alignment of the spectrums
-    :param spectrums: list of SpectrumTuple or list of list of tuples (mz, intensity)
-    :param matches: list of list of tuples or list of tuples - matching between the spectrums
-    :param type: str - type of output (png or svg)
-    :param size: tuple - size of the figure
-    :param dpi: int - dpi of the stored image
-    :param draw_mapping_lines: bool - draw the mapping lines
-    :param ppm: float - ppm value for the alignment
-    :param x_lim: tuple - x limit of the figure
-    :param kwargs: additional arguments for drawing the spectrum like font_size, bar_width, etc.
+    Draw the alignment of multiple spectrums
+    
+    Parameters
+    ----------
+    spectrums : list of SpectrumTuple or list of list of tuples (mz, intensity)
+        list of spectrums to draw
+    matches : list of list of tuples or list of tuples, optional (default=None)
+        matching between the spectrums
+    output_type : str, optional (default='png')
+        type of output (png or svg)
+    normalize_peaks : bool, optional (default=False)
+        normalize the peaks or not
+    size : tuple, optional (default=None)
+        size of the figure
+    dpi : int, optional (default=300)
+        dpi of the stored image
+    draw_mapping_lines : bool, optional (default=True)
+        draw the mapping lines
+    ppm : float, optional (default=40)
+        ppm value for the alignment
+    x_lim : tuple, optional (default=None)
+        x limit of the figure
+    kwargs : dict
+        additional arguments for drawing the spectrum in matplotlib
+    
+    Returns
+    -------
+    img : numpy array or str
+    
+    Examples
+    -------
+    .. code-block:: python
+    
+        import modifinder.utilities.visualizer as mf_vis
+        from matplotlib import pyplot as plt
+        import numpy as np
+        peaks1 = list(zip([100, 200, 270, 400, 450], [0.1, 0.2, 0.5, 0.4, 0.3]))
+        peaks2 = list(zip([100, 230, 350, 360, 430], [0.1, 0.3, 0.2, 0.4, 0.5]))
+        peaks3 = list(zip([120, 230, 300, 380, 550], [0.1, 0.2, 0.5, 0.4, 0.3]))
+        matches = [[(0, 0), (1, 1), (3, 4)], [(0, 0), (1, 1), (3, 3)]]
+        img = mf_vis.draw_alignment([peaks1, peaks2, peaks3], matches=matches,
+                                    output_type='png',
+                                    normalize_peaks=True,
+                                    x_lim=(0, 550))
+        plt.imshow(img)
+        plt.axis('off')
+        plt.show()
+
+    .. image:: ../_static/draw_alignment.png
+        :width: 400px
     """
     
-    spectrums = [get_spectrum(spectrum) for spectrum in spectrums]
+    spectrums = [to_spectrum(spectrum) for spectrum in spectrums]
     if normalize_peaks:
-        spectrums = [su.normalize_peaks(spectrum) for spectrum in spectrums]
+        for spectrum in spectrums:
+            spectrum.normalize_peaks()
 
     if x_lim is None:
         x_lim = (min(spectrums[0].mz), max(spectrums[0].mz))
@@ -356,11 +583,11 @@ def draw_alignment(spectrums, matches = None, output_type='png', normalize_peaks
         # perform the alignment
         matches = []
     
-    if matches == 'default':
-        matches = []
-        for i in range(len(spectrums) - 1):
-            cosine, match = _cosine_fast(spectrums[i], spectrums[i+1], 0.1, ppm, True)
-            matches.append(match)
+    # if matches == 'default':
+    #     matches = []
+    #     for i in range(len(spectrums) - 1):
+    #         cosine, match = _cosine_fast(spectrums[i], spectrums[i+1], 0.1, ppm, True)
+    #         matches.append(match)
             
     
     if len(matches) > 0 and len(matches) != len(spectrums) - 1:
@@ -460,15 +687,51 @@ def draw_alignment(spectrums, matches = None, output_type='png', normalize_peaks
 def draw_frag_of_molecule(mol, fragment: int, output_type='png', **kwargs):
     """
     draws a fragment of the molecule. The fragment is represented by a binary string where 1 indicates the presence of the atom and 0 indicates the absence.
-    :param mol: rdkit molecule
-    :param fragment: int - the decimal representation of the binary string of the fragment 
-    :param type: str - type of output (png or svg)
+    
+    Parameters
+    ----------
+    mol : rdkit molecule
+        Molecule to draw the fragment for
+    fragment : int
+        fragment represented by a binary string
+    output_type : str, optional (default='png')
+        type of output (png or svg)
+    kwargs : dict
+        additional arguments for drawing the molecule in rdkit
+        
+    Returns
+    -------
+    img : numpy array or str
+    
+    Examples
+    -------
+    .. code-block:: python
+    
+        import modifinder.utilities.visualizer as mf_vis
+        from matplotlib import pyplot as plt
+        from rdkit import Chem
+        mol = Chem.MolFromSmiles('CN1C=NC2=C1C(=O)N(C(=O)N2C)C')
+        def mol_with_atom_index(mol):
+            for atom in mol.GetAtoms():
+                atom.SetAtomMapNum(atom.GetIdx())
+            return mol
+        mol = mol_with_atom_index(mol)
+        fragment = int("110111", 2) # Convert binary to decimal
+        img = mf_vis.draw_frag_of_molecule(mol, fragment, output_type='png')
+        plt.imshow(img)
+        plt.axis('off')
+        plt.show()
+        
+    .. image:: ../_static/draw_frag_of_molecule.png
+        :width: 300px
+        
     """
-    mol, fragment = mu._get_molecule(mol)
+    mol = mu._get_molecule(mol)
     highlightAtoms = []
     for i in range(0, mol.GetNumAtoms()):
         if fragment & (1 << i):
             highlightAtoms.append(i)
+    print(highlightAtoms)
     kwargs['highlightAtoms'] = highlightAtoms
     img = draw_molecule(mol, **kwargs)
     return img
@@ -631,9 +894,9 @@ def return_public_functions():
     """
     return {
         "draw_molecule": draw_molecule,
-        "draw_modifications": draw_modifications,
+        # "draw_modifications": draw_modifications,
         "draw_molecule_heatmap": draw_molecule_heatmap,
-        "draw_spectrum": draw_spectrum,
-        "draw_alignment": draw_alignment,
+        # "draw_spectrum": draw_spectrum,
+        # "draw_alignment": draw_alignment,
         "draw_frag_of_molecule": draw_frag_of_molecule
     }

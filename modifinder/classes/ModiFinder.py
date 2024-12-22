@@ -7,7 +7,10 @@ The object can be used to get information about unknown compounds in the network
 from modifinder import convert as convert
 from modifinder.classes.Compound import Compound
 from modifinder.classes.EdgeDetail import EdgeDetail, MatchType
-from modifinder.engines.Abtracts import AlignmentEngine
+from modifinder.engines.Abtracts import AlignmentEngine, AnnotationEngine
+from modifinder.engines.annotation.MAGMaAnnotationEngine import MAGMaAnnotationEngine
+from modifinder.engines.alignment.CosineAlignmentEngine import CosineAlignmentEngine
+
 from modifinder.exceptions import (
     ModiFinderNotImplementedError,
     ModiFinderNotSolvableError,
@@ -57,6 +60,10 @@ class ModiFinder:
         edgeDetail: EdgeDetail = None,
         network: nx.DiGraph = None,
         networkUnknowns: list = None,
+        should_align: bool = True,
+        alignmentEngine: AlignmentEngine = None,
+        should_annotate: bool = True,
+        annotationEngine: AnnotationEngine = None,
         **kwargs,
     ):
         """
@@ -134,6 +141,16 @@ class ModiFinder:
                 )
 
             self.unknowns = [unknownCompound.id]
+        
+        if should_align:
+            if alignmentEngine is None:
+                alignmentEngine = CosineAlignmentEngine()
+            alignmentEngine.align(self.network, **kwargs)
+        
+        if should_annotate:
+            if annotationEngine is None:
+                annotationEngine = MAGMaAnnotationEngine()
+            annotationEngine.annotate(self.network, annotate_all = True, **kwargs)
     
     
     def align():
@@ -200,7 +217,21 @@ class ModiFinder:
                 setattr(self.network[u][v]["edgedetail"], key, kwargs[key])
     
     
-    def generate_probabilities(self, known_id, unknown_id, shifted_only = False, CI = False, CPA = True, CFA = True, CPE = True):
+    def generate_probabilities(self, known_id = None, unknown_id = None, shifted_only = False, CI = False, CPA = True, CFA = True, CPE = True):
+        
+        if unknown_id is None:
+            if len(self.unknowns) > 1:
+                raise ValueError("More than one unknown compound found in the network. Please specify the unknown compound id")
+            unknown_id = self.unknowns[0]
+        
+        if known_id is None and unknown_id is not None:
+            neighbors = list(self.network.predecessors(unknown_id)) + list(self.network.successors(unknown_id))
+            if len(neighbors) > 1:
+                raise ValueError("More than one known compound found in the network. Please specify the known compound id")
+            known_id = neighbors[0]
+        
+        if known_id is None or unknown_id is None:
+            raise ValueError("Both known and unknown compound ids must be specified")
         
         # check if unknown is connected to known
         if self.network.has_edge(known_id, unknown_id):

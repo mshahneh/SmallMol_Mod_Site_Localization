@@ -20,6 +20,8 @@ mamba env update -n mod-site --file conda-env.yml
 
 # documentation
 to make the documentation:
+`pip install sphinx sphinx-autobuild`
+`pip install myst-parser`
 `pip install sphinx-rtd-theme`
 
 

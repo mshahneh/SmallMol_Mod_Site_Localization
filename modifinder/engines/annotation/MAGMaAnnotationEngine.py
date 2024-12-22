@@ -26,19 +26,19 @@ class MAGMaAnnotationEngine(AnnotationEngine):
         self.args = kwargs
 
 
-    def annotate(self, network: nx.DiGraph, align_all: bool = False, **kwargs):
+    def annotate(self, network: nx.DiGraph, annotate_all: bool = False, **kwargs):
         """
         Annotates the network using the MAGMa model
 
         Parameters:
             :network (Network): the network to be annotated
-            :align_all (bool): whether to align all the edges
+            :annotate_all (bool): whether to annotate all compounds or only the ones that have not been annotated yet
             :kwargs: additional arguments
         """
         for node in network.nodes:
             compound = network.nodes[node]["compound"]
             if compound is not None and compound.is_known:
-                if align_all or compound.peak_fragments_map is None:
+                if annotate_all or compound.peak_fragments_map is None:
                     self.annotate_single(compound, modify_compound=True, **kwargs)
 
 

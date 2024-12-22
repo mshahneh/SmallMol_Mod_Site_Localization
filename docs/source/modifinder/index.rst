@@ -1,3 +1,6 @@
+Documentation
+=============
+
 .. toctree::
    :maxdepth: 2
 
@@ -6,3 +9,4 @@
    engines/index
    utilities/index
    drawing
+   convert
