@@ -233,6 +233,34 @@ class Spectrum:
             new_spectrum.intensity = new_intensity
             return new_spectrum, index_mapping
         
+    def remove_larger_than_precursor_peaks(self, change_self: bool = True):
+        """
+        Remove peaks that are larger than the precursor m/z value.
+        
+        Parameters
+        ----------
+        change_self : bool, default is True
+            If True, the peaks that are larger than the precursor m/z value will be removed in place.
+            If False, a new Spectrum object with the peaks removed will be returned.
+        
+        """
+        
+        new_mz = []
+        new_intensity = []
+        for mz, intensity in zip(self.mz, self.intensity):
+            if mz <= self.precursor_mz:
+                new_mz.append(mz)
+                new_intensity.append(intensity)
+        
+        if change_self:
+            self.mz = new_mz
+            self.intensity = new_intensity
+        
+        else:
+            new_spectrum = self.copy()
+            new_spectrum.mz = new_mz
+            new_spectrum.intensity = new_intensity
+            return new_spectrum
     
     
 

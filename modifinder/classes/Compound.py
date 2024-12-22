@@ -6,10 +6,13 @@ import rdkit.Chem.rdMolDescriptors as rdMolDescriptors
 from rdkit import Chem
 from typing import Dict
 import numpy as np
+import math
+
 
 # import modifinder as mf
 from modifinder.classes.Spectrum import Spectrum
 from modifinder import convert as convert
+
 
 class Compound:
     """ A class to represent a compound 
@@ -46,6 +49,8 @@ class Compound:
         accession (str): The accession of the compound
         
         library_membership (str): The GNPS library membership of the compound
+        
+        exact_mass (float): The exact mass of the compound
     
     Examples
     --------
@@ -120,6 +125,7 @@ class Compound:
         self.usi = None
         self.adduct_mass = None
         self.additional_attributes = {}
+        self.exact_mass = None
 
         if incoming_data is None and len(kwargs) == 0:
             return
@@ -209,6 +215,9 @@ class Compound:
         """ Parse missing and verify the data of the class"""
         if self.is_known is None:
             self.is_known = (self.structure is not None)
+            
+        if self.structure is not None:
+            self.exact_mass = rdMolDescriptors.CalcExactMolWt(self.structure)
         
         if self.distances is None and self.structure is not None:
             Chem.rdmolops.GetDistanceMatrix(self.structure)
@@ -353,6 +362,7 @@ class Compound:
         
         return contribution
     
+    
     def calculate_contributions(self, peakids, CI = False, CPA = True, CFA = True, CPE = True):
         """ 
         input:
@@ -384,61 +394,97 @@ class Compound:
             for j in range(len(peakids)):
                 contributions[i] += peak_atom_contributions[j][i] * peak_entropies[j]
         
-        
-        # for atom in range(len(existance_data)):
-        #     for peak in existance_data[atom]:
-        #         contributions[atom] += self.calculate_contribution_atom_in_peak(atom, peak, existance_data, CI=CI, CPA=CPA, CFA=CFA)
-        
         return contributions
 
 
-    # TODO: Implement the following methods
-    # TODO: Implement the method
-    def clean_peaks():
-        """ Clean the peaks of the compound
-
-        removes peaks that are small or not significant
-        """
-        pass
-
-    # TODO: Implement the method
-    def filter_fragments_by_atoms(self, atoms, peaks):
+    def filter_fragments_by_atoms(self, atoms: list, peaks: list = None):
         """Filter the fragments by the atoms, remove fragments that do not contain at least one of the atoms
-        Args:
+        Parameters
+        ----------
             atoms: a list of atoms to filter the fragments
             peaks: a list of peaks to filter their fragments, if None, use all peaks
+        
+        Returns
+        -------
+            updated: the number of updated peaks
         """
-        pass
+        if peaks is None:
+            peaks = [i for i in range(len(self.peaks))]
+        
+        updated = 0
+        for i in peaks:
+            updated_fragments = set()
+            for fragment in self.peak_fragments_map[i]:
+                for atom in atoms:
+                    if 1 << atom & fragment:
+                        updated_fragments.add(fragment)
+                        break
+
+            if len(updated_fragments) != len(self.peak_fragments_map[i]):
+                updated += 1
+            
+            self.peak_fragments_map[i] = updated_fragments
+
+        return updated
     
-    # TODO: Implement the method
-    def calculate_peak_annotation_ambiguity(self, peaks=None):
+    
+    def calculate_peak_annotation_ambiguity(self, peaks: list=None):
         """Calculate the peak annotation ambiguity
-        Args:
-            peaks: a list of peaks to calculate the ambiguity for, if None, use all peaks
-        Returns:
-            ambiguity: the average number of fragments per annotated peaks
-            ratio: the ratio of annotated peaks to all peaks
-        """
-        pass
-
-    # TODO: Implement the method
-    def calculate_annotation_entropy(self, peaks=None):
-        """Calculate the entropy of the annotation
-        Args:
-            peaks: a list of peaks to calculate the entropy for, if None, use all peaks
-        Returns:
-            entropy: the entropy of the annotation
-        """
-
-    # TODO: Implement the method
-    def apply_helper(self, helper_compound, shifted, unshifted, unshifted_mode = "union"):
-        """use helper compound to update the peak_fragments_map
         
-        Parameters:
+        Parameters
         ----------
-        
-            helper_compound: the helper compound
-            shifted: array of pairs of the shifted peaks, each pair is (self_peak_index, helper_peak_index)
-            unshifted: array pf pairs of the unshifted peaks, each pair is (self_peak_index, helper_peak_index)
-            unshifted_mode: the mode to update the unshifted peaks, can be "union", "intersection", None
+            peaks : list
+                a list of peaks to calculate the ambiguity for, if None, use all peaks
+        Returns
+        -------
+            (float, float) : a tuple of two values (ambiguity, ratio)
+                ambiguity: the average number of fragments per annotated peaks
+                ratio: the ratio of annotated peaks to all peaks
         """
+        if peaks is None:
+            peaks = [i for i in range(len(self.peaks))]
+        ambiguity = 0
+        annotated_peaks = 0
+        for peak in peaks:
+            if len(self.peak_fragments_map[peak]) > 0:
+                annotated_peaks += 1
+                ambiguity += len(self.peak_fragments_map[peak])
+        if annotated_peaks == 0:
+            return -1, 0
+        if len(peaks) == 0:
+            return -1, -1
+        return ambiguity / annotated_peaks, annotated_peaks / len(peaks)
+
+
+    def calculate_annotation_entropy(self, peaks: list=None):
+        """Calculate the entropy of the annotation
+        
+        Parameters
+        ----------
+            peaks : list
+                a list of peaks to calculate the entropy for, if None, use all peaks
+        
+        Returns
+        -------
+            float : the entropy of the annotation
+        """
+        if peaks is None:
+            peaks = [i for i in range(len(self.peaks))]
+        peak_entropies = [0 for i in range(len(self.peaks))]
+        n = len(self.structure.GetAtoms())
+        for peak in peaks:
+            atoms_appearance = [0 for i in range(n)]
+            for fragment in self.peak_fragments_map[peak]:
+                for atom in range(n):
+                    if 1 << atom & fragment:
+                        atoms_appearance[atom] += 1
+            entropy = 0
+            for atom in range(n):
+                if atoms_appearance[atom] > 0:
+                    p = atoms_appearance[atom] / len(self.peak_fragments_map[peak])
+                    entropy -= p * math.log(p)
+            peak_entropies[peak] = entropy
+        if len(peak_entropies) == 0:
+            return -1
+        entropy = sum(peak_entropies) / len(peak_entropies)
+        return entropy

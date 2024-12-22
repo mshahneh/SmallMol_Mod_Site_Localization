@@ -367,6 +367,99 @@ def power_prob(probabilities):
     return probabilities2
 
 
+def parse_molecular_formula(formula):
+    # Define the regular expression pattern to match element symbols and their counts
+    pattern = r'([A-Z][a-z]*)(\d*)'
+    matches = re.findall(pattern, formula)  # Find all matches in the formula
+
+    # Create a dictionary to store element symbol and count pairs
+    atom_counts = {}
+    for match in matches:
+        element = match[0]
+        element = element.capitalize()
+        count = match[1]
+        if count:
+            count = int(count)
+        else:
+            count = 1
+        atom_counts[element] = count
+
+    return atom_counts
+
+
+def is_submolecule(sub_formula, target_formula, ignore_H = False):
+    # Parse the atom counts of the sub-molecule and target molecule
+    sub_atom_counts = parse_molecular_formula(sub_formula)
+    target_atom_counts = parse_molecular_formula(target_formula)
+
+    # Check if every atom in sub-molecule is in target molecule and has less or equal count
+    for element, count in sub_atom_counts.items():
+        if element == 'H' and ignore_H:
+            continue
+        if element not in target_atom_counts or target_atom_counts[element] < count:
+            return False
+
+    return True
+
+def add_adduct_to_formula(formula, adduct):
+    if adduct != "M+H":
+        raise ValueError("Only H adduct is supported.")
+    else:
+        adduct = copy.deepcopy(adduct)
+        adduct = "H"
+    # add one H to the formula
+    pattern = r"([A-Z][a-z]*)(\d*)"
+    matches = re.findall(pattern, formula)  # Find all matches in the formula
+    formula = ""
+    Found = False
+    for match in matches:
+        if match[0] == adduct:
+            count = match[1]
+            if count:
+                count = int(count)
+            else:
+                count = 1
+            count += 1
+            formula += adduct + str(count)
+            Found = True
+        else:
+            formula += match[0]
+            if match[1]:
+                formula += match[1]
+    if not Found:
+        formula += adduct
+    
+    return formula
+
+def remove_adduct_from_formula(formula, adduct):
+    if adduct != "M+H":
+        raise ValueError("Only H adduct is supported.")
+    else:
+        adduct = copy.deepcopy(adduct)
+        adduct = "H"
+    
+    # remove one H from the formula
+    pattern = r'([A-Z][a-z]*)(\d*)'
+    matches = re.findall(pattern, formula)  # Find all matches in the formula
+    formula = ""
+    for match in matches:
+        if match[0] == "H":
+            count = match[1]
+            if count:
+                count = int(count)
+            else:
+                count = 1
+            count -= 1
+            if count > 1:
+                formula += "H" + str(count)
+            elif count == 1:
+                formula += "H"
+        else:
+            formula += match[0]
+            if match[1]:
+                formula += match[1]
+    
+    return formula
 
 def get_elements(formula):
     elements = re.findall(r'([A-Z][a-z]*)(\d*)', formula)

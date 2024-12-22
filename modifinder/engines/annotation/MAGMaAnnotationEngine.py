@@ -1,13 +1,16 @@
 from modifinder.engines.Abtracts import AnnotationEngine
 from modifinder.classes.Compound import Compound
+from modifinder.classes.EdgeDetail import EdgeDetail, MatchType
 from typing import List, Tuple
 from modifinder.engines.annotation.magma import (
     fragmentation_py,
     rdkit_engine as rdkit_engine,
 )
-from modifinder.utilities.general_utils import mims
+from modifinder.utilities.general_utils import mims, is_submolecule
+from modifinder.utilities.mol_utils import get_modification_nodes
 import networkx as nx
 from rdkit import Chem
+from msbuddy import assign_subformula
 
 
 class MAGMaAnnotationEngine(AnnotationEngine):
@@ -40,6 +43,13 @@ class MAGMaAnnotationEngine(AnnotationEngine):
             if compound is not None and compound.is_known:
                 if annotate_all or compound.peak_fragments_map is None:
                     self.annotate_single(compound, modify_compound=True, **kwargs)
+        
+        # refine by helpers
+        for edge in network.edges:
+            edge_detail = network.edges[edge]["edge_detail"]
+            if edge_detail is not None:
+                self.refine_annotations_by_helper(network.nodes[edge[0]]["compound"], network.nodes[edge[1]]["compound"], edge_detail, modify_compound = True)
+                self.refine_annotations_by_helper(network.nodes[edge[1]]["compound"], network.nodes[edge[0]]["compound"], edge_detail, modify_compound = True)
 
 
     def annotate_single(
@@ -86,6 +96,9 @@ class MAGMaAnnotationEngine(AnnotationEngine):
             for annotation in annotations:
                 peak_fragments_map[i].add(annotation[0])
 
+        # refine by formula
+        peak_fragments_map = self.refine_annotations_by_formula(compound, peak_fragments_map, modify_compound = False)
+        
         if modify_compound:
             compound.peak_fragments_map = peak_fragments_map
 
@@ -136,3 +149,109 @@ class MAGMaAnnotationEngine(AnnotationEngine):
             formula,
             rdkit_engine.FragmentToSmiles(Compound.structure, atomlist),
         )
+    
+    
+    def refine_annotations_by_formula(self, compound: Compound, peak_fragments_map, modify_compound: bool = True):
+        """
+        Refines the annotations of a compound by using the formula from msbuddy
+
+        See Also
+        --------
+        `MSBuddy <https://github.com/Philipbear/msbuddy>`_
+        
+        
+        Parameters
+        ----------
+            compound (Compound): the compound
+            
+        """
+        
+        structure = compound.structure
+        spectrum = compound.spectrum
+        if structure is None:
+            return peak_fragments_map
+        
+        main_compound_formula = Chem.rdMolDescriptors.CalcMolFormula(structure)
+        peak_mz = spectrum.mz
+        
+        if len(peak_mz) == 0:
+            return peak_fragments_map
+        
+        subformla_list = assign_subformula(peak_mz,
+                                        precursor_formula=main_compound_formula, adduct=spectrum.adduct,
+                                        ms2_tol=self.ppm, ppm=True, dbe_cutoff=-1.0)
+        
+        new_peak_fragments_map = [set() for i in range(len(peak_mz))]
+        for i in range(len(self.peaks)):
+            possibilites = set()
+            for subformula in subformla_list[i].subform_list:
+                formula = subformula.formula
+                # formula = utils.remove_adduct_from_formula(formula, self.Adduct)
+                
+                # find the fragments that contains the formula
+                for frag_id in peak_fragments_map[i]:
+                    molSubFormula = self.get_fragment_info(compound, frag_id)[2]
+                    if is_submolecule(molSubFormula, formula, self.args["formula_ignore_H"]) and is_submolecule(formula, molSubFormula, self.args["formula_ignore_H"]):
+                        possibilites.add(frag_id)
+            
+            if len(possibilites) > 0:
+                new_peak_fragments_map[i] = possibilites
+        
+        if modify_compound:
+            compound.peak_fragments_map = new_peak_fragments_map
+        
+        return new_peak_fragments_map
+    
+    
+    def refine_annotations_by_helper(self, main_compound: Compound, helper_compound: Compound, edgeDetail: EdgeDetail, modify_compound: bool = True):
+        """
+        Refines the annotations of a compound by using the helper compound
+        """
+        
+        if helper_compound.exact_mass < main_compound.exact_mass:
+            modification_site = get_modification_nodes(self.structure, helper_compound.structure, True)
+            shifted_peaks = [match.second_peak_index for match in edgeDetail.matches if match.match_type == MatchType.shifted]
+            sub_match_indices = main_compound.GetSubstructMatch(helper_compound.structure)
+            mapping = dict()
+            for i, atom in enumerate(sub_match_indices):
+                mapping[i] = atom
+            unshifted = [(match.second_peak_index, match.first_peak_index) for match in edgeDetail.matches if match.match_type == MatchType.unshifted]
+        else:
+            modification_site = get_modification_nodes(helper_compound.structure, self.structure, False)
+            shifted_peaks = [match.first_peak_index for match in edgeDetail.matches if match.match_type == MatchType.shifted]
+            sub_match_indices = helper_compound.structure.GetSubstructMatch(main_compound.structure)
+            mapping = dict()
+            for i, atom in enumerate(sub_match_indices):
+                mapping[atom] = i
+            unshifted = [(match.first_peak_index, match.second_peak_index) for match in edgeDetail.matches if match.match_type == MatchType.unshifted]
+        
+        main_compound.filter_fragments_by_atoms(modification_site, shifted_peaks)
+        
+        # filter unshifted peaks by intersection
+        
+        for peak in unshifted:
+            helper_peak_fragment_map = set()
+            for fragment in helper_compound.peak_fragments_map[peak[1]]:
+                new_fragment = 0
+                for i in range(len(helper_compound.structure.GetAtoms())):
+                    if 1 << i & fragment:
+                        if i not in mapping:
+                            new_fragment = -1
+                            break
+                        else:
+                            new_fragment += 1 << mapping[i]
+                if new_fragment != -1:
+                    helper_peak_fragment_map.add(new_fragment)
+            
+            main_compound.peak_fragments_map[peak[0]] = main_compound.peak_fragments_map[peak[0]].intersection(helper_peak_fragment_map)
+        
+        
+            
+        
+        
+        
+        
+        
+        
+
+        

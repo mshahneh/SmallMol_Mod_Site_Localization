@@ -144,24 +144,52 @@ class ModiFinder:
         
         if should_align:
             if alignmentEngine is None:
-                alignmentEngine = CosineAlignmentEngine()
-            alignmentEngine.align(self.network, **kwargs)
+                self.alignmentEngine = CosineAlignmentEngine()
+            self.re_align(self.alignmentEngine, **kwargs)
         
         if should_annotate:
             if annotationEngine is None:
-                annotationEngine = MAGMaAnnotationEngine()
-            annotationEngine.annotate(self.network, annotate_all = True, **kwargs)
+                self.annotationEngine = MAGMaAnnotationEngine()
+            self.re_annotate(self.annotationEngine, **kwargs)
     
     
-    def align():
-        pass
+    def re_align(self, alignmentEngine: AlignmentEngine, **kwargs):
+        """
+        Re-align the network.
+        For each edge in the network, the method will re-align the edges using the alignment engine.
+        
+        Parameters
+        ----------
+        alignmentEngine : AlignmentEngine
+            The alignment engine to use to align the unknown compound with the known compounds in the network.
+            
+        kwargs : dict
+            Additional parameters to pass to the alignment engine.
+        """
+        
+        if alignmentEngine is None:
+            raise ValueError("Alignment engine is required to re-align the network")
+        alignmentEngine.align(self.network, **kwargs)
     
-    def annotate():
-        pass
     
-    def align_and_annotate():
-        pass
-
+    def re_annotate(self, annotationEngine: AnnotationEngine, **kwargs):
+        """
+        Annotate the network.
+        For each node (Compound) in the network, the method will annotate the node using the annotation engine.
+        
+        Parameters
+        ----------
+        annotationEngine : AnnotationEngine
+            The annotation engine to use to annotate the compounds in the network.
+        
+        kwargs : dict
+            Additional parameters to pass to the annotation engine.
+        """
+        
+        if annotationEngine is None:
+            raise ValueError("Annotation engine is required to annotate the network")
+        annotationEngine.annotate(self.network, annotate_all = True, **kwargs)
+    
     
     def solve(self, unknown: str, **kwargs):
         """
@@ -215,7 +243,45 @@ class ModiFinder:
         for key in self.network[u][v]["edgedetail"].__dict__:
             if key in kwargs:
                 setattr(self.network[u][v]["edgedetail"], key, kwargs[key])
+                
     
+    def add_neighbor(self, compound: Compound, neighbor: str, edgeDetail: EdgeDetail = None, **kwargs):
+        """
+        Add a neighbor to a compound.
+        
+        The method will add a neighbor to a compound. If the edgeDetail is not passed, the method will align
+        the spectra of the compound and the neighbor using the alignment engine. If the edgeDetail is passed,
+        It has to be from the smaller compound to the larger compound.
+        
+        Parameters
+        ----------
+        compound : Compound
+            The compound to add the neighbor to.
+        
+        neighbor : str
+            The id of the neighbor compound.
+        
+        edgeDetail : EdgeDetail
+            The edge detail between the compound and the neighbor.
+        
+        kwargs : dict
+            Additional parameters to pass to the alignment engine.
+        """
+        
+        if not self.network.has_node(neighbor):
+            raise ValueError(f"{neighbor} is not in the network")
+        
+        # check if compound doesn't exist in the network, add it
+        if not self.network.has_node(compound.id):
+            self.network.add_node(compound.id, compound=compound)
+        
+        smaller = compound if compound.spectrum.precursor_mz <= self.network.nodes[neighbor]["compound"].spectrum.precursor_mz else self.network.nodes[neighbor]["compound"]
+        larger = compound if compound.spectrum.precursor_mz > self.network.nodes[neighbor]["compound"].spectrum.precursor_mz else self.network.nodes[neighbor]["compound"]
+        if edgeDetail is None:
+            edgeDetail = self.alignmentEngine.single_align(smaller.spectrum, larger.spectrum, **kwargs)
+        
+        self.update_edge(smaller.id, larger.id, edgeDetail, **kwargs)
+        
     
     def generate_probabilities(self, known_id = None, unknown_id = None, shifted_only = False, CI = False, CPA = True, CFA = True, CPE = True):
         
