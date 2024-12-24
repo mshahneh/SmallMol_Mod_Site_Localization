@@ -1,4 +1,4 @@
-classes.EdgeDetail module
+EdgeDetail module
 =========================
 
 .. automodule:: classes.EdgeDetail

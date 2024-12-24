@@ -15,8 +15,8 @@ Overview
    .. rubric:: Methods
 
    .. autosummary::
+      :toctree: generated
    
-      ~Spectrum.__init__
       ~Spectrum.update
       ~Spectrum.clear
       ~Spectrum.normalize_peaks

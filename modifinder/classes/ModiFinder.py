@@ -10,6 +10,7 @@ from modifinder.classes.EdgeDetail import EdgeDetail, MatchType
 from modifinder.engines.Abtracts import AlignmentEngine, AnnotationEngine
 from modifinder.engines.annotation.MAGMaAnnotationEngine import MAGMaAnnotationEngine
 from modifinder.engines.alignment.CosineAlignmentEngine import CosineAlignmentEngine
+from modifinder.utilities import visualizer as mf_vis
 
 from modifinder.exceptions import (
     ModiFinderNotImplementedError,
@@ -58,6 +59,7 @@ class ModiFinder:
         knownCompond: Compound = None,
         unknownCompound: Compound = None,
         edgeDetail: EdgeDetail = None,
+        helpers: list = [],
         network: nx.DiGraph = None,
         networkUnknowns: list = None,
         should_align: bool = True,
@@ -83,7 +85,14 @@ class ModiFinder:
 
         edgeDetail : EdgeDetail object from smaller to larger compound (optional in Use Case 1, ignored in Use Case 2)
             the orientation of the match must be from the smaller compound to the larger compound.
-
+            
+        helpers : list of helper compounds for the known compound (optional in Use Case 1, ignored in Use Case 2)
+            A list of helper compounds to help in the annotation refinement of the known compound.
+        
+        helpers_edgeDetails : list of EdgeDetail objects (optional in Use Case 1, ignored in Use Case 2)
+            A list of edge details between the helper compounds and the known compound. The orientation of the match must be from the smaller compound to the larger compound.
+            If not passed, the method will use the alignment engine to align the helper compounds with the known compound.
+        
         network : nx.Graph (if passed, then Use Case 2 is used, if None, then Use Case 1 is used)
             A networkx graph object with the nodes are identified by the compound ids and the "compound"
             attibute of a node is a *Compound* object. The edges are the relationships between the compounds
@@ -92,6 +101,23 @@ class ModiFinder:
         networkUnknowns : list (ignored in Use Case 1, optional in Use Case 2)
             A list of compound ids that are unknown in the network, if not passed, the unknowns will be driven from 'is_known' attribute
             of the compounds in the network.
+        
+        should_align : bool (optional, default True)
+            If True, the method will align the network using the alignment engine.
+        
+        alignmentEngine : AlignmentEngine (optional)
+            The alignment engine to use to align the unknown compound with the known compounds in the network.
+            If not passed, the method will use the CosineAlignmentEngine.
+        
+        should_annotate : bool (optional, default True)
+            If True, the method will annotate the network using the annotation engine.
+            
+        annotationEngine : AnnotationEngine (optional)
+            The annotation engine to use to annotate the compounds in the network.
+            If not passed, the method will use the MAGMaAnnotationEngine.
+        
+        kwargs : dict
+            Additional parameters to pass to the alignment engine, the annotation engine, and other methods.
 
 
         See Also
@@ -108,8 +134,19 @@ class ModiFinder:
         self.network = None
         self.unknonws = None
         self.args = kwargs
+        
+        if alignmentEngine is None:
+            self.alignmentEngine = CosineAlignmentEngine(**kwargs)
+        else:
+            self.alignmentEngine = alignmentEngine
+        
+        if annotationEngine is None:
+            self.annotationEngine = MAGMaAnnotationEngine(**kwargs)
+        else:
+            self.annotationEngine = annotationEngine
 
         if network:
+            raise ModiFinderNotImplementedError("Use Case 2 is not fully implemented yet")
             self.network = network
 
             if networkUnknowns:
@@ -123,34 +160,64 @@ class ModiFinder:
 
         else:
             self.network = nx.DiGraph()
-            knownCompond = convert.to_compound(data=knownCompond)
-            unknownCompound = convert.to_compound(data=unknownCompound)
+            knownCompond = convert.to_compound(data=knownCompond, **kwargs)
+            unknownCompound = convert.to_compound(data=unknownCompound, **kwargs)
+            unknownCompound.is_known = False
             self.network.add_node(knownCompond.id, compound=knownCompond)
             self.network.add_node(unknownCompound.id, compound=unknownCompound)
 
-            if (
-                knownCompond.spectrum.precursor_mz
-                < unknownCompound.spectrum.precursor_mz
-            ):
-                self.network.add_edge(
-                    knownCompond.id, unknownCompound.id, edgedetail=edgeDetail
-                )
-            else:
-                self.network.add_edge(
-                    unknownCompound.id, knownCompond.id, edgedetail=edgeDetail
-                )
+            self.add_adjusted_edge(knownCompond.id, unknownCompound.id, edgeDetail, **kwargs)
 
             self.unknowns = [unknownCompound.id]
         
+        if helpers is not None:
+            for helper in helpers:
+                helper = convert.to_compound(data=helper)
+                self.network.add_node(helper.id, compound=helper)
+                self.add_adjusted_edge(helper.id, knownCompond.id)
+        
         if should_align:
-            if alignmentEngine is None:
-                self.alignmentEngine = CosineAlignmentEngine()
             self.re_align(self.alignmentEngine, **kwargs)
         
         if should_annotate:
-            if annotationEngine is None:
-                self.annotationEngine = MAGMaAnnotationEngine()
             self.re_annotate(self.annotationEngine, **kwargs)
+    
+    
+    def add_adjusted_edge(self, u, v, edgeDetail: EdgeDetail = None, **kwargs):
+        """
+        Add an edge between two compounds.
+
+        The method will add an edge between two compounds. If the edgeDetail is not passed, the method will align
+        the spectra of the compounds using the alignment engine. If the edgeDetail is passed,
+        It has to be from the smaller compound to the larger compound.
+        
+        Parameters
+        ----------
+        u : str
+            The id of the first compound.
+        
+        v : str
+            The id of the second compound.
+        
+        edgeDetail : EdgeDetail
+            The edge detail between the compounds.
+        
+        kwargs : dict
+            Additional parameters to pass to the alignment engine.
+        """
+        
+        if not self.network.has_node(u):
+            raise ValueError(f"{u} is not in the network")
+        
+        if not self.network.has_node(v):
+            raise ValueError(f"{v} is not in the network")
+        
+        smaller = u if self.network.nodes[u]["compound"].spectrum.precursor_mz <= self.network.nodes[v]["compound"].spectrum.precursor_mz else v
+        larger = u if self.network.nodes[u]["compound"].spectrum.precursor_mz > self.network.nodes[v]["compound"].spectrum.precursor_mz else v
+        if edgeDetail is None:
+            edgeDetail = self.alignmentEngine.single_align(self.network.nodes[smaller]["compound"].spectrum, self.network.nodes[larger]["compound"].spectrum, **kwargs)
+        
+        self.update_edge(smaller, larger, edgeDetail, **kwargs)
     
     
     def re_align(self, alignmentEngine: AlignmentEngine, **kwargs):
@@ -204,6 +271,17 @@ class ModiFinder:
         
         alignmentEngine : AlignmentEngine
             The alignment engine to use to align the unknown compound with the known compounds in the network.
+            
+        kwargs : dict
+            Additional parameters.
+            
+        
+        Returns
+        -------
+        dict
+            A dictionary with the following keys:
+            - probabilities: the probabilities of the atoms in the unknown compound.
+        
         """
 
         if self.network.in_degree(unknown) + self.network.out_degree(unknown) == 0:
@@ -228,6 +306,9 @@ class ModiFinder:
 
         The method will update the edge between two compounds.
         """
+        if not self.network.has_edge(u, v):
+            self.network.add_edge(u, v, edgeDetail=None)
+        
         if edgeDetail:
             self.network[u][v]["edgedetail"] = edgeDetail
         else:
@@ -286,15 +367,10 @@ class ModiFinder:
     def generate_probabilities(self, known_id = None, unknown_id = None, shifted_only = False, CI = False, CPA = True, CFA = True, CPE = True):
         
         if unknown_id is None:
-            if len(self.unknowns) > 1:
-                raise ValueError("More than one unknown compound found in the network. Please specify the unknown compound id")
-            unknown_id = self.unknowns[0]
+            unknown_id = self._get_unknown()
         
         if known_id is None and unknown_id is not None:
-            neighbors = list(self.network.predecessors(unknown_id)) + list(self.network.successors(unknown_id))
-            if len(neighbors) > 1:
-                raise ValueError("More than one known compound found in the network. Please specify the known compound id")
-            known_id = neighbors[0]
+            known_id = self._get_known_neighbor(unknown_id)
         
         if known_id is None or unknown_id is None:
             raise ValueError("Both known and unknown compound ids must be specified")
@@ -336,3 +412,69 @@ class ModiFinder:
         probabilities = general_utils.power_prob(probabilities)
 
         return probabilities
+    
+    
+    def draw_prediction(self, probabilities, known_id, **kwargs):
+        
+        return mf_vis.draw_molecule_heatmap(self.network.nodes[known_id]["compound"].structure, probabilities, **kwargs)
+    
+    def draw_alignment(self, id1, id2, **kwargs):
+        """
+        Draw the alignment between two compounds.
+        
+        The method will draw the alignment between two compounds. The compounds must be in the network and connected by an edge.
+        
+        See Also
+        --------
+        visualizer.draw_alignment
+        
+        Parameters
+        ----------
+        id1 : str
+            The id of the first compound.
+        
+        id2 : str
+            The id of the second compound.
+        
+        kwargs : dict
+            Additional parameters to pass to the visualizer.
+        """
+        
+        if not self.network.has_edge(id1, id2):
+            if not self.network.has_edge(id2, id1):
+                raise ValueError(f"Compounds {id1} and {id2} are not connected in the network")
+            else:
+                edgeDetail = self.network[id2][id1]["edgedetail"]
+                smallerSpectrum = self.network.nodes[id2]["compound"].spectrum
+                largerSpectrum = self.network.nodes[id1]["compound"].spectrum
+                if edgeDetail is None:
+                    matched_peaks = []
+                else:
+                    matched_peaks = [(match.second_peak_index, match.first_peak_index) for match in edgeDetail.matches]
+        else:
+            edgeDetail = self.network[id1][id2]["edgedetail"]
+            smallerSpectrum = self.network.nodes[id1]["compound"].spectrum
+            largerSpectrum = self.network.nodes[id2]["compound"].spectrum
+            if edgeDetail is None:
+                matched_peaks = []
+            else:
+                matched_peaks = [(match.first_peak_index, match.second_peak_index) for match in edgeDetail.matches]
+        
+        return mf_vis.draw_alignment([smallerSpectrum, largerSpectrum], [matched_peaks], **kwargs)
+        
+        
+        
+
+    def _get_unknown(self):
+        if len(self.unknowns) > 1:
+            raise ValueError("More than one unknown compound found in the network. Please specify the unknown compound id")
+        unknown_id = self.unknowns[0]
+        return unknown_id
+    
+    def _get_known_neighbor(self, unknown_id):
+        neighbors = list(self.network.predecessors(unknown_id)) + list(self.network.successors(unknown_id))
+        if len(neighbors) > 1:
+            raise ValueError("More than one known compound found in the network. Please specify the known compound id")
+        known_id = neighbors[0]
+        
+        return known_id

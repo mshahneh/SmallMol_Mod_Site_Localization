@@ -21,8 +21,12 @@ mamba env update -n mod-site --file conda-env.yml
 # documentation
 to make the documentation:
 `pip install sphinx sphinx-autobuild`
+`pip install nbsphinx`
 `pip install myst-parser`
 `pip install sphinx-rtd-theme`
+
+Convert jupyter files to md files
+`jupyter nbconvert --to markdown xx.ipynb`
 
 
 run the server for local developement of the readme

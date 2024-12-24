@@ -10,10 +10,14 @@ from typing import List, Tuple
 # Base class for alignment engines
 class AlignmentEngine(ABC):
     @abstractmethod
+    def __init__(self, **kwargs):
+        pass
+    
+    @abstractmethod
     def align(self, network:nx.DiGraph,
-        fragment_mz_tolerance: float = 0.02,
-        fragment_ppm_tolerance: float = 100.0,
-        align_all: bool = False,
+        mz_tolerance: float = 0.02,
+        ppm_tolerance: float = 100.0,
+        align_all: bool = True,
         **kwargs):
         """Aligns the spectra in the network
         
@@ -23,8 +27,8 @@ class AlignmentEngine(ABC):
         Parameters
         ----------
             network (nx.DiGraph) : The Compound Graph object to align the spectra in.
-            fragment_mz_tolerance (float, optional) : The mz tolerance in Da for the fragments. Defaults to 0.02Da. 
-            fragment_ppm_tolerance (float, optional) : The mz tolerance in ppm for the fragments. Defaults to 100.0ppm.
+            mz_tolerance (float, optional) : The mz tolerance in Da for the fragments. Defaults to 0.02Da. 
+            ppm_tolerance (float, optional) : The mz tolerance in ppm for the fragments. Defaults to 100.0ppm.
             align_all (bool, optional) : If True, all edges will be aligned. If False, only the edges that have not been aligned will be aligned. Defaults to False.
         """
         pass
@@ -32,8 +36,8 @@ class AlignmentEngine(ABC):
     @abstractmethod
     def single_align(self, SpectrumTuple1,
                       SpectrumTuple2, 
-                      fragment_mz_tolerance: float = 0.02, 
-                      fragment_ppm_tolerance: float = 100.0, 
+                      mz_tolerance: float = 0.02, 
+                      ppm_tolerance: float = 100.0, 
                       **kwargs):
         """Aligns two spectra, returns the alignment details as an EdgeDetail object
 
@@ -41,8 +45,8 @@ class AlignmentEngine(ABC):
         ----------
             SpectrumTuple1 (SpectrumTuple) : First spectrum
             SpectrumTuple2 (SpectrumTuple) : Second spectrum
-            fragment_mz_tolerance (float) : Fragment mz tolerance
-            fragment_ppm_tolerance (float) : Fragment ppm tolerance
+            mz_tolerance (float) : Fragment mz tolerance
+            ppm_tolerance (float) : Fragment ppm tolerance
             kwargs : additional arguments
         
         Returns
@@ -53,6 +57,10 @@ class AlignmentEngine(ABC):
 
 # Base class for annotation engines
 class AnnotationEngine(ABC):
+    @abstractmethod
+    def __init__(self, **kwargs):
+        pass
+    
     @abstractmethod
     def annotate(self, network, **kwargs):
         pass

@@ -1,4 +1,4 @@
-classes.ModiFinder module
+ModiFinder
 =========================
 
 .. automodule:: classes.ModiFinder

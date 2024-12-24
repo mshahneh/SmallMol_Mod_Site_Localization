@@ -1,7 +1,7 @@
 {
     "Alignment": {
-        "fragment_mz_tolerance": 0.1,
-        "fragment_ppm_tolerance": 0.1
+        "mz_tolerance": 0.1,
+        "ppm_tolerance": 0.1
     },
     "Spectrum": {
         "normalize_peaks": true

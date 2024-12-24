@@ -25,7 +25,7 @@ def getMatchedPeaks(usi1, usi2):
      'mz_min': 'None',
      'mz_max':'None',
      'cosine':'shifted',
-     'fragment_mz_tolerance':'0.1',
+     'mz_tolerance':'0.1',
       'grid': 'True'}
     r = requests.get('https://metabolomics-usi.gnps2.org/json/mirror/', params=payload,  timeout=5)
     return json.loads(r.text)

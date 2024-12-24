@@ -59,7 +59,7 @@ class Spectrum:
         
         if incoming_data is None and len(kwargs) == 0:
             return
-
+        
         if incoming_data is not None:
             convert.to_spectrum(incoming_data, self)
 
@@ -68,7 +68,7 @@ class Spectrum:
 
     def update(self, peaks = None, peaks_json = None, mz=None, intensity=None, precursor_mz=None, precursor_charge=None, 
                adduct=None, ms_level=None, instrument=None, ms_mass_analyzer=None, 
-               ms_dissociation_method=None, spectrum_id=None, normalize_peaks = False, **kwargs):
+               ms_dissociation_method=None, spectrum_id=None, normalize_peaks = False, ratio_to_base_peak = None, remove_large_peaks = False, **kwargs):
         """Update the Spectrum object with the given values.
 
         Args:
@@ -84,6 +84,9 @@ class Spectrum:
             ms_mass_analyzer (str): The mass analyzer used.
             ms_dissociation_method (str): The dissociation method used.
             spectrum_id (str): The spectrum id.
+            normalize_peaks (bool): If True, the intensity of the peaks will be normalized.
+            ratio_to_base_peak (float): If None, no filtering is done, if a float number, it removes all the peaks with intensity
+            less than ratio times the base peak.
         """
         if peaks_json is not None:
             peaks = json.loads(peaks_json)
@@ -101,8 +104,17 @@ class Spectrum:
         self.ms_dissociation_method = ms_dissociation_method if ms_dissociation_method is not None else self.ms_dissociation_method
         self.spectrum_id = spectrum_id if spectrum_id is not None else self.spectrum_id
         
+        if self.mz is not None:
+            self.mz, self.intensity = zip(*sorted(zip(self.mz, self.intensity)))
+        
         if normalize_peaks:
             self.normalize_peaks()
+        
+        if ratio_to_base_peak is not None:
+            self.remove_small_peaks(ratio_to_base_peak)
+        
+        if remove_large_peaks:
+            self.remove_larger_than_precursor_peaks()
 
 
     def __str__(self):
@@ -111,6 +123,7 @@ class Spectrum:
         for key in to_delete:
             del object_dict[key]
         return json.dumps(object_dict, indent=4)
+    
     
     def clear(self):
         """Clear the Spectrum object."""
@@ -125,11 +138,13 @@ class Spectrum:
         self.ms_dissociation_method = None
         self.spectrum_id = None
     
+    
     def copy(self):
         """Return a copy of the Spectrum object."""
         copied_spectrum = Spectrum()
         convert.to_spectrum(self, use_object=copied_spectrum, needs_parse=False)
         return copied_spectrum
+    
     
     def normalize_peaks(self, change_self = True):
         """l2 Normalize the intensity of the Spectrum object.
@@ -221,6 +236,8 @@ class Spectrum:
         top_k_indices = np.argsort(self.intensity)[::-1][:k]
         new_mz = np.array([self.mz[index] for index in top_k_indices])
         new_intensity = np.array([self.intensity[index] for index in top_k_indices])
+        # sort the peaks by mz
+        new_mz, new_intensity = zip(*sorted(zip(new_mz, new_intensity)))
         index_mapping = {index: new_index for new_index, index in enumerate(top_k_indices)}
         
         if change_self:
@@ -261,6 +278,30 @@ class Spectrum:
             new_spectrum.mz = new_mz
             new_spectrum.intensity = new_intensity
             return new_spectrum
+    
+    def get_peak_indexes(self, mz, mz_tolerance = 0.02, ppm_tolerance = 40.0, **kwargs):
+        """Get the indexes of the peaks within the given m/z tolerance.
+        
+        Parameters
+        ----------
+        mz : float
+            The m/z value of the peak.
+        mz_tolerance : float, optional
+            The m/z tolerance for the peak, default is 0.02.
+        ppm_tolerance : float, optional
+            The ppm tolerance for the peak, default is 40.0.
+        
+        Returns
+        -------
+        list
+            The indexes of the peaks within the given m/z tolerance.
+        """
+        
+        result = []
+        for index, peak_mz in enumerate(self.mz):
+            if abs(peak_mz - mz) <= mz_tolerance or abs(peak_mz - mz) <= mz * ppm_tolerance / 1e6:
+                result.append(index)    
+        return result
     
     
 

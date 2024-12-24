@@ -132,7 +132,7 @@ class Compound:
 
         # attempt to initialize the class with the provided data
         if incoming_data is not None:
-            convert.to_compound(incoming_data, use_object = self)
+            convert.to_compound(incoming_data, use_object = self, **kwargs)
         
         # update the attributes with the provided keyword arguments
         self.update(**kwargs)

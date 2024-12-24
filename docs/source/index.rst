@@ -15,14 +15,7 @@ Welcome to ModiFinder's documentation!
 Citing
 ------
 
-To cite ModiFinder, please use the following publication:
-
-Mohammad Reza Zare Shahneh, Michael Strobel, Giovanni Andrea Vitale, Christian Geibel, Yasin El Abiead, Neha Garg, Berenike Wagner,
-Karl Forchhammer, Allegra Aron, Vanessa V Phelan, Daniel Petras, Mingxun Wang.
-`"ModiFinder: Tandem Mass Spectral Alignment Enables Structural Modification Site Localization" <https://pubs.acs.org/doi/10.1021/jasms.4c00061>`_,
-in
-Journal of the American Society for Mass Spectrometry
-doi:10.1021/jasms.4c00061, PMID: 38830143
+.. include:: ../../CITATION.md
 
 
 License

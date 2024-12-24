@@ -731,7 +731,7 @@ def draw_frag_of_molecule(mol, fragment: int, output_type='png', **kwargs):
     for i in range(0, mol.GetNumAtoms()):
         if fragment & (1 << i):
             highlightAtoms.append(i)
-    print(highlightAtoms)
+    # print(highlightAtoms)
     kwargs['highlightAtoms'] = highlightAtoms
     img = draw_molecule(mol, **kwargs)
     return img

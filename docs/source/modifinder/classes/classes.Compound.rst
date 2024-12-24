@@ -5,7 +5,9 @@ Compound
 Overview
 ========
 
+
 .. currentmodule:: modifinder
+
 
 .. autoclass:: Compound
 
@@ -16,14 +18,12 @@ Overview
    .. rubric:: Methods
 
    .. autosummary::
-   
-      ~Compound.__init__
-      ~Compound.apply_helper
+      :toctree: generated
+
       ~Compound.calculate_annotation_entropy
       ~Compound.calculate_contribution_atom_in_peak
       ~Compound.calculate_contributions
       ~Compound.calculate_peak_annotation_ambiguity
-      ~Compound.clean_peaks
       ~Compound.clear
       ~Compound.copy
       ~Compound.filter_fragments_by_atoms

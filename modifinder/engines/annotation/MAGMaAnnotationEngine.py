@@ -14,7 +14,7 @@ from msbuddy import assign_subformula
 
 
 class MAGMaAnnotationEngine(AnnotationEngine):
-    def __init__(self, breaks = 2, max_water_losses = 2, ionisation_mode = 0, mz_tolerance = 0.1, ppm = 40, **kwargs):
+    def __init__(self, breaks = 2, max_water_losses = 2, ionisation_mode = 0, mz_tolerance = 0.1, ppm_tolerance = 40, **kwargs):
         """
         Initializes the MAGMa annotation engine
 
@@ -25,7 +25,7 @@ class MAGMaAnnotationEngine(AnnotationEngine):
         self.max_water_losses = max_water_losses
         self.ionisation_mode = ionisation_mode
         self.mz_tolerance = mz_tolerance
-        self.ppm = ppm
+        self.ppm_tolerance = ppm_tolerance
         self.args = kwargs
 
 
@@ -46,10 +46,13 @@ class MAGMaAnnotationEngine(AnnotationEngine):
         
         # refine by helpers
         for edge in network.edges:
-            edge_detail = network.edges[edge]["edge_detail"]
+            edge_detail = network.edges[edge]["edgedetail"]
             if edge_detail is not None:
-                self.refine_annotations_by_helper(network.nodes[edge[0]]["compound"], network.nodes[edge[1]]["compound"], edge_detail, modify_compound = True)
-                self.refine_annotations_by_helper(network.nodes[edge[1]]["compound"], network.nodes[edge[0]]["compound"], edge_detail, modify_compound = True)
+                first_compound = network.nodes[edge[0]]["compound"]
+                second_compound = network.nodes[edge[1]]["compound"]
+                if first_compound.is_known and second_compound.is_known:
+                    self.refine_annotations_by_helper(network.nodes[edge[0]]["compound"], network.nodes[edge[1]]["compound"], edge_detail, modify_compound = True)
+                    self.refine_annotations_by_helper(network.nodes[edge[1]]["compound"], network.nodes[edge[0]]["compound"], edge_detail, modify_compound = True)
 
 
     def annotate_single(
@@ -71,10 +74,10 @@ class MAGMaAnnotationEngine(AnnotationEngine):
             kwargs["breaks"] = self.breaks
         if "mz_tolerance" not in kwargs:
             kwargs["mz_tolerance"] = self.mz_tolerance
-        if "ppm" not in kwargs:
-            kwargs["ppm"] = self.ppm
+        if "ppm_tolerance" not in kwargs:
+            kwargs["ppm_tolerance"] = self.ppm_tolerance
 
-        for item in ["breaks", "mz_tolerance", "ppm"]:
+        for item in ["breaks", "mz_tolerance", "ppm_tolerance"]:
             if item not in kwargs or kwargs[item] is None:
                 raise ValueError(
                     f"Missing parameters for MAGMa annotation engine {item}"
@@ -86,7 +89,7 @@ class MAGMaAnnotationEngine(AnnotationEngine):
         fragmentation_instance.generate_fragments()
 
         # generate peak to fragment map
-        base_precision = 1 + kwargs["ppm"] / 1000000
+        base_precision = 1 + kwargs["ppm_tolerance"] / 1000000
         peak_fragments_map = [set() for i in range(len(compound.spectrum.mz))]
         for i in range(len(compound.spectrum.mz)):
             search_weight = compound.spectrum.mz[i] - compound.adduct_mass
@@ -97,7 +100,7 @@ class MAGMaAnnotationEngine(AnnotationEngine):
                 peak_fragments_map[i].add(annotation[0])
 
         # refine by formula
-        peak_fragments_map = self.refine_annotations_by_formula(compound, peak_fragments_map, modify_compound = False)
+        # peak_fragments_map = self.refine_annotations_by_formula(compound, peak_fragments_map, modify_compound = False)
         
         if modify_compound:
             compound.peak_fragments_map = peak_fragments_map
@@ -179,7 +182,7 @@ class MAGMaAnnotationEngine(AnnotationEngine):
         
         subformla_list = assign_subformula(peak_mz,
                                         precursor_formula=main_compound_formula, adduct=spectrum.adduct,
-                                        ms2_tol=self.ppm, ppm=True, dbe_cutoff=-1.0)
+                                        ms2_tol=self.ppm_tolerance, ppm=True, dbe_cutoff=-1.0)
         
         new_peak_fragments_map = [set() for i in range(len(peak_mz))]
         for i in range(len(self.peaks)):
@@ -209,15 +212,15 @@ class MAGMaAnnotationEngine(AnnotationEngine):
         """
         
         if helper_compound.exact_mass < main_compound.exact_mass:
-            modification_site = get_modification_nodes(self.structure, helper_compound.structure, True)
+            modification_site = get_modification_nodes(main_compound.structure, helper_compound.structure, True)
             shifted_peaks = [match.second_peak_index for match in edgeDetail.matches if match.match_type == MatchType.shifted]
-            sub_match_indices = main_compound.GetSubstructMatch(helper_compound.structure)
+            sub_match_indices = main_compound.structure.GetSubstructMatch(helper_compound.structure)
             mapping = dict()
             for i, atom in enumerate(sub_match_indices):
                 mapping[i] = atom
             unshifted = [(match.second_peak_index, match.first_peak_index) for match in edgeDetail.matches if match.match_type == MatchType.unshifted]
         else:
-            modification_site = get_modification_nodes(helper_compound.structure, self.structure, False)
+            modification_site = get_modification_nodes(helper_compound.structure, main_compound.structure, False)
             shifted_peaks = [match.first_peak_index for match in edgeDetail.matches if match.match_type == MatchType.shifted]
             sub_match_indices = helper_compound.structure.GetSubstructMatch(main_compound.structure)
             mapping = dict()

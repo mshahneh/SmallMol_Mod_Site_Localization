@@ -13,8 +13,8 @@ import networkx as nx
 def _cosine_fast(
     spec: Spectrum,
     spec_other: Spectrum,
-    fragment_mz_tolerance: float = None,
-    fragment_ppm_tolerance: float = None,
+    mz_tolerance: float = None,
+    ppm_tolerance: float = None,
     allow_shift: bool = True,
 ) -> Tuple[float, List[Tuple[int, int]]]:
     """Approximates alignment with the highest cosine score between two spectra.
@@ -24,16 +24,16 @@ def _cosine_fast(
     Args:
         spec (Spectrum): First spectrum
         spec_other (Spectrum): Second spectrum
-        fragment_mz_tolerance (float): Tolerance in Da for fragment m/z values, if None, it is not used.
-        fragment_ppm_tolerance (float): Tolerance in ppm for fragment m/z values, if None, it is not used.
+        mz_tolerance (float): Tolerance in Da for fragment m/z values, if None, it is not used.
+        ppm_tolerance (float): Tolerance in ppm for fragment m/z values, if None, it is not used.
         allow_shift (bool): _description_
 
     Returns:
         Tuple[float, List[Tuple[int, int]]]: _description_
     """
     
-    if fragment_mz_tolerance is None and fragment_ppm_tolerance is None:
-        raise ModiFinderError("At least one of fragment_mz_tolerance or fragment_ppm_tolerance must be provided.")
+    if mz_tolerance is None and ppm_tolerance is None:
+        raise ModiFinderError("At least one of mz_tolerance or ppm_tolerance must be provided.")
     
     precursor_charge = max(spec.precursor_charge, 1)
     precursor_mass_diff = (
@@ -41,7 +41,7 @@ def _cosine_fast(
     ) * precursor_charge
     # Only take peak shifts into account if the mass difference is relevant.
     num_shifts = 1
-    if allow_shift and abs(precursor_mass_diff) >= fragment_mz_tolerance:
+    if allow_shift and abs(precursor_mass_diff) >= mz_tolerance:
         num_shifts += precursor_charge
     other_peak_index = np.zeros(num_shifts, np.uint16)
     mass_diff = np.zeros(num_shifts, np.float32)
@@ -56,7 +56,7 @@ def _cosine_fast(
         # Advance while there is an excessive mass difference.
         for cpi in range(num_shifts):
             while other_peak_index[cpi] < len(spec_other.mz) - 1 and (
-                peak_mz - fragment_mz_tolerance
+                peak_mz - mz_tolerance
                 > spec_other.mz[other_peak_index[cpi]] + mass_diff[cpi]
             ):
                 other_peak_index[cpi] += 1
@@ -68,10 +68,10 @@ def _cosine_fast(
             while (
                 other_peak_i < len(spec_other.mz)
                 and abs(peak_mz - (spec_other.mz[other_peak_i] + mass_diff[cpi]))
-                <= fragment_mz_tolerance
+                <= mz_tolerance
             ):
                 if abs(peak_mz - (spec_other.mz[other_peak_i] + mass_diff[cpi])) <= (
-                    fragment_ppm_tolerance * peak_mz / 1e6
+                    ppm_tolerance * peak_mz / 1e6
                 ):
                     peak_match_scores.append(
                         peak_intensity * spec_other.intensity[other_peak_i]
@@ -106,11 +106,14 @@ def _cosine_fast(
 
 
 class CosineAlignmentEngine(AlignmentEngine):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        
     def align(
         self,
         network: nx.DiGraph,
-        fragment_mz_tolerance: float = 0.02,
-        fragment_ppm_tolerance: float = 100.0,
+        mz_tolerance: float = 0.02,
+        ppm_tolerance: float = 100.0,
         align_all: bool = False,
         **kwargs,
     ):
@@ -121,9 +124,9 @@ class CosineAlignmentEngine(AlignmentEngine):
         ----------
         network : nx.DiGraph
             The Compound Graph object to align the spectra in.
-        fragment_mz_tolerance : float, optional
+        mz_tolerance : float, optional
             Fragment mz tolerance, by default 0.02
-        fragment_ppm_tolerance : float, optional
+        ppm_tolerance : float, optional
             Fragment ppm tolerance, by default 100.0
         align_all : bool, default False
             if True, all edges will be aligned, if False, only the edges that have not been aligned will be aligned
@@ -138,8 +141,8 @@ class CosineAlignmentEngine(AlignmentEngine):
                 edge[2]["edgedetail"] = self.single_align(
                     start_compound.spectrum,
                     end_compound.spectrum,
-                    fragment_mz_tolerance,
-                    fragment_ppm_tolerance,
+                    mz_tolerance,
+                    ppm_tolerance,
                     **kwargs,
                 )
                 
@@ -149,8 +152,8 @@ class CosineAlignmentEngine(AlignmentEngine):
         self,
         SpectrumTuple1: Spectrum,
         SpectrumTuple2: Spectrum,
-        fragment_mz_tolerance: float = 0.02,
-        fragment_ppm_tolerance: float = 100.0,
+        mz_tolerance: float = 0.02,
+        ppm_tolerance: float = 100.0,
         **kwargs,
     ) -> EdgeDetail:
         """
@@ -159,8 +162,8 @@ class CosineAlignmentEngine(AlignmentEngine):
         Parameters:
             SpectrumTuple1 (SpectrumTuple): First spectrum
             SpectrumTuple2 (SpectrumTuple): Second spectrum
-            fragment_mz_tolerance (float): Fragment mz tolerance
-            fragment_ppm_tolerance (float): Fragment ppm tolerance
+            mz_tolerance (float): Fragment mz tolerance
+            ppm_tolerance (float): Fragment ppm tolerance
             kwargs: additional arguments
 
         Returns:
@@ -169,8 +172,8 @@ class CosineAlignmentEngine(AlignmentEngine):
         cosine, matched_peaks = _cosine_fast(
             SpectrumTuple1,
             SpectrumTuple2,
-            fragment_mz_tolerance,
-            fragment_ppm_tolerance,
+            mz_tolerance,
+            ppm_tolerance,
             True,
         )
 
@@ -179,8 +182,8 @@ class CosineAlignmentEngine(AlignmentEngine):
             if is_shifted(
                 SpectrumTuple1.mz[match[0]],
                 SpectrumTuple2.mz[match[1]],
-                fragment_ppm_tolerance,
-                fragment_mz_tolerance,
+                ppm_tolerance,
+                mz_tolerance,
             ):
                 Matches.append(Match(match[0], match[1], MatchType.shifted))
             else:
