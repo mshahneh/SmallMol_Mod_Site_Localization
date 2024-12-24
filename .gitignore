@@ -2,9 +2,4 @@ __pycache__*
 build
 *.egg-info
 oldTests
-make.bat
-Makefile
-source/*
-!source/conf.py
-!source/index.rst
 models/predict_modification_site.model
