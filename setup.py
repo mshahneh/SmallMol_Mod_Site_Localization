@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='ModiFinder',
-    version='1.1',
+    version='1.4-beta',
     packages=find_packages(),
     install_requires=[
         'cairosvg',
@@ -22,7 +22,8 @@ setup(
         'msbuddy==0.2.3',
         'lightgbm',
         'seaborn',
-        'pyteomics'
+        'pyteomics',
+        'matplotlib',
     ],
     author='Reza Shahneh',
     author_email='mzare008@ucr.edu',
